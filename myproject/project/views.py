@@ -79,15 +79,15 @@ for hit in res["hits"]["hits"]:
 #         "alignment": witness_alignment  # e.g. "Adverse"
 #     }
 
-    es.index(index=INDEX_NAME, body=doc)
-    print(f"📌 Indexed testimony ID {testimony.id} with witness type: '{witness_type}' and alignment: '{witness_alignment}'")
+#     es.index(index=INDEX_NAME, body=doc)
+#     print(f"📌 Indexed testimony ID {testimony.id} with witness type: '{witness_type}' and alignment: '{witness_alignment}'")
 
-# ✅ Step 5: Loop over all testimonies and index them
-def reindex_all_testimonies():
-    for testimony in Testimony.objects.all():
-        index_testimony(testimony)
+# # ✅ Step 5: Loop over all testimonies and index them
+# def reindex_all_testimonies():
+#     for testimony in Testimony.objects.all():
+#         index_testimony(testimony)
 
-reindex_all_testimonies()
+# reindex_all_testimonies()
 
 def expand_word_forms(word):
     forms = {word}
