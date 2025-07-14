@@ -1,0 +1,3784 @@
+0001
+ 1              UNITED STATES DISTRICT COURT
+ 2             WESTERN DIVISION OF LOUISIANA
+ 3                 LAKE CHARLES DIVISION
+ 4   
+ 5   TAMMIE SMITH, et al., )
+ 6           Plaintiff,    )
+ 7   vs                    )Civil Action No.:
+ 8   CHINA MANUFACTURERS   )2:19-CV-01111
+ 9   ALLIANCE, LLC, et al.,)
+10           Defendants.   )
+11   
+12   
+13   
+14               STENOGRAPHIC & VIDEOGRAPHIC
+15                DEPOSITION OF TROY COTTLES
+16                         9:00 a.m.
+17                     FEBRUARY 11, 2025
+18   
+19   
+20   
+21   
+22   BY:  Susan Bell
+23        Certified Court Reporter, CSR, CCR#14
+0002
+ 1                      STIPULATIONS
+ 2               IT IS HEREBY STIPULATED AND AGREED,
+ 3   by and between the parties through the respective
+ 4   counsel that the deposition of TROY COTTLES, a
+ 5   witness in the above-entitled cause, may be taken
+ 6   before Susan Bell, Certified Shorthand Reporter,
+ 7   at HUNTSVILLE HUB, 600 Boulevard South, SW, Suite
+ 8   104, Huntsville, Alabama on the 11th of February,
+ 9   2025, commencing at 9:00 a.m.
+10   
+11               IT IS FURTHER STIPULATED AND AGREED
+12   that the signature to and the reading of the
+13   deposition by the witness is NOT waived, the
+14   deposition to have the same force and effect as
+15   if full compliance had been had with all laws and
+16   rules of court relating to the taking of
+17   depositions.
+18   
+19   
+20   
+21   
+22   
+23   
+0003
+ 1   
+ 2               IT IS FURTHER STIPULATED AND AGREED
+ 3   that it shall not be necessary for any objection
+ 4   to be made by counsel as to any questions except
+ 5   as to form or leading questions, and that counsel
+ 6   for the parties may make objections and assign
+ 7   ground at the time of trial, or at the time said
+ 8   deposition is offered in evidence, or prior
+ 9   thereto.
+10   
+11   
+12   
+13   
+14   
+15   
+16   
+17   
+18   
+19   
+20   
+21   
+22   
+23   
+0004
+ 1                      APPEARANCES
+ 2   FOR THE DEFENDANTS:
+ 3           GALLOWAY, JOHNSON, TOMPKINS
+ 4           BURR & SMITH, PLC
+ 5           Mr. Steven H. Bergman
+ 6           3861 Ambassador Caffery Parkway, Suite 300
+ 7           Lafayette, LA  70503
+ 8           (337)735-1760
+ 9           steven-bergman@rbmn.com
+10   
+11   FOR THE PLAINTIFF:
+12           KASTER, LYNCH, FARRAR & BALL, LLP
+13           Ms. Samantha Sweetin
+14           Mr. Nathan Koneru
+15           1117 Herkimer Street
+16           Houston, TX  77008
+17           (713)221-8300
+18           samantha@fbtrial.com
+19           nathan@kfblaw.com
+20   
+21   
+22   
+23   
+0005
+ 1                        INDEX
+ 2   
+ 3   EXAMINATION BY:                            PAGE:
+ 4    Mr. McCarter                               7
+ 5   
+ 6                       EXHIBITS
+ 7   FOR THE DEFENDANT:                         PAGE:
+ 8    Exhibit Number 1 ......................... 17
+ 9    Exhibit Number 2 ......................... 66
+10    Exhibit Number 3 ......................... 69
+11    Exhibit Number 4 ......................... 70
+12    Exhibit Number 5 ......................... 71
+13    Exhibit Number 6 ......................... 71
+14    Exhibit Number 7 ......................... 72
+15    Exhibit Number 8 ......................... 73
+16    Exhibit Number 9 ......................... 76
+17   
+18   
+19   
+20                       --o0o--
+21   
+22   
+23   
+0006
+ 1              I, Susan Bell, Certified Shorthand
+ 2   Reporter, acting as commissioner, certify
+ 3   that there came before me at the HUNTSVILLE
+ 4   HUB, 600 Boulevard South, SW, Suite 104,
+ 5   Huntsville, Alabama on February 11, 2025 at
+ 6   9:00 a.m., TROY COTTLES, witness in the above
+ 7   cause, for oral examination, whereupon the
+ 8   following proceedings were had:
+ 9   
+10              VIDEOGRAPHER:  Okay, we're on the
+11   record.  The time is 9:00 o'clock.  Today's
+12   date is February 11th, 2025.
+13              This marks the beginning of Media
+14   Unit Number One in the Deposition of Troy
+15   Cottles in the Matter of Tammie Smith, et al.
+16   versus China Manufacturers Alliance, et al.,
+17   Case Number:  2:19-CV-0111.
+18              This deposition is taking place
+19   at 600 Boulevard South, SW, Suite 104, Hunts-
+20   ville, Alabama, 35802.
+21              My name is John Pierce.  The court
+22   reporter is Susan Bell.
+23              Would all counsel please state
+0007
+ 1   your name and whom you represent after which
+ 2   will the court reporter please will swear in
+ 3   the witness.
+ 4              MR. BERGMAN:  Steven Bergman on
+ 5   behalf of Defendants China Manufacturers
+ 6   Alliance and Shanghai Huayi Group Corporation
+ 7   Limited.
+ 8              MS. SWEETIN:  Samantha Sweetin or
+ 9   the Plaintiffs.
+10              MR. KONERU:  Nathan Koneru for the
+11   Plaintiffs.
+12   
+13              TROY COTTLES, having first been
+14   duly sworn (affirmed), testified as follows:
+15   
+16              MR. BERGMAN:  I cannot see the
+17   screen.  There's nobody else on the Zoom?
+18              MS. SWEETIN:  No.  It's just
+19   Nathan.
+20   
+21   EXAMINATION BY MR. BERGMAN:
+22   
+23         Q.   Good morning.
+0008
+ 1         A.   Good morning.
+ 2         Q.   Could you please state your full
+ 3   name for the record?
+ 4         A.   Troy Cottles.
+ 5         Q.   Where do you live, Mr. Cottles?
+ 6         A.   In Toney Alabama.
+ 7         Q.   And have you been designated as an
+ 8   expert witness in this, Smith versus China
+ 9   Manufacturers Alliance?
+10         A.   Yes.
+11         Q.   When were you first retained?
+12         A.   The first invoice that I have is
+13   from -- dated April the 8th of 2019.  There
+14   may have been communication prior to that and
+15   most likely was but that's the first time I
+16   billed in the case.
+17         Q.   So that's your first invoice?
+18         A.   That's right.
+19              MR. BERGMAN:  And -- and, for the
+20   record, Mr. Cottles is looking through a box
+21   of documents he has.  We'll go through that,
+22   the contents of that box in a bit.
+23         Q.   And who was it that retained you,
+0009
+ 1   Mr. Cottles?
+ 2         A.   Aub Ward.
+ 3              THE WITNESS:  It's spelled A-u-b.
+ 4         Q.   Prior to this case have you worked
+ 5   with Mr. Ward before?
+ 6         A.   No, I don't think so.
+ 7         Q.   Prior to this case have you worked
+ 8   with his law firm, the Gordon Law Group,
+ 9   before?
+10         A.   Not that I recall.
+11         Q.   What was it that you were asked to
+12   do by Mr. Ward?
+13         A.   Initially to look at the evidence
+14   and determine if there was causations that I
+15   could identify for the failure that occurred
+16   of the tire and then later as materials were
+17   produced I was to review that.
+18              And, of course, I've been working
+19   more directly with the Kaster Lynch Law Firm
+20   since that point in time.
+21         Q.   When was the first time you saw
+22   the tire at issue in this case?
+23         A.   It would've been when I invoiced,
+0010
+ 1   April the 8th, 2019, within a couple weeks
+ 2   of that timeframe when I actually got to the
+ 3   evidence.
+ 4              So I'm not saying I know when the
+ 5   tire arrived but a couple of weeks after I
+ 6   would've received it I would have begun my
+ 7   analysis of it.
+ 8         Q.   Okay.  So was the tire sent to you
+ 9   then?
+10         A.   Yes.
+11         Q.   Sent to you at -- where was it
+12   sent to?
+13         A.   To my office in Toney, Alabama.
+14         Q.   Toney, Alabama.
+15              Upon receiving the tire, you said
+16   it would be a few weeks before you looked at
+17   it?
+18         A.   I'm saying within a couple weeks
+19   I think I would've looked at it upon receipt
+20   and the first invoice was after the initial
+21   work was done, which was April the 8th, 2019.
+22         Q.   Okay.  Could I see that first
+23   invoice, please?
+0011
+ 1         A.   Yes.
+ 2         Q.   Is this all of your invoices in
+ 3   the case?
+ 4         A.   So far, yes.
+ 5         Q.   Looking at the invoices, it looks
+ 6   like you have kind of a summary, it says like
+ 7   you know 5 hours or 3 hours.
+ 8              Is there anymore detail as to what
+ 9   you did in that time period?
+10         A.   No.
+11         Q.   Okay.  So --
+12         A.   I said "No" to that question but
+13   some of those don't just say "5 hours."  Some
+14   of them have some detail broken out.
+15         Q.   Right, some might say like, you
+16   know, some shipping or things like that?
+17         A.   That's right.
+18         Q.   All right.  So, looking through
+19   these invoices, I'll ask for the copies of
+20   them to be produced.
+21              After you were retained in April,
+22   2019 and the tire -- the tire at issue was
+23   shipped to you, how long did you keep it for?
+0012
+ 1         A.   It looks like -- and I can't test-
+ 2   ify as to when exactly I received it but when
+ 3   I billed for the work of dismounting and x-
+ 4   raying the tread piece and so forth was April
+ 5   the 8th of 2019 and I shipped on April the
+ 6   10th, so two days after I invoiced for the
+ 7   dismounting of the tire from the rim and the
+ 8   x-raying of the tread piece and so forth.
+ 9         Q.   So you had the tire for a period
+10   of time April maybe a little earlier in 2019
+11   and then after you had reviewed the tire you
+12   shipped it back to Mr. Ward in April of 2019?
+13         A.   That's right.
+14         Q.   We'll go through those invoices.
+15   I see that you later received the companion
+16   tire.
+17         A.   Correct.
+18         Q.   Did you ask for the companion tire
+19   at that time or how did that come about?
+20         A.   I don't recall a specific convers-
+21   ation about it but I -- I can't -- I can't
+22   tell you if I asked or if it was already in
+23   the works to be removed and delivered to me.
+0013
+ 1   I don't remember seeing it.
+ 2         Q.   And, when the companion tire was
+ 3   sent to you, was it just the companion tire
+ 4   or both tires sent to you?
+ 5         A.   What do you mean by "both tires"?
+ 6         Q.   Well, so you -- we established
+ 7   that sometime around April of 2019 you got
+ 8   the subject tire.
+ 9         A.   Right.
+10         Q.   And then you said on April 10th it
+11   looks like you shipped the subject tire back
+12   to Plaintiff's counsel?
+13         A.   Correct.
+14         Q.   And then about a year later your
+15   invoices indicate you received the companion
+16   tire and -- and looked at it.
+17         A.   Correct.
+18         Q.   Did you also receive the subject
+19   tire again at that time or just the companion
+20   tire?
+21         A.   My rec -- best recollection is
+22   that I just received the companion tire at
+23   that time; but, as far as the sequencing of
+0014
+ 1   receivables of the tires, when you look at
+ 2   the CD of my -- when I took my photographs
+ 3   and you can see the data for the dates on
+ 4   those photographs, that may sort that out
+ 5   better than my memory does right mow.
+ 6         Q.   Okay.  And have you provided your
+ 7   photographs and videos to counsel for produc-
+ 8   tion yet?
+ 9         A.   No.
+10         Q.   Okay.
+11         A.   Understanding we were doing this
+12   live and the Exhibit A not requiring it, I
+13   just brought it with me today but we can make
+14   it exhibits of whatever you need.
+15         Q.   Yeah, I -- I -- I would ask for
+16   the copies of all the pictures that you took
+17   and all the videos you made to be produced as
+18   well.
+19              Do you know how many pictures you
+20   did take?
+21         A.   Four boxes plus those that I tried
+22   to collect separately based on what I assumed
+23   some topics may be about some of the images
+0015
+ 1   there.  I think it's like 700 but I'm not
+ 2   positive.
+ 3         Q.   That would be both tires or just
+ 4   the subject tire?
+ 5         A.   In total.
+ 6         Q.   Okay.  And then the videos were
+ 7   the videos of you mounting and dismount the
+ 8   tire from the wheels?
+ 9         A.   Having it done, yes.
+10         Q.   Okay.  Any -- any other videos or
+11   just that?
+12         A.   I think I've shearographic video
+13   as well of the companion tire.
+14         Q.   Did you x-ray the tires?
+15         A.   Yes, the subject tire's tread
+16   piece was x-rayed.  I think I've got that in
+17   hard copy.
+18              Yeah, I x-rayed the subject tire's
+19   tread piece.
+20         Q.   Okay.
+21         A.   If there are any other x-rays,
+22   they were produced for me.  I didn't x-ray
+23   any other parts of the tire.
+0016
+ 1         Q.   Okay.  So the -- what -- what I'll
+ 2   refer to as the carcass of the subject tire,
+ 3   you did not x-ray that?
+ 4         A.   Correct.
+ 5         Q.   In examining the subject tire --
+ 6   actually, strike that.
+ 7              So April, 2019 you had the subject
+ 8   tire, you shipped it back.  Have you seen the
+ 9   subject tire since then?
+10         A.   I don't have a recollection of
+11   having seen it twice.
+12         Q.   Okay.  If you could describe for
+13   me generally the examination process that you
+14   followed with the subject tire from the time
+15   it was received until the time you sent it
+16   back.
+17         A.   So, basically, that examination
+18   process is how my notes outline what -- what
+19   I'm looking at and that starts at page 19 of
+20   my report and after we got the tire separated
+21   from the rim, first -- first of all, starting
+22   with how it's uncrated or unwrapped and ob-
+23   serving how it's received photographing that.
+0017
+ 1              And then secondly I go through a
+ 2   process of collecting the stamping off of the
+ 3   tire, off the sidewalls and any interior
+ 4   stamping that may or may not exist.
+ 5              And then beyond that is starting
+ 6   to then inspect the surfaces of the sidewalls
+ 7   starting with the serial side going to the
+ 8   serial opposite side looking at the interior,
+ 9   doing the tread carcass or any portions of
+10   the carcass that may have tread remaining,
+11   and then going to the detached surfaces and
+12   measuring tread depths and so forth in addi-
+13   tion to notating anything of interest in what
+14   is observed on the surfaces, separated sur-
+15   faces especially; looking at the rim, going
+16   through its marking process, and then looking
+17   at doing the inspection of that afterwards.
+18              I did the same process sequence
+19   for the right front companion tire as well.
+20         Q.   So, looking at your report -- or,
+21   actually, before we do that what's been mark-
+22   ed as Cottles Exhibit 1, is this the report
+23   that you prepared for this case?
+0018
+ 1              (Defendant's Exhibit Number 1 was
+ 2   marked for identification.)
+ 3         A.   Yes.
+ 4         Q.   If I understand you correctly, the
+ 5   notes that you have here beginning on page 19
+ 6   and going through, let's see, looks like page
+ 7   23, that -- that is actually the process by
+ 8   which you did each of those steps as well; is
+ 9   that correct?
+10         A.   The sequencing, yeah.
+11         Q.   Okay.
+12         A.   It's laid out in the sequence I'm
+13   basically doing.
+14         Q.   And simplifying it a little bit
+15   but -- so, based on this, you received the
+16   tires, you had it dismounted on the little
+17   videotape.
+18              You then started with the serial
+19   side, looked at the markings, turned the tire
+20   over and looked for the other side markings
+21   and the interior markings.
+22              So each step here would describe
+23   what you did?
+0019
+ 1         A.   Yes.
+ 2         Q.   And then is there a worksheet that
+ 3   you used to make these notes or were they
+ 4   just done on a normal legal pad or how -- how
+ 5   would you keep these notes prior to them be-
+ 6   ing incorporated into your report like this?
+ 7         A.   I dictated and it's typed as I
+ 8   speak.
+ 9         Q.   So you don't have a worksheet that
+10   you're filling out, you're literally just
+11   speaking to a -- your phone or a Dictaphone
+12   or something like that?
+13         A.   My paralegal is typing as I speak.
+14         Q.   Okay.  Who's your paralegal?
+15         A.   Amber Williams.
+16         Q.   How long has she worked for you?
+17         A.   12 or 13 years now.
+18         Q.   In the photographs that you took
+19   of the tire and the rim, when were those tak-
+20   en, during this inspection process or separ-
+21   ate from this inspection process?
+22         A.   During the inspection process but
+23   at the end after I've made comments and then
+0020
+ 1   I go and document photographically what I've
+ 2   just expressed in -- in my notes.
+ 3         Q.   In doing that -- so, for example,
+ 4   when you're talking about here about serial
+ 5   side markings, would you dictate your find-
+ 6   ings and then take the pictures and then go
+ 7   to the other side or will you do it -- the
+ 8   pictures more at the end of the process?
+ 9         A.   It's more at the end of the whole
+10   process, you know, batching that work togeth-
+11   er; so discussing, putting lights on the tire
+12   setting the tire up for inspection, getting
+13   it lit up; and then talking about what I'm
+14   seeing around it, making crayon marks for de-
+15   gree location references when I'm doing the
+16   inspection.
+17              And then, once I'm through with
+18   talking about it, I'll go around with that
+19   lighting and my camera and document that
+20   photographically.
+21         Q.   And, other than what's listed here
+22   on pages 19 through 23 regarding the subject
+23   tire and the rim, are there -- is there any-
+0021
+ 1   thing else that you did as part of your
+ 2   inspection process of the tire?
+ 3         A.   I had the x-rays produced for the
+ 4   tread -- separated tread piece.  That's I
+ 5   think generally it.  I can't think of a spec-
+ 6   ific other area of investigation.
+ 7              I measured the tread depths.  I
+ 8   looked at the rim grooves to the ability pos-
+ 9   sible with this evidence.  I looked for cond-
+10   itions on the tire or the absence of those
+11   conditions in sorting through my findings to
+12   see what I believed to be evidence of the
+13   causations of the tread separation event and
+14   doc -- documented that either photographic-
+15   ally or in measurement.
+16         Q.   And the -- the shearography -- the
+17   shearography, you only did that of the com-
+18   panion tire; is that correct?
+19         A.   Correct.
+20         Q.   Is there a reason you did not do
+21   it of the subject tire?
+22         A.   You can't do it with the subject
+23   tire.  It's already separated.  There's no
+0022
+ 1   way to pull back a tire that's burned and
+ 2   separated.
+ 3         Q.   So when I'm looking at your report
+ 4   these notes that are in here from pages 19 to
+ 5   23, these would've been created at or about
+ 6   April of 2019.  Is that fair understanding of
+ 7   what you've testified?
+ 8         A.   For the subject tire, yes.
+ 9         Q.   And the companion tire would've
+10   been approximately a year later; right?
+11         A.   Yes.
+12         Q.   The report itself that you submit-
+13   ted in this case, when did you prepare the --
+14   the remainder of the report?
+15         A.   Well, I may be missing one of my
+16   in- voices.  I'll have to look.  I don't see
+17   where I billed for writing the report.
+18              So I don't have a date to point --
+19   point you to.  I would've relied upon the
+20   invoice for that.
+21              I'm not seeing it so I'll have to
+22   look back through.  I had two files to pull
+23   invoices out of to make copies of.  I'll
+0023
+ 1   search again.  I don't see it.
+ 2         Q.   There's nothing on your report
+ 3   that would tell you when you prepared it?
+ 4         A.   No.  I didn't date them.
+ 5         Q.   So, in terms of -- was there any
+ 6   kind of tests that you ran on the subject
+ 7   tire?
+ 8         A.   I would say the x-raying itself
+ 9   was the only thing that was nontactile visual
+10   inspection, which are the standards in my
+11   field; but nothing of a rubber sample or
+12   something like that, no.
+13         Q.   And, for example, with the subject
+14   tire or the companion tire, did you do any
+15   kind of strength testing of the rubber?
+16         A.   No.
+17         Q.   So is there anything else that you
+18   did as part of your inspection of the tire
+19   that we haven't covered?
+20         A.   Not that occurs to me, no.
+21         Q.   So the sequence is set forth in
+22   your report, you took some pictures and video
+23   and you x-rayed the tread piece.
+0024
+ 1              So that -- that's the sum of what
+ 2   you did with this tire; is that correct?
+ 3         A.   Best I can recall, yes.
+ 4         Q.   Let's turn to your report.  Looks
+ 5   like these first -- from pages 3 to 9, this
+ 6   is a summary of -- your summary of the tire
+ 7   manufacturing process; is that right?
+ 8         A.   Yes, a general summary of it.
+ 9         Q.   Is this based on any specific tire
+10   factory?
+11         A.   No.
+12         Q.   All right.  So, in looking at the
+13   summary, I mea, have you -- have you visited
+14   any tire factory as part of putting this sum-
+15   mary together?
+16         A.   Well, this summary comes from 17
+17   years in the industry plus I've seen other
+18   factories outside of that 17 years.
+19              So it's a conglomeration of my
+20   understanding of the typical means and ways
+21   that tires are produced and it's just meant
+22   to express to the judge and the jury that I
+23   understand the sequence, that these things
+0025
+ 1   occur in a particular order and for a partic-
+ 2   ular purpose.
+ 3              And then just after this I talk
+ 4   about how tires can be designed and so it's
+ 5   sort of the same effort to demonstrate know
+ 6   how based on -- based on my experience and
+ 7   training, education I received throughout
+ 8   that 17 years because -- because, while I
+ 9   promoted through the engineering section of
+10   Dunlop and Goodyear Dunlop into upper manage-
+11   ment and ended as a director of the joint
+12   venture on the technical side, I developed
+13   tires throughout my experience.  I never was
+14   without projects that I was managing and/or
+15   developing and tuning the tire for the cus-
+16   tomer requirement.
+17              So that's just the know how I'm
+18   trying to express in a generic way for the
+19   purposes of the jury and the judges in this
+20   case.
+21         Q.   And, when you say in 17 years of
+22   experience, you're referring to from July of
+23   '88 when you started with Dunlop Tire through
+0026
+ 1   2005?
+ 2         A.   Yes.
+ 3         Q.   I mean, I can see it here on your
+ 4   -- on your resume but just briefly describe
+ 5   your 17 years at Dunlop and Goodyear?
+ 6         A.   So I started in Huntsville, we had
+ 7   a factory operating here in Huntsville and I
+ 8   started in the original equipment organiza-
+ 9   tion and that was the group that designed
+10   tires for OEM vehicles; Toyota, Honda, Nissan
+11   Mazda, later Mercedes.
+12              So the specific tire requirements
+13   they had for endurance and high speed and
+14   roller resistance and noise and snow traction
+15   wet traction, dry traction, ride comfort,
+16   those things were all areas of tire perform-
+17   ance that I had responsibility for.
+18              So I tuned tires in the factory to
+19   meet these end requirements of those customer
+20   and I had a responsibility and I was taught
+21   how to develop the green tire -- what we call
+22   "green tire" means before the tire is cured
+23   -- components; beads and inner liners and
+0027
+ 1   body plies and belts and tread and sidewalls,
+ 2   nylon, and so forth and they could be used in
+ 3   the tire.
+ 4              I could design those components
+ 5   and the dimensions of those components and
+ 6   then request them of the factory, have the
+ 7   tires built, and then take the finished tire
+ 8   and test it at an outdoor proving ground and
+ 9   at an indoor test facilities or on the
+10   vehicle and then jointly with those customers
+11   all over the world; so Stuttgart to Tokyo to
+12   wherever our customers had home bases and in
+13   their North American facilities.
+14              So that's what I spent my initial
+15   time at Dunlop in in the technical division
+16   was focusing on how to make the tires meet
+17   the customer requirements without failing in
+18   -- in a predictable way and working on moving
+19   out the failure modes from a design perspec-
+20   tive knowing how we were going to process the
+21   tire through the manufacturing process and
+22   accommodating both of those to try to make
+23   tires more durable for those applications in
+0028
+ 1   the field.
+ 2              Secondly, after doing that for
+ 3   some time, I went to Torrance outside of Los
+ 4   Angeles and I worked as field service rep in
+ 5   that facility for those customers and gather-
+ 6   ed tire data with them and then sent that
+ 7   tire data back to our headquarters for deal-
+ 8   ing with the claims but also started inte-
+ 9   grating the engineering group with the ser-
+10   vice people so that designers could go see
+11   what's happening and fix it on the fly, which
+12   is not something I've seen in the testimony
+13   in this instance is that that's not done, the
+14   -- the designers aren't involved with the
+15   field performance collection to the degree
+16   that it changes anything.
+17              And so that -- that was something
+18   that I integrated as a result of being an
+19   engineer, tire engineer there.  It integrated
+20   our service representatives with engineers
+21   and coupled engineers with them to go meet
+22   the customers at dealers or wherever or at
+23   national regional offices or the national
+0029
+ 1   offices like were in Torrance.
+ 2              And so I decided the claims were
+ 3   accepted or not acceptable jointly with Toy-
+ 4   ota or Nissan or Honda, whomever; and then
+ 5   those that we accepted I sent back to head-
+ 6   quarters to be paid.  So that was one aspect
+ 7   of the work I did.
+ 8              And then I came back from that and
+ 9   was promoted to senior engineer and took on
+10   more project responsibilities, soon after I
+11   became manager of the organization when our
+12   manager retired and then promoted to senior
+13   manager and took on more product responsibil-
+14   ities; meaning, not just passenger and light
+15   truck OE tires but started taking on respons-
+16   ibilities for other projects in the joint
+17   venture such as ATV tires and at a later date
+18   motorcycle tires for a short while as I pro-
+19   moted to director of the technical division.
+20         Q.   Is it -- am I correct that your
+21   experience did not include medium or heavy
+22   duty truck tires?
+23         A.   My responsibilities didn't include
+0030
+ 1   it.  My -- certainly my experiences did.
+ 2              Heavy duty median truck tires were
+ 3   manufactured in the Buffalo facility where I
+ 4   spent some years and I observed them being
+ 5   manufactured, I talked to their design engin-
+ 6   eering staff.  We had regular group meetings
+ 7   and all of that, the technologies and the is-
+ 8   sues were all communicated and we looked at
+ 9   field data together as -- on a quarterly bas-
+10   is at least.
+11              And so it was comingled.  I didn't
+12   have a responsibility for it but I certainly
+13   understood the technologies used in man --
+14   manufacturing the tires.
+15              I saw similarities of how their
+16   tires were manufactured for medium truck ver-
+17   sus passenger and light trucks; more robust
+18   designs, more belts, for example.  A steel
+19   body ply instead of polyester body ply but
+20   otherwise larger more industrial directed but
+21   pretty much steel belted radial tires none-
+22   theless.
+23              So I had interactions with them
+0031
+ 1   throughout my experience in Akron and Buffalo
+ 2   but I didn't have responsibility to design
+ 3   the product or evaluate it but I did make
+ 4   myself familiar with it with because it was
+ 5   one of the products our company made.
+ 6         Q.   So, when you were in Akron, you
+ 7   were senior manager of OEM passenger tires as
+ 8   well; is that correct?
+ 9         A.   That's correct.
+10         Q.   And then you moved to Buffalo in
+11   January of 2003.  You were a senior technical
+12   manager you said responsible for ATV and OEM
+13   passenger program I think you described it.
+14         A.   Yeah, I continued the passenger
+15   work and then added ATV.
+16         Q.   And am I reading this correct, you
+17   were only the technical director for about a
+18   month?
+19         A.   That's right.
+20         Q.   What was the reason that you left
+21   Dunlop, the Goodyear Dunlop in -- Goodyear
+22   Dunlop in July of 2005?
+23         A.   I asked to go home.
+0032
+ 1              I've told this case multiple times
+ 2   but I asked to go back to Alabama.  All our
+ 3   family was here; my mother contracted cancer,
+ 4   my wife's mother suddenly died.  I asked to
+ 5   move back and I was told that that wasn't a
+ 6   possibility at the time.  They just moved me
+ 7   to Buffalo two years before and that there
+ 8   was a different plan.
+ 9              So I asked "Well, what is that
+10   plan, you haven't discussed it with me," and
+11   I was told that the president was going to
+12   retire the following year, my vice president
+13   was going to move to his position and I was
+14   going to move to the vice president position.
+15              And it just -- it would've been a
+16   great promotion.  It was probably what I had
+17   always hoped to have happen but it didn't fit
+18   me personally at the time and I felt like my
+19   family was struggling here so I put out my
+20   resume.
+21              They found out that I was looking
+22   for opportunities back toward home and the
+23   company called me into the HR Department and
+0033
+ 1   asked me I had been talking to other tire
+ 2   companies and I had.
+ 3              So they gave me a severance pack-
+ 4   age and I took it.  I went home by the end
+ 5   of that week.  So I've been here ever since.
+ 6         Q.   And have you worked for yourself
+ 7   since July of 2005?
+ 8         A.   Yes.
+ 9         Q.   Going back to your report and you
+10   talking about the tire manufacturing process,
+11   have you been to any of -- any factory that
+12   is operated by Shanghai Huayi Group Corpora-
+13   tion Limited?
+14         A.   No, I haven't.
+15         Q.   Okay.  Have you seen any factory
+16   overseas?
+17         A.   Yes.
+18         Q.   What factories overseas have you
+19   seen?
+20         A.   Hankook's factory in Dijon.
+21         Q.   Any others?
+22         A.   Yeah, that's in the -- in this
+23   consulting context but, prior to that, I had
+0034
+ 1   been to Japan, I had seen Sumitomo's factory
+ 2   in Shirakawa and Kobe and Nagoya.  I had seen
+ 3   Dunlop Germany's factories in had Hanau.  I
+ 4   have seen Goodyear's factories in Canada.
+ 5              So, if overseas is the question,
+ 6   that's -- overseas or other countries, that's
+ 7   -- that's my answer to that.
+ 8              In litigation I've seen the South
+ 9   Korean factory of Hankook that I mentioned
+10   and then stateside I've seen Continental
+11   Tires in Mt. Vernon, Illinois.
+12         Q.   So the tire manufacturing process
+13   here that goes from page 3 to page 9, is this
+14   a standard insert in your reports?
+15         A.   Yes.  It took me about two weeks
+16   to write it and once I had written it and I
+17   may have adjusted it word for -- you know, a
+18   word here or word there over the years since
+19   I've produced it but that was an endeavor
+20   actually.
+21              So, once I -- once I got it down,
+22   I have used it to, again, demonstrate to the
+23   Court and jury that I have an understanding
+0035
+ 1   of the process of the manufacturing.
+ 2              I worked a majority of my time in
+ 3   the tire industry actually in the factories.
+ 4   That was just a philosophy of Sumitomo that
+ 5   was the parent company of Dunlop at the time
+ 6   is very flat organization.
+ 7              We do have a headquarters in Kobe
+ 8   but very flat organization.  Put in the en-
+ 9   gineers in the manufacturing facility so that
+10   they're not designing what can't be produced
+11   and I -- I see value to that and I also see
+12   value to 6,000 people in Akron doing R&D.  I
+13   mean, there's -- you can have both but that
+14   -- that was --
+15         Q.   So my question -- and I think you
+16   have answered it -- there is nothing in pages
+17   3 through 9 that is specific to this case;
+18   correct?
+19         A.   No.  I didn't produce it just for
+20   this report if that's the question.
+21         Q.   Right.
+22         A.   I produced that to demonstrate
+23   know how about tire manufacturing.
+0036
+ 1         Q.   There's nothing in pages 3 through
+ 2   9 that is based on any specific evidence in
+ 3   this case; correct?
+ 4         A.   I think that's correct.
+ 5         Q.   All right.  Page 10 of your report
+ 6   is entitled "Designing a passenger or light
+ 7   truck steel belted radial tire" and that goes
+ 8   for it looks like from pages 10 through 15;
+ 9   right?
+10         A.   Yes.
+11         Q.   Same questions for this section,
+12   is this a section that you use in each of
+13   your reports?
+14         A.   Generally, yes.
+15         Q.   This is something that you drafted
+16   at some point in the past and you basically
+17   drop it into each report; correct?
+18         A.   Yes; again, to show know how for
+19   the design approach?
+20         Q.   And so is there anything in this
+21   section from page 10 through page 15 that is
+22   specific to the facts of this case?
+23         A.   Not specific to, no, just general
+0037
+ 1   background.
+ 2         Q.   Is there anything in pages 10
+ 3   through 15 that is specific to any of the
+ 4   facts or evidence that's been developed in
+ 5   this case?
+ 6         A.   I don't guess I understand the
+ 7   distinction in your question.
+ 8         Q.   Let me strike -- let me re-ask it
+ 9   because I didn't ask what I meant.
+10              Are you relying on any evidence in
+11   this case for what's been included in section
+12   -- pages 10 through 15?
+13         A.   I guess I'm still confused at the
+14   -- at the question but the best answer I can
+15   offer to what I'm under -- trying to under-
+16   stand the question to be is:  I'm not going
+17   to exclude myself from using anything in the
+18   report in support of myself but, if I under-
+19   stand the spirit of what you're asking, I
+20   think there may be things also offered else-
+21   where in the report that I would rely on that
+22   -- that touch on some of these things design-
+23   wise.
+0038
+ 1              I don't know if I am understanding
+ 2   your --
+ 3         Q.   I'm asking a more direct question.
+ 4   In preparing pages 10 through 15 of the -- of
+ 5   your report, are you relying on any evidence
+ 6   that has been developed in this case?
+ 7         A.   In preparing this, no.  It was
+ 8   written before this case.
+ 9         Q.   That was my question.
+10         A.   Oh, sorry.
+11         Q.   And, for pages 10 through 15, I
+12   -- I don't want to make assumptions, that --
+13   those -- that section was based on your ex-
+14   periences working at Dunlop and Goodyear; is
+15   that a fair statement?
+16         A.   At least knowledge gained there.
+17   Not all just Dunlop experiences but knowledge
+18   I gained in that process working, yes.
+19         Q.   Page 16 says "Similarities between
+20   medium truck tires and passenger/light truck
+21   processing designs."
+22              Is there anything on this page
+23   that is specific to the facts of this case?
+0039
+ 1         A.   Not specific to the specific facts
+ 2   but in that there is medium truck tire here
+ 3   in that everything that I talked about prior
+ 4   to page 16 majored on passenger light truck
+ 5   discussion.
+ 6              This page is meant to say:  "And
+ 7   yet medium trucks while I didn't design those
+ 8   share very similar components, very similar
+ 9   processing in the manufacturing of the tire
+10   and in the design of the tire.  Maybe more
+11   components, a little more robustness, thicker
+12   tread and so forth; but, otherwise, they're
+13   still steel belted radial tires and they
+14   share failure modes that steel belted radial
+15   tires experience.
+16              So, other than that, not specific
+17   to this tire's facts.
+18         Q.   Okay.  On page 17, I think this --
+19   this is a description of the method that you
+20   used; correct?
+21         A.   Right.
+22         Q.   That's what we were discussing
+23   earlier that's reflected in your process and
+0040
+ 1   notes that you took but this is a description
+ 2   of -- of the -- essentially that process?
+ 3         A.   And the thought behind the notes,
+ 4   right, the thought of how am I analyzing as I
+ 5   go and what am I gleaning from this evidence
+ 6   individually and independently of other evi-
+ 7   dence; and then how can I -- as a result of
+ 8   completing an analysis, how can I come to the
+ 9   conclusions and it's based on the -- on this
+10   process.
+11         Q.   So, on your second line here, it
+12   says:  "I have confirmed this by meeting and
+13   discussing this topic with other tire expert-
+14   s" and that's describing your manner of exam-
+15   ination.
+16              What other tire experts are you
+17   referring to?
+18         A.   I have spoken to other people at
+19   conferences; Dennis Carlton -- Carlson, David
+20   Southwell.  I have met with -- the guy's name
+21   is not coming to me as I sit here but, early
+22   on in the process of deciding about doing
+23   this -- this type of consulting work, I met
+0041
+ 1   with a guy in Michigan.  His name is eluding
+ 2   me at the moment.
+ 3         Q.   Would that be William Worley?
+ 4         A.   No.  This guy had already basic-
+ 5   ly retired but he had a lot of experience in
+ 6   doing forensics.  He's up in cherry country
+ 7   up there but I can't think of his name off
+ 8   the top of my head.  So, anyway, I met with
+ 9   him.
+10              I have met with Worley at other
+11   conferences than the ones I was thinking of
+12   but -- so I've -- I've discussed with them.
+13   I've observed.
+14              For example, Mr. Grant in this
+15   case, I observed him conducting inspections.
+16   We use the same process.  Come to different
+17   conclusions on occasions but he uses the same
+18   process of documenting and I've seen him on
+19   video doing inspections that I wasn't present
+20   at.  I've been present in joint inspections.
+21              So the methodology is the same.
+22   The results obviously may favor, you know,
+23   one or the other parties in the case but the
+0042
+ 1   process, scientific process, or approach to
+ 2   the evidence is the same.
+ 3         Q.   You mentioned conferences.  Do you
+ 4   belong to any specific organizations at the
+ 5   current time?
+ 6         A.   I'd have to look back and see
+ 7   whether I've updated.  Some of it's automat-
+ 8   ically updated and others not.
+ 9              The Society of Automotive Engin-
+10   eers was the last one that I participated in
+11   and I may still be a member of.  I don't know
+12   if it's an auto update or not.
+13         Q.   Okay.  So -- so what -- my -- my
+14   question was:  What industry organizations do
+15   you belong to?
+16         A.   Yeah, I'm just saying I don't know
+17   if it's current, my -- if my membership fee
+18   is current but Society of Automotive Engin-
+19   eers I've been involved in.
+20         Q.   Okay.  Anything else?
+21         A.   The HIFI organization; Hazard
+22   Information Foundation, I have presented at.
+23   It's been a few years on that but I can't
+0043
+ 1   think of anything else right now.
+ 2         Q.   You mentioned conferences.  How
+ 3   often do you go to industry conferences?
+ 4         A.   I've been to Society of Automotive
+ 5   Engineers; and, after that, Tire Society and
+ 6   others I attended when I was in the industry
+ 7   but I haven't attended since.
+ 8         Q.   How about, for example, did you
+ 9   ever belong to the Rubber Manufacturers
+10   Association?
+11         A.   The company did but I wasn't a
+12   representative.
+13         Q.   And how about Tire Manufacturers
+14   Association, were you ever involved with
+15   them?
+16         A.   No.
+17         Q.   Okay.  Have you ever attended or
+18   presented at the -- at an ITEC Conference?
+19         A.   No.
+20         Q.   Okay.  Have you ever presented or
+21   attended any international tire conferences?
+22         A.   No.
+23         Q.   I'm going to break this down into
+0044
+ 1   while you were at Goodyear Dunlop and after
+ 2   with these next few questions.
+ 3              Have you been involved while you
+ 4   were at Goodyear Dunlop with any studies on
+ 5   tire performance; such as, what causes tire
+ 6   failures in the field?
+ 7         A.   Studies.  Conducted studies.
+ 8              When you say the word "studies,"
+ 9   I'm thinking of bigger classroom settings but
+10   I conducted studies, every tire designer did.
+11              When we designed a product we were
+12   tasked with making sure that it didn't suffer
+13   failure in its normal serviceable life and we
+14   had internal tests/protocols established for
+15   that and we did things like peel back treads
+16   looking for liner pattern marks.
+17              I noted that Grant mentions he
+18   saw some liner pattern marks in some Dunlop
+19   tires.  Well, if he did, that's why we were
+20   looking.  If we found them, we wanted them
+21   out.
+22              So, you know, suggesting that that
+23   is an okay thing to find is improper based on
+0045
+ 1   my understanding and training in the industry
+ 2   and specifically in regards to Dunlop, which
+ 3   he mentions in his report.
+ 4              So liner pattern tire marks was
+ 5   something that we didn't want and we would
+ 6   be instructed every -- in the training pro-
+ 7   cess and I continued this as I became man-
+ 8   agement, every new design and new belt pack-
+ 9   age, new configuration, we peeled the treads
+10   back and peeled the belts back and looked for
+11   any anomaly that kept there from being proper
+12   adhesion amongst the belts and whatever we
+13   found we ran it to, showed it to the factory
+14   and said "In the case of liner pattern marks,
+15   you've got to refresh this material and keep
+16   it fresh for the tire builders."
+17              In the case of pockets of air or
+18   anything like that, then we had to increase
+19   the stitcher pressure on the machine to force
+20   this air out before you go to cure because
+21   you're capturing it in the tire.
+22              So, certainly, there were ongoing
+23   regular studies on that.  That was part and
+0046
+ 1   parcel of the way I was trained and practices
+ 2   that I was trained with.
+ 3              In addition to, if we run an en-
+ 4   durance test internally and indoor on a, you
+ 5   know, 67-inch steel drum machine if the tire
+ 6   fails and it failed prematurely for the mode
+ 7   that we were putting it through then we diced
+ 8   the tire back with a band saw looking for the
+ 9   initiating points and then either looked to
+10   see if we had manufacturing issues that were
+11   exacerbating that area or if we had a design
+12   issue; the belts were off, not to the right
+13   dimension or what have you and then we would
+14   redesign based on that before we launched the
+15   product into the market.
+16              So certainly there were studies.
+17         Q.   Okay.  Let me ask the question a
+18   different way.  On page 46 of your report, it
+19   lists your publications and patents.
+20         A.   Okay.
+21         Q.   It says the statement is dated the
+22   22nd of August, 2010.
+23         A.   All right.
+0047
+ 1         Q.   So, if I'm reading this correctly,
+ 2   these were your publications as of that date;
+ 3   is that correct?
+ 4         A.   Yes.
+ 5         Q.   Are there any since that date?
+ 6         A.   I contributed the section on tire
+ 7   manufacturing defects to a booklet that the
+ 8   Beasley Allen Law Firm was putting out on
+ 9   tire defects.  I don't remember the exact
+10   dating of that but it's another section of a
+11   publication that I assisted with providing
+12   explanation for manufacturing defects and
+13   images of those defects.
+14         Q.   Other than this publication for
+15   the law firm that you mentioned, have you
+16   published anything else since August 22nd,
+17   2010?
+18         A.   Not fully published but I do have
+19   some reference materials that I think are
+20   already in the referenced CD but also a sort
+21   of informal review of -- let me see if I can
+22   find it -- defects and conditions that cause
+23   or contribute to tread separations.
+0048
+ 1              I sent these out to Dennis Carlson
+ 2   and Brian Darr and I sent them images -- and
+ 3   -- and mine are in here.  I sent them a pack-
+ 4   et of images of conditions of defects -- or
+ 5   manufacturing defects that I had observed in
+ 6   various tires that I testified had led to the
+ 7   tires ultimate tread separation failure; so
+ 8   trapped air, liner pattern marks, cracked
+ 9   inner liner splices, porosities so -- so far,
+10   oxidation, dog-eared splices, overlapped belt
+11   wires, gaps, splices in the belts, scalloped
+12   wires in the belts and asked them if they had
+13   something similar that they had testified was
+14   a contributing factor to a tread separation
+15   to present back to me and they did.
+16              So while this is informal I under-
+17   stand, it's not peer reviewed but these were
+18   my peers and so I sent them this packet and
+19   they returned two packets to me of "Tire" --
+20   Carlson said:  "Tire defects and conditions
+21   that caused or contributed to tread belt
+22   separations."  Brian Darr, his was covered
+23   with a cover sheet:  "Tire Manufacturing
+0049
+ 1   Defects and Deficiencies."
+ 2              So, to the extent that these are
+ 3   exerts in the field of tire forensics, I just
+ 4   wanted to see from a wheelhouse of what they
+ 5   have seen and tires they have worked on what
+ 6   kinds of defects were they seeing and were
+ 7   they in agreement that these things were con-
+ 8   tributing to tire failures and they produced
+ 9   that back to me.
+10              So that's some of the dialogue in
+11   a semiformal peer-reviewed process that I
+12   conducted.
+13         Q.   Okay.  My question was:  Have you
+14   published anything since August 22nd, 2010?
+15         A.   Well, I produced it to them.  I
+16   didn't -- it's not a publishing in the -- in
+17   the normal sense of publishing.
+18         Q.   This -- these pictures that you
+19   sent to Mr. Carlson and -- what was the name?
+20         A.   Brian Darr.
+21         Q.   Dower?
+22         A.   Darr.
+23         Q.   D-a-r-r?
+0050
+ 1         A.   Yes.
+ 2         Q.   These weren't published in, you
+ 3   know, for example, an industry trade journal
+ 4   or a scientific publication or anything like
+ 5   that; correct?
+ 6         A.   Not at this point, that's correct.
+ 7         Q.   It's just something you exchanged
+ 8   with some people that you've worked with over
+ 9   the years?
+10         A.   Yes.
+11         Q.   So the answer to my question then
+12   is:  No you have not published anything since
+13   August 22nd, 2010?
+14         A.   I think that's correct.
+15         Q.   Looking at page 18 of your report,
+16   "Cottle Inspection Notes," are those the --
+17   the things that we talked about from pages 19
+18   through 23?
+19         A.   Yes.
+20         Q.   Is there a separate version of
+21   that or is this the only version of it?
+22         A.   That's it.
+23         Q.   The report is the only version?
+0051
+ 1         A.   Yes.
+ 2         Q.   The "Cottles File CD's (Subject
+ 3   Dismount; Tread A X-rays; Right Front Compan-
+ 4   ion Tire Dismount & Shearography," have those
+ 5   been produced yet in this case?
+ 6         A.   They're here.
+ 7         Q.   Then "Cottles Inspection Photos,"
+ 8   we've talked about that.
+ 9         A.   Right.
+10         Q.   "Cottles" -- "Cottles Reference
+11   Materials," I assume that's the bulk of the
+12   remainder of this box?
+13         A.   No.  Actually, it's a CD library
+14   of materials.
+15         Q.   Okay.  And then you have reference
+16   here to "Defect OSIs"?
+17         A.   Yes.
+18         Q.   Is that these pages we were just
+19   talking about, the exchange with Carlson and
+20   Darr, or is that something else?
+21         A.   In addition to that.  These are
+22   examples of it but also they are examples I
+23   tried to collect for the jury for the Court
+0052
+ 1   to understand that this not the first time I
+ 2   have see a trapped air impression in a tire.
+ 3   This is not the first time I've seen liner
+ 4   pattern marks in a tire and this is not the
+ 5   first time tires that had tread separation
+ 6   failures presented oxidation and polishing
+ 7   within.
+ 8              At one point in time, Mr. Grant
+ 9   agreed with me that there was oxidation.  He
+10   just thought it got there a different way.
+11   Now he doesn't even see it when he is looking
+12   at the same evidence.
+13              So, at one point in time, we had
+14   discussion about the mechanism that got it
+15   there.  Now we don't do that but I've got ex-
+16   amples of oxidation that's occurring to the
+17   belt skim rubber that leads and contributes
+18   to the tread separation process.
+19              30, 40, 50 cases.  They're not
+20   this case specific.  They're not Double Coin
+21   specific but they're evidence in other failed
+22   tires, including the photographs x-ray report
+23   in those files.
+0053
+ 1         Q.   Okay.  So, when you're referring
+ 2   to these defects, these are from other cases,
+ 3   other manufacturers, other tires?
+ 4         A.   Right.
+ 5         Q.   Or other plaintiffs?  I mean,
+ 6   everything -- everything is from a different
+ 7   matter?
+ 8         A.   That's right, it's drilled into
+ 9   the defect that's observed in the tire's tac-
+10   tile and visual inspections and some -- in
+11   some cases x-ray inspections but, for these
+12   three, visual.
+13              So there are multiple samples of
+14   cases and evidence in those from prior cases
+15   just to demonstrate to the jury that -- and
+16   the judge this is not novel, this is -- and
+17   -- and -- and these folders here or -- or the
+18   collections here that we've talked about that
+19   I exchanged with Carlson and Darr further
+20   suggests this is not novel.  These things
+21   cause tire failures.
+22              If you've been in the industry,
+23   you knew to look for them.  In my experience,
+0054
+ 1   I was trained to look for them.
+ 2              For someone from the industry to
+ 3   suggest that they don't exist or they don't
+ 4   matter, well, I wasn't trained that way.  So,
+ 5   if -- if that's case in Mr. Grant's opinion,
+ 6   then I didn't -- I wasn't trained that way.
+ 7   So --
+ 8         Q.   Okay.  So my question is a simple
+ 9   one.  Are any of these pictures from this
+10   case when you refer to "Defect OSIs"?
+11         A.   No.
+12         Q.   Then you refer to "Case OSIs" and
+13   you refer to "Doty" and "Frisch."
+14         A.   Yes.
+15         Q.   Those are not in this case either;
+16   correct?
+17         A.   Not this case but substantially
+18   similar identical tires I think based on my
+19   understanding of the shared green tires and
+20   in support of my opinions because I found
+21   similar defects in them.
+22         Q.   I see you reference a Protective
+23   Order in the case.
+0055
+ 1              Have you signed the Exhibit A to
+ 2   the Protective Order?
+ 3         A.   If I had it, I did, yes.
+ 4              I may have spoken too quickly.  I
+ 5   don't see an Exhibit A but I've got the Pro-
+ 6   tective Order.  So I've handled the materials
+ 7   I've received as if I had signed it.  Whether
+ 8   I have or not, I don't see that page.
+ 9              MR. BERGMAN:  We've been going a
+10   little over an hour.  Why don't we take a
+11   short break?
+12              VIDEOGRAPHER:  Off the record at
+13   10:08.
+14              (Short recess.)
+15              VIDEOGRAPHER:  Back on the record
+16   at 10:16.
+17         Q.   All right.  Mr. Cottles, if you
+18   could turn -- you actually had mentioned dur-
+19   ing the break you had some further clarifica-
+20   tion on some of the questions I had asked you
+21   earlier.
+22         A.   That's right.  I found the Cover
+23   Letters and Communications file.  On January
+0056
+ 1   31st, 2019, I was first contacted I think
+ 2   about this case, at least that's the closer
+ 3   date than I can find anywhere else about this
+ 4   case.
+ 5         Q.   And so your observations and your
+ 6   notes related to the subject tire would have
+ 7   been sometime between the months of February,
+ 8   March, or early April of 2019?
+ 9         A.   Ask me that again.
+10         Q.   Your notes and observations of the
+11   subject tire would've been from sometime in
+12   February, March, or April of 2019?
+13         A.   That's right.
+14         Q.   Let's go ahead and go through your
+15   report starting on page 19.  Actually, let me
+16   back up.
+17              So, in the History section, you
+18   list all the documents that you've received
+19   and/or reviewed in this case; is that
+20   correct?
+21         A.   At the time, yes.
+22         Q.   What do you mean "at the time"?
+23   What have you looked at recently that's not
+0057
+ 1   listed here?
+ 2         A.   I think I've got depositions of
+ 3   the corporate reps' deposition, Du, Su, and
+ 4   Murphy.
+ 5         Q.   Those are listed here.
+ 6         A.   Material, the inner liner material
+ 7   was sent to me.  That's all I can think of.
+ 8   There may be -- just in case there's other
+ 9   things, it'll be in the file.
+10         Q.   Okay.  Let's talk about the -- the
+11   box that you brought with you then.  So, very
+12   generally, what are the contents of that box?
+13         A.   I've got hard copies of photos.
+14   I've got some photos collected and clipped by
+15   what I presume might be some of our discus-
+16   sion points.
+17              I've got -- I've got the -- some
+18   hard copies of depositions.  I've also got a
+19   thumb drive that's got everything in the file
+20   on it I think but I've got hard copies of
+21   some of the discovery produced by Bates Num-
+22   ber, the specs and the field returns and so
+23   forth.
+0058
+ 1              CDs of the reference -- my refer-
+ 2   ence materials, CDs that I believe have the
+ 3   accident report and others -- the photos of
+ 4   others -- that others have produced, my case
+ 5   photos.
+ 6              Right front tire's dismount and
+ 7   shearography results, tread piece A's x-ray
+ 8   and the subject dismount video in addition to
+ 9   what I've already pulled out in a folder
+10   which included the invoices and the images
+11   that were shared earlier we talked about, the
+12   Protective Order, Interrogatories, communica-
+13   tions, some shipping materials.
+14              A report of Corey, a report of
+15   Grema (sic), report of Grant, my Duces Tecum,
+16   Deposition Testimony History List, my resume,
+17   accident report in hard copy, a hard copy of
+18   a patent that I rely upon for the nylon opin-
+19   ion.  I think that's about it.
+20              I have a section of a tire just
+21   to demonstrate what trapped air in a tire can
+22   look like in the real world and demonstrate
+23   to the jury.  It's not a Double Coin tire,
+0059
+ 1   it's a light truck tire but just an example
+ 2   of how that gets captured.  I think that's
+ 3   it.
+ 4         Q.   Regarding the pictures, you said
+ 5   you have them clipped in a specific way.
+ 6              Are they available electronically
+ 7   that way as well or -- or, in other words, is
+ 8   this the only way that these -- these current
+ 9   groupings of pictures, is the only evidence
+10   of it right now are on that flash drive?  Are
+11   the pictures grouped in the same way?
+12         A.   They're not grouped on the flash
+13   drive, no.  I just collected them from the
+14   hard copies.
+15         Q.   And these pictures, are they
+16   labeled in any fashion for identification?
+17         A.   No, the -- they don't even do that
+18   now.  I was just looking on the back of them.
+19   I get them printed at Walgreen's in Athens,
+20   Alabama and they used to have a Walgreen's
+21   serial on them but they don't have that.
+22              So there's -- there's -- there's
+23   nothing on the picture itself that does that.
+0060
+ 1   These are just representatives out of the
+ 2   total for different things; oxidation, liner
+ 3   pattern marks, trapped air impressions, other
+ 4   conditions.
+ 5              So what we usually do is make them
+ 6   a composite exhibit out of the stack and then
+ 7   the court reporter can copy them.
+ 8         Q.   So, with respect to your report,
+ 9   have you done that already in the report at
+10   -- somewhere?
+11         A.   Done what?
+12         Q.   Identified the pictures that you
+13   rely upon in reaching your -- your opinions
+14   or conclusions.
+15         A.   No.  I mean, they're part of the
+16   total collection of pictures I've produced
+17   but I haven't segregated them in the report,
+18   no.
+19         Q.   Okay.  And the was my question.
+20              So, as we're going through each
+21   of the sections in your report, there -- you
+22   have not identified any specific pictures for
+23   any of those sections of your report --
+0061
+ 1         A.   Correct.
+ 2         Q.   -- with your analysis?
+ 3         A.   Sorry.  Correct.
+ 4         Q.   Let's go to -- turn to your report
+ 5   for the moment.  So, going through your notes
+ 6   and observations of the tire, starting with
+ 7   the serial side markings, you note "Although
+ 8   the markings were burned away."
+ 9              Did you do any kind of investiga-
+10   tion or analysis into what caused the tire to
+11   burn?
+12         A.   Not specific as to cause of burn.
+13   I've certainly seen multiple tires burn in
+14   tread separation cases but I did in my report
+15   eliminate some things that according to your
+16   experts they rely upon to come to the condi-
+17   tion that they suggest caused the burn.
+18              So, in that way, I think I have
+19   eliminated some things already in my report
+20   that -- for example, I think one of them men-
+21   tions underinflation operation causing bluing
+22   and heating of the tire and so forth and I --
+23   I don't -- I've eliminated in my analysis
+0062
+ 1   underinflated operation.
+ 2              I didn't specifically describe how
+ 3   the fire occurred but I've eliminated that
+ 4   causal link in my review of the tire evidence
+ 5   itself.
+ 6         Q.   My question wasn't about what you
+ 7   read in others' reports.  My question was:
+ 8   What investigation did you do into the cause
+ 9   of the burning?
+10         A.   Again, other than seeing it multi-
+11   ple times, I haven't analyzed this burn.
+12              I mean, my testimony was just that
+13   looking at those reports I've seen nothing
+14   that indicates the tire operated in an under-
+15   inflated method.
+16         Q.   Did you do any investigation into
+17   any mechanical conditions on the truck?
+18         A.   No.
+19         Q.   Did you do any investigation to
+20   determine when the tire started burning?
+21         A.   No, other than it's obvious and I
+22   think your expert -- tire expert agrees with
+23   me that the tread separated before the tire
+0063
+ 1   burned because it doesn't share that damage.
+ 2         Q.   Did you know when this tire was
+ 3   manufactured?
+ 4         A.   Not specifically because that area
+ 5   of the tire is burned but I believe that the
+ 6   parties -- according to the items I reviewed,
+ 7   I believe the parties are in agreement that
+ 8   it is likely in the 2016 timeframe.
+ 9         Q.   Have you done any investigation as
+10   to when this tire was manufactured?
+11         A.   Not -- not other than what I just
+12   said because the tire doesn't show it itself.
+13         Q.   Have you done any investigation
+14   into where this tire was manufactured?
+15         A.   I understand the two locations for
+16   the potential of the tire were the Shanghai
+17   factory or the -- I can't pronounce it -- but
+18   the other Chinese factory it was produced in
+19   at the time.
+20         Q.   Have you done any investigation
+21   into where the tire was manufactured?
+22         A.   No.  I'm just relying on the in-
+23   formation in the file.  I haven't individual-
+0064
+ 1   ly sought to figure out how and where the
+ 2   tire could be produced.
+ 3         Q.   Do you have any information as to
+ 4   when the tire was installed on the vehicle in
+ 5   question?
+ 6         A.   Looking at Kent -- Bates Numbers
+ 7   Kent 1454 and 1455, it demonstrates two steer
+ 8   tires were installed.  It looks like the date
+ 9   is 9/29/2017.
+10              I think that was the -- again, I
+11   don't think that's in contention among the
+12   parties as I -- as far as I understand it.
+13         Q.   And do you know how many miles the
+14   tire was driven before the accident occurred?
+15         A.   My recollection was something on
+16   the order of about 36,000 miles.
+17         Q.   Looking at your notes on the SS
+18   marking side, there's not many.  On the SOS
+19   marking side, you note a few.
+20              You have "65R 22.5" and question
+21   marks in parentheses.  What is that referring
+22   to?
+23         A.   I think the legibility of the 65R
+0065
+ 1   22.5 portion of that but it was a 385 and
+ 2   consistent with the other side.
+ 3         Q.   What do the initials "LRL" refer
+ 4   to?
+ 5         A.   Load Range L.
+ 6         Q.   Do you know how much weight the
+ 7   truck was carrying the day of the accident?
+ 8         A.   Yeah, I don't know that I recall
+ 9   that off the top of my head.  I understand it
+10   was a sand load but I don't know how much.
+11         Q.   And your notes here indicate a
+12   "CCCsF0000268."  Do you know what that refers
+13   to?
+14         A.   Yes.  That's a certification for
+15   China, equivalent or their version of a DOT
+16   but not the DOT.
+17         Q.   So then beginning on page 21 you
+18   have some of your tread carcass inspections.
+19         A.   Yes.
+20         Q.   It says:  "0 degrees, #1 and #2
+21   belts are attached with strips of #3 and #4
+22   belts attached to #2 belt."
+23              Do you have any photographs of
+0066
+ 1   that?
+ 2         A.   Yes.  They're not segregated so it
+ 3   is going to be a process.
+ 4              These may not be exhaustive be-
+ 5   cause these were shuffled around in four
+ 6   boxes but I think this is indicating what I
+ 7   was talking about.
+ 8         Q.   Okay.  Is there anything on these
+ 9   pictures that tells us that this the date
+10   these were taken or the tire -- which tire
+11   this was?
+12         A.   Not on the hard copies but you
+13   have the CD here that can be copied and you
+14   can see when I took the photograph and it'll
+15   be a sequence of photographs much like we've
+16   talked about in the inspection process to
+17   determine this is the failed tire, not the
+18   companion tire.
+19         Q.   So let's go ahead and have these
+20   marked as Exhibit 2.
+21              (Defendant's Exhibit Number 2 was
+22   marked for identification.)
+23         A.   You're going to call this Exhibit
+0067
+ 1   2?
+ 2         Q.   Yes.
+ 3              Going down about halfway, it says:
+ 4   "Chip and tear noted in tread with multiple
+ 5   deep gouges."
+ 6              What are you referring to there?
+ 7         A.   Conditions on the tread surface of
+ 8   the tire that obviously was used in the fore-
+ 9   seeable area of off-road use or gravel-pit
+10   use or what have you to cause chips and tears
+11   to the tread.
+12         Q.   And then "multiple deep gouges,"
+13   are you talking about like parts of the tread
+14   kind of cut away or are you talking about --
+15   when you say "gouges," what are you referring
+16   to?
+17         A.   Cuts into the tread at least and
+18   maybe -- I said "the chip."  That's usually
+19   the tearaway.
+20         Q.   Going down, you have -- it refers
+21   to "275-300 degrees serial side," "300-310
+22   degrees serial side;" and then it says "310-
+23   330 degrees CL."
+0068
+ 1              What does "CL" refer to?
+ 2         A.   Center line.
+ 3         Q.   You claim 275-300 degrees serial
+ 4   side is trapped air channel on the #2 belt
+ 5   wedge.
+ 6              Do you have pictures of that?
+ 7         A.   We have pictures of the trapped
+ 8   air found.  I won't say that I've segregated
+ 9   it by degree location because that reference
+10   isn't in the shot but going through the CD
+11   version of the photos should help do that
+12   showing where I am by degree rotation of the
+13   tire as I'm doing the inspection but I have
+14   some samples of trapped air at the belt edge
+15   area that -- there's several here that -- I
+16   pulled some there off the top to show.
+17         Q.   So, again, with these pictures,
+18   there's nothing on the picture that tells me
+19   where on the tire this picture was taken;
+20   correct?
+21         A.   Yeah, on the hard copy, that's not
+22   -- that's correct.
+23         Q.   When you say that it's on the CD
+0069
+ 1   you can figure it out, you know, how can I
+ 2   figure it out from the CD?
+ 3         A.   So, as we've talked, I go through
+ 4   a process in -- in how I sequence what I'm
+ 5   looking at and when I'm looking at it and
+ 6   what degrees I start and so forth.
+ 7              I -- I think that that gets us a
+ 8   lot closer than just the hard copy but just
+ 9   to show you a representative image I printed
+10   those.
+11         Q.   So let's go ahead and mark this
+12   block as Cottles Exhibit 3.  Oh, just the
+13   ones you pulled out.
+14              (Defendant's Exhibit Number 3 was
+15   marked for identification.)
+16         A.   Well, they're all -- they all have
+17   some distance or closer images of basically
+18   the same areas.  So I don't know about -- if
+19   I can get it right back to what you had when
+20   you were looking or not.
+21         Q.   And then you said you see some
+22   liner pattern marks on the #2 belt skim 330-
+23   370 degrees to center line.
+0070
+ 1              What pictures do you have of that?
+ 2         A.   I've got a collection of liner
+ 3   imprints but I mention liner again on page 22
+ 4   and they're not segregated from each other
+ 5   and they're sort of zoomed in.  I don't know
+ 6   that I can do that in that shot but that's
+ 7   the collection of liner imprints.
+ 8         Q.   Have you done any measurement as
+ 9   to the width of these liner imprints, the
+10   thickness of them?
+11         A.   I haven't.
+12         Q.   And, again, with these pictures,
+13   there's nothing on these pictures that tells
+14   me where on the tire each of these pictures
+15   was taken; correct?
+16         A.   Not on the hard copy, that's
+17   correct.
+18         Q.   That will be Cottles Exhibit 4.
+19              On the tread piece, you talk about
+20   some polishing between 1 and 2 belts.
+21              Do you have photographs of that?
+22              (Defendant's Exhibit Number 4 was
+23   marked for identification.
+0071
+ 1         A.   (Witness hands over pictures.)
+ 2         Q.   Let's go ahead and mark this as
+ 3   Cottles Exhibit 5 I think we're up to.
+ 4              Next, there's a reference to major
+ 5   crescent shaped zone of oxidation and polish-
+ 6   ing exposing bare brassy wires on the tread
+ 7   piece.
+ 8              What pictures do you have of that?
+ 9              (Defendant's Exhibit Number 5 was
+10   marked for identification.)
+11         A.   (Witness hands over pictures.)
+12         Q.   Let's go ahead and mark those as
+13   Cottles Exhibit 6.
+14              And then you have a couple of
+15   other stacks here.  What are those stacks of
+16   pictures referring to?
+17              (Defendant's Exhibit Number 6 was
+18   marked for identification.)
+19         A.   This stack of 1, 2, 3, 5 I think
+20   -- 6 shots shows the crescent shaped zone of
+21   oxidation that's occurring under the tread
+22   piece and I noted in my notes I noticed that
+23   Mr. Grant said I didn't appear to know where
+0072
+ 1   the tire separated from but this is the major
+ 2   crescent shaped zone.
+ 3              That's where the majority of the
+ 4   oxidation is going from not only the belt
+ 5   edge but migrating across the face of the
+ 6   tire and, when the adhesion level gets low
+ 7   enough, the tread separates.
+ 8              So it's sort of obvious but he
+ 9   didn't -- he didn't see it.
+10         Q.   This will be Cottles 7.
+11              Then the other two stacks that you
+12   have are the ones that you have previously
+13   grouped?
+14              (Defendant's Exhibit Number 7 was
+15   marked for identification.)
+16         A.   This is a couple of images, three
+17   images of localized punctures through the
+18   tread causing small localized rust spots in
+19   the tire and not the location of the major
+20   crescent shaped zone of oxidation and polish-
+21   ing.
+22              So they're individually happening
+23   in the tire but they're not the contributing
+0073
+ 1   factor to the major crescent shaped zone at
+ 2   separation location.
+ 3         Q.   This will be Cottles Exhibit 8.
+ 4              And then the other two stacks, or
+ 5   other stack?
+ 6              (Defendant's Exhibit Number 8 was
+ 7   marked for identification.)
+ 8         A.   This is just a series of the pho-
+ 9   tos looking at the side of the tire where
+10   there's inner liner left where there's not --
+11   there's reports that suggest that there's a
+12   repair patch in the tire.  I didn't see it
+13   and Joe Grant didn't see it, your tire expert
+14   but there's some discussion about losing a
+15   repair patch.  I think that's speculative.
+16   There's -- there's no evidence of a repair
+17   patch that I see and I looked through Grant's
+18   report and he didn't see it either.
+19              So there some discussion of that.
+20   I just collected the photos to show I don't
+21   see a repair patch in the tire.
+22              Are you --
+23         Q.   No, I'm not going to mark that.
+0074
+ 1         A.   Those are my favorite ones.
+ 2         Q.   It would probably turn the report
+ 3   into a 3 gigabyte monstrosity.
+ 4              You -- on page 22, you have tread
+ 5   depth notes?
+ 6         A.   Yes.
+ 7         Q.   Was the tread depth consistent
+ 8   with the mileage you believe was on the tire?
+ 9         A.   I believe so, yes, for the appli-
+10   cation.
+11         Q.   What about the variation of the
+12   tread depths.  Did that indicate anything to
+13   you?
+14         A.   Obviously, the tire operates under
+15   heavy loads and steering with loads on the
+16   vehicle.  I don't think it points out any
+17   particular thing.  It's fairly random across.
+18              I'm seeing at some points 5.3 in
+19   the center up to 9.5 in the center.  I think
+20   this is what you see in heavy duty truck use.
+21         Q.   Are you saying it's consistent as
+22   well as the outer side being 2, 3 -- 2, 3,
+23   4/32nds lower than the inner sections?
+0075
+ 1         A.   These are millimeters, not 32nds.
+ 2         Q.   Millimeters?  Okay.
+ 3         A.   Yeah.  So there's some variation
+ 4   but again these are front steer tires, you're
+ 5   going to scrub shoulders and it's an applica-
+ 6   tion in which they're often on underdeveloped
+ 7   surfaces obviously.
+ 8         Q.   You said you had some x-rays done
+ 9   of the tread piece; right?
+10         A.   Yes.
+11         Q.   Do you have those pictures?
+12         A.   (Witness hands over pictures.)
+13         Q.   Did you x-ray this entire tread?
+14         A.   No, just the tread piece.
+15         Q.   I'm sorry.  The entire tread
+16   piece, did you x-ray the entirety of the
+17   tread piece?
+18         A.   Yes.
+19         Q.   Let's mark that as Exhibit 9.
+20              Looking at page 29, your Analysis,
+21   you first observation, as you call, it says:
+22   "The presence of premature oxidative degrad-
+23   ation on the belt skims."
+0076
+ 1              At the end you're talking about --
+ 2   it says:  "This constitutes a defect in the
+ 3   subject tire which caused or contributed to
+ 4   cause this tire to fail."
+ 5              Are you saying that the oxidation
+ 6   -- the degradation was a cause of the failure
+ 7   of the tire?
+ 8              (Defendant's Exhibit Number 9 was
+ 9   marked for identification.)
+10         A.   Yes.
+11         Q.   Okay.  And how did the oxidative
+12   degradation cause the tire to fail?
+13         A.   Well, in two ways.  The oxidation
+14   occurring within the tire becomes the mechan-
+15   ism or the rubber to let loose from itself
+16   because -- and for the purposes of the jury
+17   who have probably never talked about a tire
+18   before, there's no glue in the tire.  It's
+19   all bonded together one sheet of rubber over
+20   another sheet of rubber until -- and they're
+21   all placed on top of each other, inner liner,
+22   body ply, belts, tread, sidewall, beads all
+23   put into the tire and the rubber has to be
+0077
+ 1   chemically close enough in relation to the
+ 2   other components that it could have an equal
+ 3   bond in those location.
+ 4              And, when oxidation occurs through
+ 5   whatever means, when it occurs progressively
+ 6   enough inside the tire that the belts degrade
+ 7   and start cracking -- the belt rubber, not
+ 8   the wire -- and the -- the rubber that binds
+ 9   the wires into the rest of the tire start
+10   cracking and then they start propagating that
+11   cracking as they lift from each other centri-
+12   fugally around the tire as the tire's handl-
+13   ing the vehicle load and being cycled on the
+14   road.
+15              As it comes in -- as any spot
+16   comes in contact with the road and compresses
+17   you get these microcompressions going on at
+18   the belt edge and then, as that oxidation
+19   attacks the belt edge area and progresses
+20   cracking further around the tire and then
+21   starting to migrate across the tire, this
+22   gets larger and larger and centrifugally the
+23   tire is trying to sling the tread as -- as
+0078
+ 1   it beginning that separation process and the
+ 2   mechanism for it to do that is the oxidation
+ 3   occurring across the face of the -- between
+ 4   the belts that are bonded together.
+ 5              In this case, there are four steel
+ 6   belts and the two belts that we are talking
+ 7   about are the second and third belt.  Those
+ 8   are called the operating belts in a four-belt
+ 9   system.  So the separation commences between
+10   the two belts and migrate across until it's
+11   so severe that the top #3 belt and the #4
+12   belt and the tread can't hold on centrifugal-
+13   ly to the lower.  The adhesion is too low and
+14   so it breaks loose and peels off.  So that's
+15   how it affects it.
+16              You don't want so much oxidation
+17   between belts that this tire which is market-
+18   ed and developed to be the kind of tire that
+19   wears out a full tread and then can be re-
+20   placed with two retreads.  It should be able
+21   to hold all those belts together so that you
+22   get the two additional retread lives of it,
+23   which your experts called "the million mile
+0079
+ 1   carcass" with this kind of medium truck tire.
+ 2              So you certainly expect more than
+ 3   36,000 in one tread, in some portion of one
+ 4   tread before you might lose the belt bond and
+ 5   so that's what happened here and that's how
+ 6   oxidation con -- connects to it.
+ 7         Q.   So are you saying that the -- you
+ 8   said that as the 2 and 3 belt -- you said, as
+ 9   they started to separate, the tire was liter-
+10   ally trying to throw it off?  Is that what
+11   you were trying to say?
+12         A.   Centrifugally that's what happened
+13   the forces are operating away from the spin-
+14   dle of the wheel.
+15              So, as I get belt edge separation
+16   and you've got two belts and the #2 is the
+17   widest and the #3 is inset from it and those
+18   two belts are working like this on the edge
+19   and that working progresses until it's hap-
+20   pening farther and farther around the tire
+21   but also deeper and deeper within the tire
+22   until the belt edge is doing this kind of
+23   motion every cycle and, for a tire this size
+0080
+ 1   at highway speed, that can be 15 to 16 times
+ 2   per second.
+ 3              So we're working this tire a lot
+ 4   in that area and I've shown the images of the
+ 5   polishing that was occurring because those
+ 6   two belts had separated from each other, they
+ 7   are polishing the rubber away.
+ 8              In fact, when I said "brassy wire"
+ 9   there's no rubber over that wire anymore.  It
+10   has been brushing inside the tire through the
+11   microcompression and now not so micro, you're
+12   getting larger and larger movement as the
+13   major crescent shaped zone migrates from one
+14   belt edge over toward the other belt edge and
+15   we get an area that just doesn't have enough
+16   local -- what's the word I want to use --
+17   doesn't have enough surface area connection
+18   to hold that whole belt system down when all
+19   that's attaching to is over here on one loc
+20   -- location now and this is all moving in the
+21   process (demonstrating.)
+22              Often what happens as that occurs
+23   is dynamically the tire domes and comes out
+0081
+ 1   around, which is one basis for the interest
+ 2   in the field results of this tire.  There are
+ 3   a lot of outer rounds and the testimony is
+ 4   it's 80 percent of the returns.
+ 5              So there's a lot of issues going
+ 6   on with outer round issue where the tires go
+ 7   more egg shaped that round and that can be a
+ 8   precursor to this very separation before the
+ 9   tread actually breaks and peels.
+10         Q.   Did you say 15 to 16 times per
+11   second?
+12         A.   Yes, at highway speeds.
+13         Q.   Let me try to unpack that.  That's
+14   why I became a lawyer, not a scientist.
+15              When you're referring to this 15
+16   or 16 times per second, are you refer to
+17   revolution or are you referring to something
+18   else?
+19         A.   Revolutions.  If I put a -- if I
+20   had a whole tire here -- and I'll use this
+21   section because I can manage that.  If I put
+22   an "X" right there, every time the tire ro-
+23   tates into contact with the road, there's
+0082
+ 1   compression going on.
+ 2              The highest stress and strain in
+ 3   any tire is along the sidewall and at the
+ 4   belt edge.  Unfortunately, it's a belt edge
+ 5   because everything else is cinched down in
+ 6   the tire but the belts are cut and placed on
+ 7   top of this donut and so now -- now you are
+ 8   applying stresses and strains at an area that
+ 9   is a cut surface laying on top of a round
+10   tied-in donut of -- with the belt -- the bead
+11   cables down here and the body ply wrapped
+12   around it, the sidewalls on that; and now
+13   I've laid belt material and you've done it
+14   four times.
+15              And then you put the tread down
+16   and every time the tire rotates in contact
+17   with the road there's a compression down with
+18   the force that's on the tire that's being
+19   transmitted from the vehicle to the rim to
+20   the tire on the ground and immediately when
+21   -- if I put an "X" on that tread, immediately
+22   when that X comes into contact with the road
+23   everything rebounds and then we do it again,
+0083
+ 1   compress and rebound.
+ 2              At the same time as the separation
+ 3   are growing centrifugally all that rotation
+ 4   on the road is driving the tire -- trying to
+ 5   drive the tire apart and it's up to how well
+ 6   adhered all the components are in the tire
+ 7   whether it maintains its centrality and can
+ 8   continue to operate and have durability.
+ 9              When it loses that and becomes egg
+10   shaped and begins to peel the tread, it's too
+11   late and certainly that carcass can't be used
+12   because you split -- you split right between
+13   the belts.  You can't use it to retread again
+14   even if it didn't rupture in the process,
+15   which it almost always does.
+16         Q.   What is the circumference of this
+17   tire?
+18         A.   I give the static -- let me get
+19   the right one.  Static loaded radius at 19.4
+20   inches.  So that's loaded radius, which means
+21   underload deflected, so times 2, so it's 38.8
+22   inches.
+23              That's reasonable because a tire
+0084
+ 1   standing is about 3 feet tall, a little more
+ 2   than that.
+ 3         Q.   Okay.  So about 38 inches you said
+ 4   is the circumference?
+ 5         A.   That's the diameter, so times pi.
+ 6         Q.   So 3.14 times 3 would be, what 9
+ 7   feet give or take?
+ 8         A.   Yes.
+ 9         Q.   Approximately?
+10         A.   Yes.
+11         Q.   Okay.  And you're saying that
+12   that's going around 9 feet 15 to 16 times per
+13   second?
+14         A.   At highway speeds.  Not at every
+15   speed but at highway speed something like
+16   that.
+17              I haven't calculated it specific-
+18   ally for this size but I -- it can be done.
+19   I haven't done that.
+20              I do look at those numbers in --
+21   in the past and it's in the -- it's on the
+22   ballpark of that.  It might be 12 revolutions
+23   per second or it might be 16 but some -- some
+0085
+ 1   place in there.
+ 2              I haven't calculated it for this
+ 3   particular space but in your specs you say
+ 4   you get 495 revolutions in a mile.  So that's
+ 5   just that 9 feet rolling out 5,280 feet.
+ 6         Q.   So it's a little higher than 9
+ 7   feet if it's -- how much does is say per
+ 8   mile?
+ 9         A.   495 revolutions in a mile.
+10         Q.   Okay.
+11         A.   But, you know, how many revolu-
+12   how many revolutions are you getting at high-
+13   way speed is -- you're still going to get the
+14   same revolutions, you're just going to get
+15   there faster; right, than less than a mile
+16   necessarily.
+17         Q.   Well, sure.  So, if you're going
+18   60 miles an hour, that means you're going a
+19   mile a minute; right?
+20         A.   Right.
+21         Q.   There's 60 seconds in a minute.
+22         A.   Right.
+23         Q.   You're saying 15 or 16 revolutions
+0086
+ 1   per second, that would be 900 revolutions in
+ 2   play.
+ 3         A.   So maybe half that then.
+ 4         Q.   And so in your report you say:
+ 5   "It constitutes a defect in the subject tire
+ 6   which caused or contributed to cause the tire
+ 7   failure."
+ 8              Was it a cause of the tire fail-
+ 9   ure, yes or no?
+10         A.   Yes.
+11         Q.   And where did the tire fail, at
+12   what location?
+13         A.   In the area of the major crescent
+14   shaped zone 90 degrees to -- 90 degrees to
+15   175 degrees on the serial opposite shoulder.
+16         Q.   The failure didn't start -- so
+17   that's about a fourth of the tire; right, 90
+18   to 180 degrees?
+19         A.   Right.
+20         Q.   Where did the actual separation
+21   occur?  I occurs in a more specific spot;
+22   right?  It didn't occur across a fourth of
+23   the tire.
+0087
+ 1         A.   Let me see my exhibits back.
+ 2              The line on Exhibit 7 and one of
+ 3   the images from there, which I have actually
+ 4   in a little better blowup in another couple
+ 5   of shots but I don't want to get these all
+ 6   confused.
+ 7              This polishing that's going on out
+ 8   at the end of the tread piece and it's pol-
+ 9   ishing down and shining along long strips of
+10   these underlying belts is probably where the
+11   initiation of the separation was and where it
+12   actually begins to lift first along that
+13   diagonal there (indicating.)
+14         Q.   And what position on the tire is
+15   that?
+16         A.   This is off the tread piece.  So
+17   Tread Piece A ranges from 275 to 150 on the
+18   SS and 315 -- 355, sorry, to 175 on the SOS.
+19   I believe I'm looking at the opposite side,
+20   the 355 to 175 in that image.
+21         Q.   Okay.  And I want to make sure I'm
+22   understanding your notes.
+23              When it says "355 to 175," that
+0088
+ 1   means that the piece ranged from 175 degrees
+ 2   opposite side to 355 opposite side; correct?
+ 3         A.   Right.
+ 4         Q.   Okay.  And so the piece that --
+ 5   where you're saying it started, you're saying
+ 6   it started at 355 or 175, you just don't know
+ 7   which one?  Is that what you're saying?
+ 8         A.   No.  It -- so what I'm defining in
+ 9   this range on page 21 is the SS side 275 to
+10   150.  That's -- that's the whole edge, how
+11   far that edge goes, 275 to 150.
+12         Q.   Correct.
+13         A.   And then, on the serial opposite
+14   side, 355 back in the shot, back beyond this
+15   shot to the 175.
+16              So this is the 150-175 range, so
+17   in that area of the tread end.
+18         Q.   And that's where you're saying it
+19   started?
+20         A.   Yes.
+21              THE WITNESS:  Can we take 5?
+22              MR. BERGMAN:  Yeah, we can take a
+23   break.
+0089
+ 1              VIDEOGRAPHER:  Off the record at
+ 2   11:17.
+ 3              (Short recess.)
+ 4              VIDEOGRAPHER:  Back on the record
+ 5   at 11:29.
+ 6         Q.   Okay.  Mr. Cottles, before we took
+ 7   a break, we were talking about your first an-
+ 8   alysis and that was about premature oxidative
+ 9   degradation.
+10         A.   Right.
+11         Q.   So let's go into your second one
+12   now.
+13              Actually, first, you then list a
+14   number of different I guess papers and other
+15   things you rely upon in support of that
+16   opinion; is that correct?
+17         A.   That's correct.
+18         Q.   Then in here you're talking -- in
+19   your third to last bullet point, you acknow-
+20   ledge that "All tires experience oxidation;"
+21   correct?
+22         A.   Can to some degree.  It's the
+23   issue of degree that becomes a concern.
+0090
+ 1         Q.   Okay.  Well, in fact, all tires
+ 2   experience oxidation; right?  That -- that's
+ 3   just part of the natural process.
+ 4         A.   Well, externally.
+ 5              Internally, where rubber is sup-
+ 6   posed to be protected from it, it should be a
+ 7   slower process and, in the case of a retread-
+ 8   able tire, you don't want the process to in-
+ 9   vade the belting because then you can't re-
+10   tread it.
+11         Q.   Okay.  You say that there are two
+12   factors you look at.  "The oxidational break-
+13   down of the rubber occurred before the tires
+14   natural life expired;" and two, "There was no
+15   other avenue for the air and the moisture to
+16   enter the tire."
+17              What would be other avenues that
+18   you're referring to there?
+19         A.   I'm catching up to where you were
+20   reading.  Just a minute.
+21              This is a discussion about the
+22   premature aspect of the oxidation.  If I'm
+23   looking at a 25-year-old passenger tire and
+0091
+ 1   it looks internally like -- when it separates
+ 2   like a 25-year-old passenger tire, it's not
+ 3   easy to suggest that that rubber shouldn't
+ 4   look that way if it's oxidized and has been
+ 5   mounted and inflated and it's been oxidizing
+ 6   like that.
+ 7              This is an instance though where
+ 8   "premature" is an important word because yes,
+ 9   there's oxidation; but no, you don't want it
+10   to the degree that you've got it in the tire
+11   because now this tire suffers not just third
+12   of its life, less than a third based on tread
+13   depth, you didn't get through the first tread
+14   no matter how old the tire was.
+15              There's no age limit on medium
+16   truck tires.  No manufacturer has one and so
+17   you're expecting this carcass to survive, you
+18   know, the million mile carcass if you want to
+19   call it that but it has to be able to be re-
+20   treaded with the belts staying bonded to each
+21   other so that that -- it can have a second
+22   life or third life.  So I'm explaining the
+23   premature aspect.
+0092
+ 1              So some things occurring in time,
+ 2   you know, for a long enough period of time, I
+ 3   would say it's oxidized as it would naturally
+ 4   do but this is happening much more rapidly
+ 5   than it would naturally do based on its
+ 6   intended foreseeable service in life.
+ 7         Q.   Okay.  That wasn't my question.
+ 8              My question -- "There are no other
+ 9   avenues for the air and moisture to enter the
+10   tire."  What are some of the other avenues
+11   for air or moisture to enter a tire that you
+12   are referring to there?
+13         A.   Oh, I see.  If there had been a --
+14   a poor seal to the rim; if there had been a,
+15   you know, a leaky repair, none of which we
+16   have evidence of in this case even though the
+17   reports suggest otherwise in one instance.
+18              Those are possibilities; but, if
+19   the air is pressurized on the inside it's
+20   very difficult for it to migrate from outside
+21   in.  That's not the tendency of a pressurized
+22   tire, to allow -- if you've got a tire in-
+23   flated, you know, with 100 plus PSI, air is
+0093
+ 1   not trying to get into the tire against the
+ 2   pressurized vessel.  It's trying to work its
+ 3   way through and out and that's where the
+ 4   oxidation is coming from in this matter.
+ 5         Q.   So number -- number 2, and you're
+ 6   citing to tire litigation; but "There was no
+ 7   other avenue for the air and moisture to en-
+ 8   ter the tire."
+ 9              So, if there was a puncture hole,
+10   obviously air and moisture would enter the
+11   tire through a puncture hole; correct?
+12         A.   Not obviously.  It can do.  It's
+13   not obvious that it will do because the rub-
+14   ber often -- if the puncturing item comes out
+15   the rubber seals -- closes back -- not seal
+16   but closes back and doesn't allow -- you know
+17   the atmosphere is not trying to work its way
+18   into the tire.  The tire's pressure is trying
+19   to work its way to the atmosphere.  I mean,
+20   that' just the basic science of it.
+21         Q.   Okay.
+22         A.   But I did show you that there are
+23   some localized areas in -- in Exhibit 8, okay
+0094
+ 1   Exhibit 8, some localized areas that have
+ 2   some corrosion going on around a puncture
+ 3   spot local to -- in the tire but that's
+ 4   pretty panned in.
+ 5              If you pan out in the photograph
+ 6   -- in the area of this, that -- one, that's
+ 7   not the major crescent shaped zone of oxida-
+ 8   tion at all.
+ 9              Two, that's rust on top of rubber
+10   that's not affected, polished, oxidized like
+11   we see in the failure mode.
+12              So can you locally corrode the
+13   wire, yeah; but in today's technology with
+14   the belt wire provided to the world's indus-
+15   try -- tire industry, the problem of a pipet
+16   conduit that used to occur in the cabling
+17   where there could be a certain number of ca-
+18   bles and if you cut across and then looked at
+19   them on end point there was a channel in the
+20   middle so that if I punctured on this side I
+21   rusted on that side doesn't exist anymore.
+22              So that's old technology thinking
+23   and, if I found it in this tire, I would be
+0095
+ 1   super critical of the fact that somehow one
+ 2   manufacturer, Double Coin, was able to get
+ 3   someone convinced to make wire that no one
+ 4   else is supplying any longer.  That's been
+ 5   eradicated back in the '80s.
+ 6              Of course, that brings up a point.
+ 7   This tire's design is from the '80s, as I
+ 8   understand the testimony of Mr. Su; and, if
+ 9   for some reason they were able to use the
+10   kind of cabling that doesn't impregnate with
+11   rubber in the belt skim (inaudible) process,
+12   I'd be very critical of that and I'd like to
+13   know a little more about the technology that
+14   is currently in the tire based on his testi-
+15   mony.
+16         Q.   You didn't see any observations of
+17   this older wire that you're talking about,
+18   did you?
+19         A.   No, but there's -- you know, it's
+20   often used by Mr. Grant as a testimony that,
+21   if I puncture here, I rust over there; and
+22   that's not what happens in today's tires.
+23              I'm just saying this particular --
+0096
+ 1   that was the '80s technology belting and that
+ 2   was eliminated in the industry as far as I
+ 3   know when I first came in the industry 1988;
+ 4   but it brings up the point that, as I under-
+ 5   stand Mr. Su's testimony, the technology used
+ 6   for this tire is virtually the same as it was
+ 7   when it purchased by Firestone.
+ 8              I don't know what all technology
+ 9   was included but, if that was included, I'd
+10   like to see the detail of -- if they're still
+11   using it or not.
+12              And a second thing, we're talking
+13   about what other avenues oxidation gets into
+14   the tire.  It's my understanding just as a
+15   general premise that, when Bridgestone bought
+16   Firestone in '88 and then this arrangement
+17   with Double Coin and Firestone happened in
+18   '89, I don't -- it would be very surprising
+19   to me if Bridgestone allowed current technol-
+20   ogy to be sold to a competitor.
+21              That being said, I think Bridge-
+22   stone uses 100 parts halobutyl and bromobutyl
+23   style inner liner rubber.  I'm very interest-
+0097
+ 1   ed to know what halobutyl content and type of
+ 2   butyl is used in the subject tire if that's
+ 3   produced.
+ 4              I don't see how it could be a
+ 5   trade secret because it was not Double Coin's
+ 6   to begin with but it was sold to them; but,
+ 7   if that was produced and could be produced,
+ 8   I'd like to evaluate whether the inner liner
+ 9   contributed in this case.
+10              Grant says it's -- I don't know
+11   how he came to this conclusion just looking
+12   at a burned inner liner.  He says it's the
+13   same kind of inner liner everyone else uses
+14   but that's literally probably not true based
+15   on the 1980's spectra of the material and --
+16   and technology being sold to Double Coin.
+17              I'd like to see what the halobutyl
+18   content is.  I think that could potentially
+19   lead to support for the opinions of the oxi-
+20   dation and maybe even an additional opinion
+21   based on it.  So I'd -- I'd certainly like
+22   to see that information.  I hope it can be
+23   produced.
+0098
+ 1         Q.   Did you do any analysis of the
+ 2   inner liner as part of your inspection?
+ 3         A.   I haven't without seeking -- seek-
+ 4   ing court order and that kind of thing.  It
+ 5   can -- it can be done.
+ 6              This particular tire's inner liner
+ 7   is affected enough by the burning that occur-
+ 8   red that I don't know if I'd want to use this
+ 9   particular tire, maybe some other sample tire
+10   from the -- from -- from the ear but -- if it
+11   could be produced but I --
+12         Q.   Did you use the companion tire to
+13   look at the inner liner?
+14              COURT REPORTER:  I didn't hear
+15   you.
+16         Q.   Did you look at the companion tire
+17   to look at inner liner specifications?
+18         A.   Specifications as far as retire
+19   spec I -- I've studied that for the subject
+20   tire.  As far as cured spec and properties,
+21   no, I haven't -- I haven't taken a sample
+22   from it.
+23         Q.   So -- so punctures one way that
+0099
+ 1   air and moisture can get into a tire;
+ 2   correct?
+ 3         A.   Into portions of it.  Now, if it
+ 4   go all -- if it goes all the way through the
+ 5   inner liner, then obviously air is coming out
+ 6   and not going in but -- because of the pres-
+ 7   surization of the tire period.
+ 8         Q.   How many punctures were on the
+ 9   tread piece that you noticed?
+10         A.   Quite a few.  I didn't -- I didn't
+11   count them all but quite a few.
+12         Q.   And did you note where they were
+13   located on the tread piece?
+14         A.   To some degree.  I -- you have my
+15   photographs.  So I can point to it in the
+16   photographic evidence but I made comment to
+17   some of them and then I made sort of a group
+18   comment.  "Several punctures and abrasions
+19   through tread and stone embedments through-
+20   out the tread and the carcass noted."
+21         Q.   Were there any portions of the
+22   tread that had complete punctures all the way
+23   through all four liners or all -- all four
+0100
+ 1   steel belts?
+ 2         A.   I don't recall seeing one through
+ 3   all -- all four steel belts.
+ 4              I saw them in my notes because I
+ 5   investigated that potential through the third
+ 6   belt into the second belt.  I don't see that
+ 7   I made any comment with what was available to
+ 8   us that something went all the way through.
+ 9         Q.   Did the x-ray show any punctures
+10   all the way through all four belts?
+11         A.   Not in any spot that I'm seeing.
+12   There was a belt -- at least a belt covering
+13   drill holes and puncture holes in every shot
+14   I have of the tread piece itself, at least
+15   one, sometimes more than one; but, where I
+16   have a complete hole, I'm looking at third
+17   and fourth belt but there's no second belt in
+18   that area.
+19              So not in any of the x-rays that I
+20   have.
+21         Q.   Any other ways air and moisture
+22   can get into a tire?
+23         A.   Permeation through the inner lin-
+0101
+ 1   er.  I don't know if I mentioned that one yet
+ 2   permeation, just migrating through under the
+ 3   pressure that's inside the tire.
+ 4              Sometimes cracked inner liner
+ 5   splices or open inner liner splices allow
+ 6   access beyond the inner liner into the body
+ 7   of the tire and up.  We talked about cuts and
+ 8   chunks and tears and so forth.
+ 9              So norm -- normal tire normal use,
+10   that -- those are the ways I'm familiar with.
+11         Q.   Moving to number 2, "Inadequate
+12   bonding of the belt skims" and then you have
+13   a variety of bullet points.  It talks about
+14   "some trapped air impressions present on the
+15   belt skim material."
+16              Then, you go on to say:  "This
+17   represents a manufacturing defect in the
+18   subject tire."
+19         A.   Right.
+20         Q.   Are you saying this was a cause of
+21   the failure?
+22         A.   Yes.
+23         Q.   In your report you don't say where
+0102
+ 1   you observed trapped air impressions.
+ 2         A.   Yes, I did, in the notes.  That's
+ 3   why we clipped the photos because we were
+ 4   looking at areas where trapped air channels
+ 5   existed.
+ 6              It's on page 21.  275-300 degrees
+ 7   serial side, there's a trapped air channel on
+ 8   the #2 belt wedge.  At 310-330 center -- I'm
+ 9   sorry -- at 325-10 SS trapped air channel on
+10   #2 belt wedge.
+11              On page 22, 275-95 SS trapped air
+12   channel on #3 belt.
+13         Q.   None of those are where you say
+14   the separation began, though; correct?
+15         A.   Yeah.  As far as, once it became a
+16   full separation, that was happening more to
+17   the SOS side.
+18              So these are defects that affect
+19   the bond -- localized bonding in the rubber.
+20   So it doesn't offer any resistance.  It come
+21   across smoothly and images show how smooth
+22   that rubber is but it's not in the area where
+23   it had been polishing to the degree that we
+0103
+ 1   are seeing belts sticking through the rubber,
+ 2   shiny belt cables.
+ 3         Q.   You're still saying this was a
+ 4   cause of the tire failure?
+ 5         A.   Yeah, for the reason I just said.
+ 6   It's localized air pockets in the tire.
+ 7              It's the oxygen degrading rubber
+ 8   around it and we certainly have the oxidative
+ 9   breakdown, that is from oxygen degradation of
+10   the rubber and then localized weakness in the
+11   tire due to that and consistent with Mr. Su's
+12   testimony it can cause tread separation.
+13         Q.   So you testified earlier that the
+14   tread belt separation began in the 150-175
+15   area of the -- of the serial side?
+16         A.   Serial opposite side.
+17         Q.   Serial opposite side.  Sorry.
+18              You're saying trapped area impres-
+19   sions elsewhere on the tire contributed to
+20   the separate at the 150-175 area on the
+21   serial opposite side?
+22         A.   Yes, because the presence of the
+23   oxidation that I see is obliterated in the
+0104
+ 1   area where the belts are brushing.  I'm not
+ 2   assuming it was there but I'm seeing it else-
+ 3   where and showing that this is a condition
+ 4   that existed between these two bonded belts,
+ 5   working belts in the tire, belt 2 and belt 3.
+ 6              So this condition weakens when the
+ 7   tread separation commences.  These two areas
+ 8   don't bond.  They're smooth and the images
+ 9   depict that.
+10              So that's -- that's not offering
+11   any resistance to tread separation.  As well,
+12   that air or moisture that was put into the
+13   tire at the time that it was manufactured and
+14   cured, that then can degrade around the belts
+15   themselves and, while these trapped areas are
+16   smooth within themselves, there's oxidation
+17   around them.
+18              I'm just saying the major crescent
+19   shaped zone, the one that's ultimately the
+20   culprit at the point of lift is a zone on the
+21   opposite shoulder that's much larger and it
+22   migrated across until it consumed the tire's
+23   adhesion -- adhesion levels.
+0105
+ 1         Q.   So you're just not answering the
+ 2   question so I'll keep asking it.
+ 3              Are you saying these observations
+ 4   elsewhere on the tire caused the separation
+ 5   at the 150-175 opposite serial side?
+ 6         A.   Contributed to cause it, yes.
+ 7         Q.   Okay.
+ 8         A.   I mean, I'm not -- I'm not writing
+ 9   this report to talk about things that are un-
+10   related to a tread separation.
+11              I know tire forensics, I know tire
+12   design, I know tire failure, I know what the
+13   likely causations are and when I see trapped
+14   air impressions in rubber and liner imprints
+15   in rubber and oxidation breakouts in the
+16   belts, I'm -- if I hear hoof -- hoof prints,
+17   I don't think zebras.  This is very familiar
+18   to me after more than 35 years of being in
+19   the industry and working for myself in this
+20   capacity.
+21         Q.   Are there any studies or papers
+22   that say trapped air impressions in part of
+23   the tire cause a tread belt separation in
+0106
+ 1   another part of the tire?
+ 2         A.   Not without breaking protective
+ 3   orders in other matters.
+ 4              The industry doesn't tell on it-
+ 5   self.  So there's not much in the way of
+ 6   literature.
+ 7              You mentioned ITEC a moment ago
+ 8   and, one, the chances of ITEC peer reviewing
+ 9   a paper for me are remote.
+10              I am the subject of ITEC meetings.
+11   I have people who called me to say "Your name
+12   was just brought up on the stage."  So, one,
+13   that's a very biased industry-oriented help-
+14   us-in-defense build a literature and peer-
+15   review conference.
+16              So that there's not literature, I
+17   want the Court to understand in this case, as
+18   a Court in Georgia mentioned in a Daubert re-
+19   sponse to a Daubert challenge of me, obvious-
+20   ly, there's no unbiased location for litera-
+21   ture for both parties to come to.  It doesn't
+22   exist in this tire litigation world.
+23              So the fact that there's not an
+0107
+ 1   article about trapped air pockets leading to
+ 2   tread separation still doesn't overarch the
+ 3   issue that Mr. Su testified that tapped air
+ 4   in tires can cause tread separation, which is
+ 5   consistent with my understanding and training
+ 6   in the industry.
+ 7         Q.   My question was:  Are there any
+ 8   published studies that support your claim
+ 9   that trapped air causes tread belt separa-
+10   tions?  It's a yes or no question.
+11         A.   I'm not seeing anything in my
+12   reference list that is an article on trapped
+13   air that specifies that comment.
+14         Q.   Okay.  Just out of curiosity, your
+15   reference here to Tire Defect Litigation, are
+16   you references your own chapter when you make
+17   that reference or are you referencing someone
+18   else's chapter?
+19         A.   That's the images and chapter that
+20   I contributed to on trapped air.
+21         Q.   So you're referencing yourself?
+22         A.   Yes.
+23         Q.   Okay.  Next, you talk about liner
+0108
+ 1   pattern marks present on the belt skim mater-
+ 2   ial.
+ 3         A.   Yes.
+ 4         Q.   And the last sentence says:  "When
+ 5   they're" -- "when these are observed in the
+ 6   tire post cure it is strong physical observ-
+ 7   able evidence that a proper bond did not
+ 8   occur."
+ 9              Are you actually giving an opinion
+10   that that occurred in this case and that it
+11   was a cause of the separation?
+12         A.   Are you asking am I giving the
+13   opinion that the bond is weaker over an area
+14   of liner pattern marks?
+15         Q.   So the last sentence says:  "When
+16   these are observed in the tire post cure, it
+17   is strong physical observable evidence that a
+18   proper bond did not occur."
+19              Is it first your opinion that a
+20   proper bond did not occur with this tire?
+21         A.   Yes.
+22         Q.   And are you saying that is a cause
+23   of the separation that occurred in this case?
+0109
+ 1         A.   Correct.  That's the header of
+ 2   number 2:  "Inadequate bonding of the belt
+ 3   skims as evidenced by trapped air and liner
+ 4   imprints."
+ 5         Q.   You're saying that this is one of
+ 6   the causes?
+ 7         A.   That's right.
+ 8         Q.   So you're saying the presence of
+ 9   liner pattern marks was observed at the point
+10   of separation?
+11         A.   Well, they don't get to be at --
+12   observed at the point of separation because
+13   of the polishing that's occurred between the
+14   two surfaces.
+15              As I explained to the jury earlier
+16   this movement, the microcompressions, the
+17   polishing that's occurring and brushing to
+18   the point in some areas we didn't have any
+19   rubber over the belt wires any longer but
+20   surrounding that area are locations of liner
+21   imprints just like with the trapped air.
+22              Now, did they exist?  The jury
+23   will have to decide if they think it existed
+0110
+ 1   in the area of actual now affected polished
+ 2   oxidized rubber and exposed wire because I'm
+ 3   not going to say that it was there.
+ 4              I didn't see it and I also didn't
+ 5   see -- like I didn't see a repair patch.  I'm
+ 6   not going to say it's there when there's no
+ 7   evidence of it.
+ 8              And I think especially in federal
+ 9   court it -- it demands that kind of rigor but
+10   I'm seeing it leading up to that area and the
+11   surrounding areas of the two bonds between
+12   belts 2 and 3 and I -- from my training, as
+13   I said earlier, I was told and shown to strip
+14   back looking for liner imprints.  If you find
+15   them, the -- the material is too old; go tell
+16   the factory, refresh components, quit using
+17   this roll and that's very consistent with
+18   what Mr. Su said.
+19              I believe that the liner imprints
+20   suggests improper bond and that the tire
+21   never rubber-to-rubber chemically bonded as
+22   it should have so it would have the strength
+23   of the bond in that area that it -- that was
+0111
+ 1   anticipated for it.
+ 2         Q.   You'd referenced earlier that
+ 3   inside your box is a sample of inner liner
+ 4   that was provided in this litigation.
+ 5              Have you compared that sample to
+ 6   your photographs of the tire?
+ 7         A.   I've looked at it and there are
+ 8   some similarity in it.
+ 9              I don't know if it was represented
+10   as identical but there's some similarity in
+11   the wave and the pitch of the spacing amongst
+12   the threads in the weave.
+13         Q.   So you have done measurements to
+14   see if it's the same spacing and pitch?
+15         A.   I haven't measured it.  I mean, I
+16   think it can be done easiest under microscope
+17   but I haven't done that yet.  If I'm asked to
+18   do that for a trial exhibit, we can do that.
+19         Q.   Next, your third thing you say is:
+20   "The subject tire lacks nylon cap strips or
+21   cap plies."
+22              What percentage of truck tires
+23   manufactured worldwide have nylon cap or
+0112
+ 1   strip plies?
+ 2         A.   I don't know.  I haven't done a
+ 3   survey.
+ 4              I know that Goodyear produced a
+ 5   patent based on their own analysis utilizing
+ 6   it and it had significant contribution to the
+ 7   tires durabilities.
+ 8              I also understand that the Hankook
+ 9   tire from Korea, they use strips on occasion.
+10   I haven't looked beyond that to see who else
+11   might.
+12              So I understand the testimony of
+13   Mr. Su that cap plies aren't necessarily ever
+14   used by Double Coin in their medium truck
+15   tires but he did suggest and I believe that I
+16   allow for -- I've offered this technology as
+17   one but I allow for other countermeasures to
+18   tread separation and he mentioned a zero de-
+19   gree steel band at the belt edges.
+20              Had that been used, I think it
+21   likely would've had some contribution to the
+22   tires durability but it wasn't used in this
+23   instance on this particular product.
+0113
+ 1         Q.   Didn't Mr. Su testified that a
+ 2   zero degree belt was only used on extremely
+ 3   large off road truck tires?
+ 4         A.   I believe he did.  I don't think
+ 5   that dissuades what the propensity and the
+ 6   efficacy of the material is.
+ 7              Whether you use it in aircraft
+ 8   tires or not wouldn't make any difference to
+ 9   whether it could be used.
+10              I understand that's what he said
+11   it was used on.  I understood what I read.
+12   I'm just saying that, if that is something
+13   already in the wheelhouse, already available,
+14   it would help to go in zero degree and wrap
+15   the belt in so that they don't separate from
+16   each other and start that process of the
+17   initial crack propagation.
+18              However, absent that, certainly
+19   nylon or Kevlar or any of those materials
+20   could be used.
+21         Q.   You worked for Goodyear Dunlop for
+22   several years right, 17 or 18 years or what-
+23   ever it was?
+0114
+ 1         A.   I started with Dunlop but, after
+ 2   '99, it merged into a joint venture.
+ 3         Q.   Yeah, and you said they have a
+ 4   patent for this nylon cap or nylon --
+ 5         A.   Strips.
+ 6         Q.   -- strips or cap plies.
+ 7              Do they use it all of their truck
+ 8   tires?
+ 9         A.   I'm not aware.  I wasn't -- that
+10   -- their product wasn't my area of respons-
+11   ibility but they -- they only specifically
+12   notate two or three lines of tires that they
+13   actually used in -- as support to the patent
+14   which came out in '95.
+15         Q.   Were those passenger tire lines or
+16   truck tire lines?
+17         A.   No.  This is all medium truck.
+18         Q.   Are they still using those lines,
+19   still producing those lines?
+20         A.   I don't know.  I haven't asked.
+21         Q.   You were there for 10 years after
+22   this patent was issued; right?
+23         A.   (No response.)
+0115
+ 1         Q.   Were you familiar with it being
+ 2   used during the time you were there?
+ 3         A.   No.  I wasn't with Goodyear until
+ 4   '99 but I was responsible for Dunlop brand
+ 5   and I wasn't aware.  In fact, I only in the
+ 6   last few years found a patent.
+ 7         Q.   How did the absence of the nylon
+ 8   cap or strip line cause a separation in this
+ 9   case?
+10         A.   Well, it provides a safety compon-
+11   ent which cinches down and you have to under-
+12   stand the kind of nylon that's used for tire
+13   performance and that nylon is treated, dipped
+14   and treated in such a way that you can -- you
+15   know, Michelin talks about it in their patent
+16   others talk about it, that, once it's applied
+17   into a rubberized sheet and wrapped into the
+18   tire on top of the steel belts so -- I don't
+19   know if you can see this in the video or not
+20   but this light truck tire has got two steel
+21   belts here and between those belts and the
+22   tread lug you can add a layer or two layers,
+23   whatever you wanted, of the nylon over the
+0116
+ 1   belts and under heat, when you're operating
+ 2   the tire and it's got -- you know, you've
+ 3   started moving and you're now building some
+ 4   operating heat in the tire, it constricts and
+ 5   so -- and it actually relaxes when the tire
+ 6   cools down but it constricts and acts as a
+ 7   tourniquet.
+ 8              If you place it and concentrate
+ 9   it, especially for the belt edges and however
+10   much of the belt edge you need to do, when
+11   you -- when you apply it and you're operating
+12   the tire and you've got centrifugal forces
+13   acting and the tire is growing a bit in oper-
+14   ation, it constricts the belts.
+15              And so that's how it contributes
+16   is it would be a safety component which can
+17   reduce the growth of the belts and growth at
+18   the belts becomes really significant when the
+19   belts are separated from each other and now
+20   you get egg shapedness or doming, those kinds
+21   of results in the tire due to the underlying
+22   separation.  It can retard that and that's
+23   exactly what comes out of the patent.
+0117
+ 1              Goodyear did the testing and they
+ 2   had a couple of tire lines that for -- they
+ 3   collected two data's -- two year's worth of
+ 4   data on and they had -- let me find the chart
+ 5   really quick.
+ 6              They were seeing two years before
+ 7   they added it in the 385 65R 22.5, same size
+ 8   as the subject tire.  In the GE-159 line and
+ 9   in the MT-2 line they had -- before they add-
+10   ed it, they collected 1,198 tread separations
+11   so they added it and collected data for two
+12   years.
+13              And, in the meantime, they almost
+14   doubled their production numbers of those two
+15   lines.  And so production numbers went from
+16   139,000 to 267,000 and so they only had 411
+17   tread seps versus -- so they reduced by 3 --
+18   a factor of 3 the tread seps when they nearly
+19   doubled their production numbers by using the
+20   nylon cap strips on a 385 65R 22.5 tire.
+21              So I think the efficacy of the
+22   nylon, which is known in the industry anyway,
+23   has been for years; but the efficacy of the
+0118
+ 1   nylon in this application is spelled out in
+ 2   the actual patent.
+ 3         Q.   So are you -- is it your testimony
+ 4   that, if there'd been a nylon cap, this tire
+ 5   wouldn't have separated?
+ 6         A.   Not that day and I'm not here to
+ 7   tell you it would never have separated given
+ 8   the other defects in the tires but I believe
+ 9   the efficacy of the nylon would've been sign-
+10   ificant to the tire's durability and I'm just
+11   confident in that technology enough to say I
+12   don't believe that day and who knows what
+13   happens after that.
+14         Q.   You've talked about a couple times
+15   now that the tire will sort of -- not sort
+16   of.  You said the tire will start to lose
+17   shape.  You referred to egg shaped or, you
+18   know, whatnot.
+19              So wouldn't that -- you know, the
+20   tire losing shape be evident to the driver of
+21   the vehicle?
+22         A.   Can be, cannot be.  I mean, I'm
+23   not here to speak to driver kinematics and
+0119
+ 1   what they are sensitive to as a driver.
+ 2              It could -- could be a vibration,
+ 3   might not be according to the suspension.  I
+ 4   wasn't there.  I don't know.  I -- I can't
+ 5   say.  I'm not speaking to --
+ 6         Q.   Have you done any studies or tests
+ 7   to see about the -- to see if as the tire is
+ 8   out of round, if it's noticeable to a driver
+ 9   or not?
+10         A.   I have.  In the -- in the terms of
+11   uniformity which is -- we used to study high-
+12   way speeds putting passenger and light truck
+13   tires on vehicles and running down a course,
+14   looking for the drift, looking for any vib-
+15   ration, analyzing that versus what the tire
+16   measured as for uniformity; lateral force and
+17   vertical force, balance, those kinds of basic
+18   things and then learning how we could tighten
+19   it up because one of our competitors -- we
+20   felt Michelin had a better bead cable and it
+21   produced a better uniformity for that tire.
+22              That was a vibration issue and not
+23   out of round in the way that I'm describing
+0120
+ 1   it here.  Out of round in the way that comes
+ 2   back for claims after, you know, the latter
+ 3   part of a year of collection is usually not
+ 4   the "I don't like the sensitivity of the non-
+ 5   uniformity, I need a new balance weight on
+ 6   the wheel."  It's usually "I've got something
+ 7   underlying that is causing a concentrated am-
+ 8   ount of vibration and the tire can be chang-
+ 9   ing shape as a result of underlying separa-
+10   tion."
+11              The kind of vibration people that
+12   aren't happy with in the initial drive is the
+13   kind of thing they come right back with and
+14   go "Switch that off, I'm driving, you know,
+15   two" -- "two weeks in a row on that."
+16              So we're talking about slightly
+17   two different things with the same termino-
+18   logy unfortunately in the industry.
+19              Imbalance and out of round and
+20   kinetics, those kinds of things that happen
+21   as a result of how the tire was constructed
+22   and how it drives new is different and not a
+23   safety issue normally.
+0121
+ 1              The safety issue is the tire is
+ 2   changing shape and many times in cases with
+ 3   medium truck tires the inspection doesn't
+ 4   pick it up but they stop at some point and
+ 5   there's a big dome in the tire egg shaped and
+ 6   this is because there's underlying components
+ 7   in there and their breaking their bonds with
+ 8   each other, usually the belts; and those are
+ 9   the things that can progress to demonstrate a
+10   separation layer.
+11         Q.   So, when I ask you to describe how
+12   the premature oxidative degradation would
+13   cause the tire to separate, you -- you walked
+14   through the process and you got to the point
+15   where -- and I wasn't clear on this.
+16              Were you saying that, because of
+17   the internal separation, it would actually
+18   cause the tire to separate or is it from the
+19   force of hitting the ground that would start
+20   the separation?
+21         A.   The former, not the latter.  I
+22   don't the latter comment.
+23         Q.   So you were talking about the
+0122
+ 1   pressures on the tire with each revolution;
+ 2   right?  As the tire spins around, it comes
+ 3   into contact with the ground.  So all of that
+ 4   is pressure that was being put onto the tire;
+ 5   right?
+ 6         A.   (No response.)
+ 7         Q.   And so my question --
+ 8         A.   Let me -- just so I know that we
+ 9   are understanding each other better maybe, I
+10   said, if I put an "X" on the tread piece --
+11   but I'm holding just the 2-inch wide piece;
+12   right?  And there's X's all the way around;
+13   right?  Every place the tire is in contact
+14   with the road is applying force down.
+15         Q.   Correct.
+16         A.   So it's always in stress at the
+17   belt edges.  The a highest concentration is
+18   at the belt edges always; but any particular
+19   spot, if I put an "X" on the tire and rolled
+20   it under the vehicle, as soon as it went into
+21   contact with the road surface, there would be
+22   a microcompression then and, as soon as that
+23   flipped out of contact as it continue to roll
+0123
+ 1   it would rebound.
+ 2              So we get these microcompression
+ 3   release, compression release; and they are
+ 4   contributing -- once oxidation makes it to
+ 5   the belt edge, they're contributing to the
+ 6   crack propagation.
+ 7              There -- that's the work -- to use
+ 8   physics terms, that's the work that's happen-
+ 9   ing that the compression cycles are chatter-
+10   ing away this bond; and, if it's oxidizing
+11   along the belt edge where it oxidizes more
+12   readily than it does in the center of the
+13   tread, there's no reason for it to oxidize
+14   quickest in the center.  It's out on the cut
+15   belt edge where it starts oxidizing first
+16   where the load concentration is working that
+17   area.
+18              So it's not that it's hitting the
+19   road that starts the belt separation per se.
+20   It's that whole process of oxygen getting to
+21   the belt edge, cracking that belt edge rubber
+22   and then these microcompressions working that
+23   weakness until it's a large weakness.
+0124
+ 1              I don't know if that's answering
+ 2   you but I'm trying.
+ 3         Q.   So, somewhere along the way in the
+ 4   process as I'm trying to understand your de-
+ 5   scription of it, and we have the tread piece
+ 6   here; right?  A piece of -- a piece of that
+ 7   tread tears from the surface of the rest of
+ 8   the tire at some point; correct?
+ 9         A.   Well, when I say "tread," it's
+10   also got belts under it.  It's -- it's separ-
+11   ating between the belt and taking the tread
+12   and belt with part of it and the rest remains
+13   with the carcass on the rim.
+14         Q.   And so the question I'm asking --
+15   so you're saying that, you know -- you're
+16   saying, because of the premature oxidative
+17   degradation, your testimony is the 2 and 3
+18   belts were separating?
+19         A.   Yes.  Yes.
+20         Q.   What would cause the 2 and 3 belt
+21   -- so those belts obviously wrap around the
+22   tire?
+23         A.   Right.
+0125
+ 1         Q.   I think there's even a little bit
+ 2   of overlap.  You know the splice is supposed
+ 3   to meet somewhere.
+ 4              So what caused the belt inside to
+ 5   break from -- you know, from the circle that
+ 6   it was otherwise because it's one -- obvious-
+ 7   ly it's one long piece of belt skim when it's
+ 8   put onto the -- into the tire; right?
+ 9         A.   So the weakest point in any of
+10   the belts if I look at the x-ray is any space
+11   between the wires.  They're all on diagonals
+12   to each other and that's caused -- that's for
+13   the purpose of panographing the tire; meaning
+14   we put them on even opposite angles.
+15              Let's say -- I'm guessing.  Let's
+16   say 21 degrees -- and maybe I can look at the
+17   spec and actually tell you what this one is.
+18              Let's take 21 degrees in this di-
+19   rection for first operating belt.  I'm just
+20   talking about belt 2 and 3.  It's 21 degrees
+21   in the opposite direction on the other belt,
+22   belt 3, and that's done so that when the tire
+23   cures in the mold it flattens the tread so
+0126
+ 1   you can get 50,000, 60,000, 100,000 miles out
+ 2   of a tread.
+ 3              That's -- that's the purpose of
+ 4   that is equal opposite angles but the weakest
+ 5   point in the belt system other than if it's
+ 6   got a bad splice in it is between any cable.
+ 7              So, when it splits and you see the
+ 8   belt angles running like this, when it lifts,
+ 9   it lifts in the weakest spot and it rips be-
+10   tween the belt cables and just comes up as
+11   one piece or two pieces in this case.  Belt 3
+12   and 4 come up in that way (demonstrating.)
+13              This angle or this angle whichever
+14   belt you're talking about, the belt lifts in
+15   that weakest location and sometimes pulls
+16   some other cables away in the pulling process
+17   when it's lifting away (demonstrating.)
+18              I don't know if that's answering
+19   the question but you can see here's the first
+20   belt and it's in this slow angle.  And "slow"
+21   meaning larger than 21 degrees.
+22              Here's the second belt right next
+23   to it.  Here's the third -- the second belt,
+0127
+ 1   first belt, second belt is out here, the wid-
+ 2   est belt and it goes back (demonstrating.)
+ 3              The third belt is this one and the
+ 4   fourth belt's in the same area but just nar-
+ 5   rower because it's there for the stone drill-
+ 6   ing and all that.
+ 7              In fact, when you retread it, you
+ 8   could actually peel that belt off.  It's only
+ 9   there for stone drilling.
+10         Q.   Okay.
+11         A.   This takes usually a day with my
+12   clients at my office to do this whole "Help
+13   me understand the oxidation process."  So we
+14   are trying to accomplish it in a small period
+15   of time.
+16         Q.   I'm trying to get an answer from
+17   you.
+18         A.   Oh, I thought I was answering.
+19         Q.   So my question is:  When the tread
+20   belt separation occurs, at some point, you
+21   know, the -- the belt skim is no longer one
+22   piece, it -- a part of it breaks off; right?
+23         A.   Yes.
+0128
+ 1         Q.   What is the -- the -- what -- what
+ 2   is causing that break, that last step?  Is it
+ 3   -- I guess that's -- just what causes that
+ 4   break?
+ 5         A.   So, irrespective of the -- of the
+ 6   angle -- irrespective of the angle that I've
+ 7   just told you is in the belts -- and I showed
+ 8   you that the x-rays show that it's not zero
+ 9   degrees and straight across or whatever.
+10              Assume that's a hoop of belt on a
+11   building drum and then later in the finished
+12   tire and we've got three more belts over it
+13   and they're all spliced back so the beginning
+14   -- as you said the beginning and the end sort
+15   of lines up and becomes a splice that's the
+16   spot.  It shouldn't overlap and shouldn't gap
+17   it should be just butted right up.
+18              When the next belt on top of this
+19   one is working against this belt, if this is
+20   belt 2 and belt 3 is on top and they're work-
+21   ing against each other and they're starting
+22   to polish and that polish is getting longer
+23   around the tire and wider across the tire to
+0129
+ 1   the point that all of the real adhesion in
+ 2   this whole system now is happening over in a
+ 3   small area on one side.
+ 4              Then, the -- the support for the
+ 5   whole system is that each belt is bonded to
+ 6   the one above it and ones below it all the
+ 7   way through and everything is else is all
+ 8   bonded above it and below it and there's no
+ 9   blue.
+10              So you cured it at high temper-
+11   atures.  You've cured it long enough that you
+12   meant for it to get all the curing units into
+13   the tire to make it turn, vulcanize, and be
+14   something you can use in the industry, in the
+15   market, and now top belt -- the belt above
+16   this one if this is belt 2 is no longer fully
+17   contacting and bonded to this so the weakness
+18   causes belt 3 to peel off of belt 2.
+19              And that weakness, that lack of
+20   bond which is caused by the polishing going
+21   on, the oxidation going on, the stresses of
+22   loading and unloading that you see in those
+23   polished surfaces is because they're not con-
+0130
+ 1   nected anymore.
+ 2              So now belt 3, belt 4 on top of it
+ 3   which is just extra mass from the standpoint
+ 4   of this bonding and the tread thickness which
+ 5   is just extra mass from the standpoint of
+ 6   this bonding is slinging around and this belt
+ 7   can't maintain that force, it can't hold back
+ 8   against the centrifugal forces of mass in
+ 9   motion.
+10              It's like taking a bucket of water
+11   and spinning it on a rope.  The minute you
+12   stop is the minute you're wet; right?
+13              So this -- this is the function of
+14   all the belts have to stay together or else
+15   this thing spools out and that's what happen-
+16   ed in the tread separation.  It spooled to
+17   pieces.
+18              That's the reason that it lifts
+19   and unfolds itself basically as belt 3 is
+20   peeling off and taking bits with it and other
+21   section of belt because the bonding isn't the
+22   same all through the tire.  After you've got
+23   the weaknesses here and weaknesses there, the
+0131
+ 1   bonding is at different levels within the
+ 2   tire.
+ 3              So we've got a piece of tread that
+ 4   has got belt 1, 2, 3, and 4 on it in certain
+ 5   areas and then only belt 2, 3, 4 in another
+ 6   area.  It's variable.
+ 7         Q.   So, going back then to my earlier
+ 8   question, you're not giving the opinion -- is
+ 9   it your opinion that a nylon ply on a 4-belt
+10   tire would have prevented this separation?
+11         A.   On that day.  I believe in the
+12   technology enough to understand that it caus-
+13   es restriction at the belt edges, which is a
+14   precursor to a belt separation.
+15              So, yes, on the day.  I can't say
+16   it would've lasted forever.  I'm not offering
+17   that testimony especially given other defects
+18   I observed in the tire.
+19         Q.   Are you ware of any four steel
+20   belt truck tires that have nylon ply caps?
+21         A.   I'm aware of some that have been.
+22   Those that are in the patent.
+23         Q.   Did those have four steel belts?
+0132
+ 1         A.   Yes, at the 385 65 22.5.
+ 2         Q.   But not all 385 tires have steel
+ 3   belts, do they?
+ 4         A.   Name one that doesn't.  I don't
+ 5   know.  I mean, I can't think of one that
+ 6   doesn't.  I think that's the state of the art
+ 7   technology at this point.
+ 8         Q.   It is today.  I mean, this patent
+ 9   is from what, the '90s; right?
+10         A.   And this tire is from the '80s.  I
+11   mean, it had four belts in it.
+12         Q.   And have you done any studies to
+13   determine if this adding a nylon cap would've
+14   lessened tread belt separations in any line
+15   of tires?
+16         A.   Yeah, I did that in the industry.
+17   I mean, I had development in which I made
+18   myself prove that I needed to put the extra
+19   cost of the component of nylon in to -- your
+20   question didn't say "medium trucks;" but, in
+21   passenger light truck tires, I made myself
+22   prove I needed to add the expense of nylon in
+23   a tire that's still in the industry I believe
+0133
+ 1   with the Toyota Tacoma.
+ 2         Q.   Passenger tires only have one or
+ 3   two steel belts; right?
+ 4         A.   Right.
+ 5         Q.   Are you aware of any truck tire
+ 6   studies where -- comparing performance with a
+ 7   nylon cap versus performance without a nylon
+ 8   cap?
+ 9         A.   I'm not aware of anything anyone's
+10   published on it; and, again, I'd rely on the
+11   study behind the patent.
+12              It's not just patent material, it
+13   is actually two year's worth of collecting on
+14   each side of application of the nylon to the
+15   same line.
+16         Q.   On page 38, you try to talk about
+17   eliminating other causes.
+18              You state here that:  "It is not
+19   generally accepted in the tire community that
+20   impact damage can cause a tread separation."
+21              What tire community -- who are you
+22   referring to when you say "tire community"?
+23         A.   Every major tire manufacturer.  I
+0134
+ 1   ask or have my clients ask every manufacturer
+ 2   "Produce any impact testing you conduct that
+ 3   lets you know that this tire" -- "how this
+ 4   tire will perform toward tread separation."
+ 5   And without exception to date everyone has
+ 6   responded "We have nothing responsive to that
+ 7   request," which tells me that if you're going
+ 8   to suggest that an impact causes your tires
+ 9   to peel the treads and the belts off rather
+10   than just burst like a normal impact would
+11   do; one, you'd have the testing to support
+12   it; two, you design around it based on the
+13   testing; and I don't see that happening with
+14   any manufacturer and I've testified to that
+15   many times.
+16              They -- they speak about a labor-
+17   atory that does third-party testing for them
+18   but it's not even a real world application.
+19   It's a tire that Smithers at standard testing
+20   labs.
+21              They inflate a tire on a rim, they
+22   overinflate it, they put a pendulum up with a
+23   100-pound weight on the pendulum, they swing
+0135
+ 1   a metal probe into the tire, and originally
+ 2   it broke through everything; tread, inner
+ 3   liner, all of it; and then they filed on the
+ 4   nozzle to the point that they could get it to
+ 5   break through the tread and just glance off
+ 6   the first -- the top belt and not fail the
+ 7   bottom belt.
+ 8              Well, that's pretty unique and
+ 9   it's always locked jig such that there's no
+10   suspension support for the tire that normally
+11   you would get in the -- in the real world.
+12              I don't find that to be authora-
+13   tative whatsoever but the main impetus to me
+14   from a technical perspective is, if you would
+15   testify to that impacts or allow people to
+16   testify for you that impacts lead to tread
+17   separations, you provide them testing and
+18   there isn't any.
+19              The industry won't respond there
+20   is any and I can say from my experience while
+21   I won't get into specifications of Goodyear,
+22   Dunlop, or whatever, we didn't have tests for
+23   that and I think that's very consistent.
+0136
+ 1              So to me the industry is speaking
+ 2   in the absence of data that impacts don't
+ 3   cause tread separations in and of themselves.
+ 4         Q.   You're not aware of any industry
+ 5   publications that suggest that it can cause a
+ 6   separation?
+ 7         A.   Yeah, and it's all used in liti-
+ 8   gation but I'm not aware of any testing.  You
+ 9   can say anything you want but I'm not aware
+10   of any testing on that point from the manu-
+11   facturers who have all the wherewithal to do
+12   it and none have.
+13         Q.   Are you aware of any testing that
+14   has been done to determine whether a liner
+15   pattern mark is a defect?
+16         A.   One, I don't think you have to
+17   have testing to do it because Mr. Su agrees
+18   that liner imprints are defects in tires, not
+19   a wanted effect and they could cause tread
+20   separations; but two, I'm aware of testing
+21   that was done and at least testified about at
+22   trial.
+23              So I was there in the trial when
+0137
+ 1   Mr. Southwell testified that, during an in-
+ 2   stance in which Bridgestone Australia had the
+ 3   tread separations in their medium truck tires
+ 4   they collected tires, they found they were
+ 5   leaving the material sitting on the floor too
+ 6   long, they weren't processing it, and they
+ 7   were getting liner imprints; and, when they
+ 8   peeled tires that had imprints versus didn't
+ 9   have imprints, they got a 70 percent drop in
+10   adhesion force between the belts in those
+11   tires.
+12              I'm aware of his testimony at --
+13   on it.  I haven't seen that testing because
+14   it would be proprietary at this point but
+15   that's all I'm aware of sitting here.
+16              And, in conjunction to that, I was
+17   trained to physically peel the tire apart
+18   looking for those kinds of anomalies.
+19              THE WITNESS:  Can we take another
+20   5?
+21              MR. BERGMAN:  Yeah, sure.
+22              VIDEOGRAPHER:  Off the record at
+23   12:30.
+0138
+ 1              (Short recess.)
+ 2              VIDEOGRAPHER:  Back on the record
+ 3   at 12:38.
+ 4         Q.   You talk about here, you say that
+ 5   you tried to eliminate underinflation, over-
+ 6   inflation or overloading as a cause of the
+ 7   failure.  You say it played no role.
+ 8              Do you know how much weight was on
+ 9   the truck on the day of the accident?
+10         A.   Again, I think it was carrying a
+11   sand load.  We're talking about front tires
+12   versus rear tires.  They're usually managing
+13   the cab so it's not like they -- it has an
+14   excruciating amount of force to the front
+15   when you do that so I think that's manage-
+16   able.
+17         Q.   You go on to say:  "It played no
+18   roll" and you say:  "Underinflation should be
+19   a foreseeable event."
+20              Isn't that why tires have guide-
+21   lines for inflat to certain PSIs?
+22         A.   Yeah, it is; but designers also
+23   know that tires are not going to be operated
+0139
+ 1   at optimal conditions at all times and most
+ 2   prudent manufacturers would say "We have a
+ 3   safety margin around some level of underin-
+ 4   flation for our tires or overinflation based
+ 5   on the components we've chosen."
+ 6         Q.   I'd asked you at the outset if
+ 7   you'd ever worked with Aub Ward before.
+ 8              How many times have you worked
+ 9   with the Kaster Lynch firm?
+10         A.   Quite a few.  I go to trial with
+11   them more than any other client I have.
+12         Q.   Okay.  So how many times is that?
+13         A.   I don't know.  I haven't counted.
+14         Q.   Let me start a different way then.
+15   How many current cases do you have with the
+16   Kaster Lynch firm?
+17         A.   I think of one I just testified
+18   in.  I don't know how many I have on -- on my
+19   files right now open.  I -- I don't look for
+20   it for that.  I may have more than two or
+21   three cases but I don't know what they are
+22   sitting here.
+23         Q.   How many -- how many cases do you
+0140
+ 1   take a year?
+ 2         A.   It varies.  Actually, just this
+ 3   kind of work varies year to year so I -- I do
+ 4   what I can.
+ 5              I can't remember turning down one
+ 6   because of the amount of volume I was doing
+ 7   but -- and I think I've testified I've seen
+ 8   as many as 75 cases in a year and as few as
+ 9   30 or so.
+10              So that's changed a little bit
+11   since COVID but it's getting busier again.
+12         Q.   30 to 70 would be a rough range?
+13         A.   Most years.  There may have been
+14   differences in some years but about that.
+15         Q.   I'm sorry, how many cases do you
+16   currently have with Kaster Lynch?
+17         A.   I don't really know.  I can think
+18   of one I juste testified in but there may be
+19   others on the -- in the file that I haven't
+20   touched in a while.
+21              The hardest part is knowing when
+22   things have settled and I didn't get informed
+23   so sometimes I don't know if it's still ac-
+0141
+ 1   tive or not until I sit down and ask.
+ 2         Q.   So, over the last five years, how
+ 3   many cases do you think you've done with the
+ 4   Kaster Lynch firm?
+ 5         A.   I don't keep a running tab so I
+ 6   can tell you what I think but I don't know
+ 7   how many that I could say that it is.
+ 8         Q.   How many do you think?
+ 9         A.   Maybe 30 or 40.
+10         Q.   And, you know, looking at your
+11   deposition and testimony history, it looks
+12   like it goes back for about 20 years give or
+13   take.
+14         A.   Getting close.
+15         Q.   Ever testify on behalf of -- of a
+16   tire manufacturer?
+17         A.   Oh, tire, no.
+18         Q.   Have you ever given an opinion
+19   that a tire was not defective?
+20         A.   Yes.  I've testified about tires
+21   that have failed in sidewall failure from
+22   underinflated operation and I testified at
+23   trial in one of those.
+0142
+ 1              That's a different failure mode
+ 2   but I've testified to that, that it left the
+ 3   facility where it was mounted and it wasn't
+ 4   properly mounted, stuff like that.
+ 5         Q.   Was that just one time or more
+ 6   than one?
+ 7         A.   That's the one that was occurring
+ 8   to me as I was sitting here.
+ 9              I think I testified about a -- as
+10   I was talking earlier about, if a tire is 20
+11   years old and it looks like a 20-year-old
+12   tire.
+13              I had an instance like that where
+14   the tire had been a spare in the back of a
+15   Cadillac and it was taken to Bridgestone Tire
+16   Center and they replaced three of the others
+17   and left that one in place because the tread
+18   looked good.  So it was 20-year-old tire that
+19   failed on the way back from that facility or
+20   something within the next 30 or 40 miles or
+21   something to that.
+22              When I looked at that tire, I did
+23   not see any other manufacturing defects but
+0143
+ 1   it was thoroughly oxidized through because it
+ 2   sat there in the -- in the vehicle inflated
+ 3   for all those years.
+ 4         Q.   Just more out of curiosity, do you
+ 5   not oppose Goodyear or Dunlop because of a
+ 6   conflict or because of choice?
+ 7         A.   I originally had a -- a severance
+ 8   agreement with them and so I didn't take any
+ 9   Goodyear Dunlop cases.
+10              I don't know if that hasn't run
+11   its course but I'm happy where I am.  I don't
+12   need to invite any potential problems.
+13         Q.   And the last part of your report
+14   is reference materials.
+15         A.   Yes.
+16         Q.   Is this the -- the -- these are
+17   the source of any external -- strike that.
+18              These are the only external refer-
+19   ences that you relied upon other than the
+20   materials identified that you reviewed?
+21         A.   No.  This is -- and this list of
+22   materials is not specifically for this par-
+23   ticular report.  This is a grouping of mater-
+0144
+ 1   ials that I attach to multiple reports and
+ 2   then I referenced materials under those opin-
+ 3   ions that I offered in the Analysis section
+ 4   that may not be in that list.
+ 5         Q.   Okay.
+ 6         A.   And, in addition to that, I have a
+ 7   reference CD of basically my library.  So I
+ 8   -- I would reserve that I would use any of
+ 9   that at the time of trial.
+10              To answer an earlier question, you
+11   asked me when I wrote the report and I see
+12   here that at least I had gone to trial in the
+13   Crum case against Hankook in October 9th of
+14   2024 when I attached my testimony list.  So
+15   some place post that date I would say I -- I
+16   submitted the report.
+17         Q.   Well, I know that you submitted it
+18   after that date.  Is that also when you wrote
+19   it?  Different -- two different things.
+20         A.   That's when it was finalized.  I
+21   don't remember when I started it but that's
+22   when it was finalized.
+23         Q.   So, in your Analysis section, is
+0145
+ 1   there a reason you did not include any speci-
+ 2   fic pictures with each of your analysis
+ 3   points?
+ 4         A.   I don't always do that.  Sometimes
+ 5   I do and sometimes I don't.  Mostly I don't.
+ 6              I've got the photos and they can
+ 7   be blown up bigger than what's in the picture
+ 8   -- I mean what -- what I could put in the
+ 9   report.
+10              So I'm sure at time of trial there
+11   will be those that are selected from my pho-
+12   tos to demonstrate the individual issues we
+13   are talking about.
+14         Q.   That sort of answered my question
+15   but didn't answer it.  Let me ask it in a
+16   different way.
+17              With your opinion number 1 about
+18   oxidation, for example, why didn't you in-
+19   clude specific pictures showing the oxidation
+20   you claim exists?
+21         A.   Because I knew that I was going to
+22   print the pictures I'd taken of the oxidation
+23   and collect them at the time of deposition to
+0146
+ 1   make part of the file.
+ 2              I didn't -- it just bogs down to
+ 3   try to put a lot of pictures in a report and
+ 4   move it while you're copying your report so I
+ 5   keep everything oriented.
+ 6              I don't love doing it.  Sometimes
+ 7   I'll do it on certain occasions for certain
+ 8   issues but it's not my preferred method.
+ 9         Q.   Did you do any analysis of the
+10   maintenance of the tire by Kent and Smith
+11   Holdings?
+12         A.   Not other that the visual tactile
+13   inspection of the tire itself.
+14         Q.   Did you do any -- you listed among
+15   the materials all of the documents that Kent
+16   and Smith Holdings produced.  Did you review
+17   the maintenance records to determine how the
+18   tire was maintained as part of preparing your
+19   opinions?
+20         A.   It was reviewed.  I don't remember
+21   coming to any specific conclusion that stood
+22   out from the documents but I did review it.
+23         Q.   Okay.  Are you giving any opinion
+0147
+ 1   regarding the maintenance practices of Kent
+ 2   and Smith Holdings?
+ 3         A.   I haven't been asked to do that.
+ 4   It's not part of my report.
+ 5         Q.   Have you done any analysis of the
+ 6   maintenance practices of Kent and Smith Hold-
+ 7   ings and how it could've contributed to the
+ 8   state of the tire at the time of the acci-
+ 9   dent?
+10         A.   Just what in investigation of the
+11   tire and examination of the tire presented
+12   to me in my forensic analysis.
+13         Q.   Okay.  So just like noting like
+14   the -- the cuts or groove or chips or things
+15   like that?
+16         A.   That's right.
+17         Q.   And you noted punctures in your
+18   report.  Did you take into account those
+19   puncture in performing your analysis?
+20         A.   Yes.
+21         Q.   In what way?
+22         A.   In looking at the rest of the car-
+23   cass, had those punctures actually resulted
+0148
+ 1   in underinflated operation, there would tell-
+ 2   tale signs to the carcass; abrasions in the
+ 3   upper sidewall, extensive bead area damage;
+ 4   and I looked at that and was able to count it
+ 5   and threw it out based on the evidence it-
+ 6   self.
+ 7         Q.   Did you do any assessment or anal-
+ 8   ysis of the nature of the repairs made to
+ 9   those punctures and whether that contributed
+10   to any condition on the tire?
+11         A.   I didn't see any evidence of re-
+12   pairs to any of the punctures.  So I'm not
+13   confident that any of them went completely
+14   through the tire, there's no evidence of that
+15   and, had they gone through the tire and the
+16   tire aired out as a result and then operated
+17   in that condition, there would've been tell-
+18   tale signs on the tire.
+19         Q.   Okay.  Are you familiar with the
+20   recommendations on how to properly repair a
+21   puncture in a tire?
+22         A.   I'm familiar with the recommenda-
+23   tions.
+0149
+ 1         Q.   Did you do any analysis to deter-
+ 2   mine whether any of the punctures were re-
+ 3   paired using those recommendations?
+ 4         A.   I didn't see evidence of any re-
+ 5   pair.  I also looked at your expert Grant's
+ 6   report and he doesn't define any repair in
+ 7   the tire.
+ 8              So I -- I think it feels like a
+ 9   red herring.  I don't think there's been any
+10   repair to the tire.
+11         Q.   Are you aware of any policies or
+12   guidance or even guidelines about the use of
+13   repaired tires as a steer tire?
+14         A.   I think I noted that in one of the
+15   reports, some comment about it being used in
+16   another position besides steer but other than
+17   that I wasn't aware of any specific guide-
+18   lines on it.
+19              I mean, certainly retreads can be
+20   used.  So I'm not certain the implication of
+21   using a repaired tire when a retread can be
+22   used.
+23         Q.   How much have you been paid for
+0150
+ 1   your opinion to date Mr. Cottles?
+ 2         A.   Whatever the sum of the invoices
+ 3   is and whether there's another invoice for --
+ 4   I'll look again but whether there's another
+ 5   invoice for writing the report.  I don't see
+ 6   it listed here.
+ 7              I've invoiced at least with what I
+ 8   have in hand about $27,000 or $28,000.
+ 9         Q.   And is the amount of work you've
+10   done many this case high, low, or typical of
+11   the amount of work you do on a case?
+12         A.   They're all different according to
+13   how many testimonies I'm looking at, how many
+14   tires I actually evaluate.  They -- they're
+15   all different so I don't have a high, medium,
+16   or low rank -- rank order.
+17         Q.   Are you aware of any time that
+18   your testimony has been excluded?
+19         A.   It was limited on ability to test-
+20   ify about oxidative -- the chemical nature of
+21   oxidation ink Florida.
+22              There was an instance in Texas in
+23   a case called -- just a minute -- Lara.  I
+0151
+ 1   called it -- the case as I knew it was Lara,
+ 2   L-a-r-a, versus Bridgestone.
+ 3              As I understand the situation, I
+ 4   offered late the opinion of the nylon cap ply
+ 5   separate from my initial report and defense
+ 6   counsel sought to have that opinion struck
+ 7   and, as I understand it, the Court ordered
+ 8   just to eliminate all my opinions; but it was
+ 9   a bench order, not a signed order.
+10              So my -- so my client had already
+11   settled at that point but they were present
+12   to represent my interest in that and -- so it
+13   never was a signed order as far as I know.
+14              Another Texas case in which belt-
+15   ing defect was excluded from -- or the Court
+16   wouldn't allow me to talk about it because --
+17   I didn't understand the ruling but because it
+18   was not outside Michelin's own standards.
+19              I don't understand that ruling be-
+20   cause that doesn't have anything to do with
+21   the forensics of it but that was what was
+22   said.  I couldn't testify about the belting
+23   defect and, because they didn't have a stand-
+0152
+ 1   ard on liner pattern marks, that Court didn't
+ 2   allow me to testify about that but I was able
+ 3   to testify about oxidation, trapped air, and
+ 4   nylon cap plies.
+ 5              I don't think that I've ever been
+ 6   excluded on any matter in Louisiana, so we'll
+ 7   see what happens.
+ 8         Q.   What was the name of this latter
+ 9   Texas case you were talking about?
+10         A.   Whit.
+11         Q.   What was the Florida case name if
+12   you recall?
+13         A.   I don't recall it sitting here.
+14         Q.   Subject to any questions that your
+15   attorneys ask, I'm done right around my 1:00
+16   o'clock target.
+17         A.   Thank you.
+18              MR. KONERU:  I don't have any
+19   questions.
+20              VIDEOGRAPHER:  This concludes the
+21   Deposition of Troy Cottles.
+22              We're off the record at 12:59.
+23              COURT REPORTER:  Does everybody
+0153
+ 1   want Etrans or --
+ 2              MR. BERGMAN:  Yeah, I'll take an
+ 3   Etran with the exhibits.
+ 4              MS. SWEETIN:  We'll take an Etran
+ 5   with the exhibits as well.
+ 6   
+ 7   
+ 8                      --o0o--
+ 9   
+10   
+11   
+12   
+13   
+14   
+15   
+16   
+17   
+18   
+19   
+20   
+21   
+22   
+23   
+0154
+ 1                   CERTIFICATE
+ 2   STATE OF ALABAMA     )
+ 3   
+ 4   COUNTY OF JEFFERSON  )
+ 5   
+ 6                   I hereby certify that the above and foregoing
+ 7   deposition was taken down by me in stenotype and the questions
+ 8   and answers thereto were transcribed by means of
+ 9   computer-aided transcription, and that the foregoing
+10   represents a true and correct transcript of the testimony
+11   given by and witness upon said hearing.
+12             I further certify that I am neither of counsel, nor
+13   kin to the parties to the action, nor am I in anyway
+14   interested in the result of said cause named in said caption.
+15             I further certify that I am duly licensed by the
+16   Alabama Board of Court Reporting as a Certified Court Reporter
+17   evidenced by the CCR number following my name below.
+18   
+19   
+20                                   Susan Bell, Commissioner
+21                                   Certified Court Reporter
+22                                    CCR#14-Expires:  9/30/25
+23                                   Commission Expires:  10/26
+0155
+ 1   Reference No.: 12362097
+ 2   
+ 3   Case:  SMITH vs C.M.A., LLC
+ 4   
+         DECLARATION UNDER PENALTY OF PERJURY
+ 5   
+          I declare under penalty of perjury that
+ 6   I have read the entire transcript of my Depo-
+     sition taken in the captioned matter or the
+ 7   same has been read to me, and the same is
+     true and accurate, save and except for
+ 8   changes and/or corrections, if any, as indi-
+     cated by me on the DEPOSITION ERRATA SHEET
+ 9   hereof, with the understanding that I offer
+     these changes as if still under oath.
+10   
+11           ___________________________
+12           Troy Cottles
+13   
+14             NOTARIZATION OF CHANGES
+15                  (If Required)
+16   
+17   Subscribed and sworn to on the ______ day of
+18   
+19   __________________________, 20____ before me,
+20   
+21   (Notary Sign)________________________________
+22   
+23   (Print Name)                    Notary Public,
+24   
+25   in and for the State of _____________________
+0156
+ 1   Reference No.: 12362097
+     Case:  SMITH vs C.M.A., LLC
+ 2   
+ 3   Page No._____Line No._____Change to:______________
+ 4   __________________________________________________
+ 5   Reason for change:________________________________
+ 6   Page No._____Line No._____Change to:______________
+ 7   __________________________________________________
+ 8   Reason for change:________________________________
+ 9   Page No._____Line No._____Change to:______________
+10   __________________________________________________
+11   Reason for change:________________________________
+12   Page No._____Line No._____Change to:______________
+13   __________________________________________________
+14   Reason for change:________________________________
+15   Page No._____Line No._____Change to:______________
+16   __________________________________________________
+17   Reason for change:________________________________
+18   Page No._____Line No._____Change to:______________
+19   __________________________________________________
+20   Reason for change:________________________________
+21   Page No._____Line No._____Change to:______________
+22   __________________________________________________
+23   Reason for change:________________________________
+24   
+     SIGNATURE:_______________________DATE:___________
+25   Troy Cottles
+0157
+ 1   Reference No.: 12362097
+     Case:  SMITH vs C.M.A., LLC
+ 2   
+ 3   Page No._____Line No._____Change to:______________
+ 4   __________________________________________________
+ 5   Reason for change:________________________________
+ 6   Page No._____Line No._____Change to:______________
+ 7   __________________________________________________
+ 8   Reason for change:________________________________
+ 9   Page No._____Line No._____Change to:______________
+10   __________________________________________________
+11   Reason for change:________________________________
+12   Page No._____Line No._____Change to:______________
+13   __________________________________________________
+14   Reason for change:________________________________
+15   Page No._____Line No._____Change to:______________
+16   __________________________________________________
+17   Reason for change:________________________________
+18   Page No._____Line No._____Change to:______________
+19   __________________________________________________
+20   Reason for change:________________________________
+21   Page No._____Line No._____Change to:______________
+22   __________________________________________________
+23   Reason for change:________________________________
+24   
+     SIGNATURE:_______________________DATE:___________
+25   Troy Cottles
