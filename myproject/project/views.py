@@ -19,9 +19,9 @@ import re
 p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 
-res = es.search(index="transcripts", body={"query": {"match_all": {}}})
-for hit in res["hits"]["hits"]:
-    print(hit["_source"])# mapping = es.indices.get_mapping(index="transcripts")
+# res = es.search(index="transcripts", body={"query": {"match_all": {}}})
+# for hit in res["hits"]["hits"]:
+#     print(hit["_source"])# mapping = es.indices.get_mapping(index="transcripts")
 # print(mapping)
 
 # INDEX_NAME = "transcripts"
@@ -204,18 +204,11 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
             for item in results:
                 item.pop("id", None)
+                txt_filename = item.get("filename")
 
-                # Extract filename (assumed to be .txt filename)
-                txt_filename = item.get("filename")  # ✅ Your SharePoint result must contain this key
-
-                try:
-                    transcript = Transcript.objects.filter(name=txt_filename).first()
-                    if not transcript:
-                        print(f"❌ Skipping: No transcript found for filename: {txt_filename}")
-                        skipped += 1
-                        continue  # Skip this item
-                except Transcript.DoesNotExist:
-                    print(f"❌ Transcript not found for filename: {txt_filename}")
+                transcript = Transcript.objects.filter(name=txt_filename).first()
+                if not transcript:
+                    print(f"❌ Skipping again: No transcript found for {txt_filename}")
                     skipped += 1
                     continue
 

@@ -7,6 +7,8 @@ import re
 import json
 import os
 from dotenv import load_dotenv
+from project.models import Transcript
+
 load_dotenv()
 # Configuration (move to settings or .env for production)
 TENANT_ID = os.getenv("TENANT_ID")
@@ -71,7 +73,6 @@ def fetch_json_files_from_sharepoint():
     headers = {"Authorization": f"Bearer {token}"}
 
     drive_id = get_dive_id()
-    # Step 3: List all JSON files in the folder
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -80,8 +81,6 @@ def fetch_json_files_from_sharepoint():
     files_res.raise_for_status()
     files = files_res.json().get("value", [])
 
-    total_records = 0
-    saved_files = []
     results = []
 
     for file in files:
@@ -89,27 +88,34 @@ def fetch_json_files_from_sharepoint():
         if not filename.endswith(".json"):
             continue
 
+        txt_file_name = convert_json_filename_to_txt(filename)
+
+        # ✅ Skip if there's no matching Transcript in DB
+        if not Transcript.objects.filter(name=txt_file_name).exists():
+            print(f"❌ Skipping: No transcript found for filename: {txt_file_name}")
+            continue
+
+        # Now fetch and process the file
         file_path = f"{FOLDER}/{filename}"
         encoded_file_path = urllib.parse.quote(file_path)
         file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{encoded_file_path}:/content"
 
-        file_res = requests.get(file_url, headers=headers)
-        file_res.raise_for_status()
-        data = file_res.json()
-        txt_file_name = convert_json_filename_to_txt(filename)
-        print
         try:
+            file_res = requests.get(file_url, headers=headers)
+            file_res.raise_for_status()
+            data = file_res.json()
+
             for record in data:
-                    results.append({
+                results.append({
                     "question": record.get("question"),
                     "answer": record.get("answer"),
                     "cite": record.get("cite"),
                     "index": record.get("index"),
-                    "filename" : txt_file_name
+                    "filename": txt_file_name
                 })
         except Exception as e:
-                print(f"⛔ Skipping file {filename} due to error: {e}")
-                continue
+            print(f"⛔ Skipping file {filename} due to error: {e}")
+            continue
 
     print(f"\n✅ Total QA Pairs processed: {len(results)}")
     return results
