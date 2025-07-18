@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -91,16 +91,17 @@ TEMPLATES = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://demo.gibson.legal/",
-    "http://demo.gibson.legal/",
+    "https://demo.gibson.legal",
+    "http://demo.gibson.legal",
 
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = ['*']
 CORS_ALLOW_METHODS = ['*']
 CORS_ALLOW_CREDENTIALS = True
-
 WSGI_APPLICATION = "myproject.wsgi.application"
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # or any absolute path
 
 
 # Database
