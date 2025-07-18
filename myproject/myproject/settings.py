@@ -103,6 +103,7 @@ WSGI_APPLICATION = "myproject.wsgi.application"
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # or any absolute path
 
+STATIC_URL = '/static/'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
