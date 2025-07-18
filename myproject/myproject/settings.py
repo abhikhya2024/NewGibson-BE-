@@ -91,7 +91,9 @@ TEMPLATES = [
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
+    "https://demo.gibson.legal/",
+    "http://demo.gibson.legal/",
+
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_HEADERS = ['*']
