@@ -82,7 +82,7 @@ es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 #     for testimony in Testimony.objects.all():
 #         index_testimony(testimony)
 
-reindex_all_testimonies()
+# reindex_all_testimonies()
 res = es.search(index="transcripts", body={"query": {"match_all": {}}})
 for hit in res["hits"]["hits"]:
     print(hit["_source"])# mapping = es.indices.get_mapping(index="transcripts")
