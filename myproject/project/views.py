@@ -20,69 +20,69 @@ p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 
 
-# INDEX_NAME = "transcripts"
-# # ✅ Step 1: Define correct mapping with type.keyword
-# mapping = {
-#     "mappings": {
-#         "properties": {
-#             "question": {"type": "text"},
-#             "answer": {"type": "text"},
-#             "cite": {"type": "text"},
-#             "transcript_name": {"type": "text"},
-#             "witness_name": {"type": "text"},
-#             "type": {  # Witness type
-#                 "type": "text",
-#                 "fields": {
-#                     "keyword": {"type": "keyword"}
-#                 }
-#             },
-#             "alignment": {  # ✅ Added alignment mapping
-#                 "type": "text",
-#                 "fields": {
-#                     "keyword": {"type": "keyword"}
-#                 }
-#             }
-#         }
-#     }
-# }
+INDEX_NAME = "transcripts"
+# ✅ Step 1: Define correct mapping with type.keyword
+mapping = {
+    "mappings": {
+        "properties": {
+            "question": {"type": "text"},
+            "answer": {"type": "text"},
+            "cite": {"type": "text"},
+            "transcript_name": {"type": "text"},
+            "witness_name": {"type": "text"},
+            "type": {  # Witness type
+                "type": "text",
+                "fields": {
+                    "keyword": {"type": "keyword"}
+                }
+            },
+            "alignment": {  # ✅ Added alignment mapping
+                "type": "text",
+                "fields": {
+                    "keyword": {"type": "keyword"}
+                }
+            }
+        }
+    }
+}
 
-# # ✅ Step 2: Delete old index
-# if es.indices.exists(index=INDEX_NAME):
-#     es.indices.delete(index=INDEX_NAME)
-#     print(f"🗑️ Deleted old index: '{INDEX_NAME}'")
+# ✅ Step 2: Delete old index
+if es.indices.exists(index=INDEX_NAME):
+    es.indices.delete(index=INDEX_NAME)
+    print(f"🗑️ Deleted old index: '{INDEX_NAME}'")
 
-# # ✅ Step 3: Create new index
-# es.indices.create(index=INDEX_NAME, body=mapping)
-# print(f"✅ Created new index: '{INDEX_NAME}' with mapping.")
+# ✅ Step 3: Create new index
+es.indices.create(index=INDEX_NAME, body=mapping)
+print(f"✅ Created new index: '{INDEX_NAME}' with mapping.")
 
-# # ✅ Step 4: Indexing logic
-# def index_testimony(testimony):
-#     transcript = testimony.file
-#     witness = Witness.objects.filter(file=transcript).first()
+# ✅ Step 4: Indexing logic
+def index_testimony(testimony):
+    transcript = testimony.file
+    witness = Witness.objects.filter(file=transcript).first()
 
-#     witness_name = f"{witness.first_name} {witness.last_name}" if witness else ""
-#     witness_type = witness.type.type if (witness and witness.type) else ""
-#     witness_alignment = str(witness.alignment) if (witness and witness.alignment) else ""
+    witness_name = f"{witness.first_name} {witness.last_name}" if witness else ""
+    witness_type = witness.type.type if (witness and witness.type) else ""
+    witness_alignment = str(witness.alignment) if (witness and witness.alignment) else ""
 
-#     doc = {
-#         "question": testimony.question,
-#         "answer": testimony.answer,
-#         "cite": testimony.cite,
-#         "transcript_name": transcript.name,
-#         "witness_name": witness_name,
-#         "type": witness_type,           # e.g. "Fact Witness"
-#         "alignment": witness_alignment  # e.g. "Adverse"
-#     }
+    doc = {
+        "question": testimony.question,
+        "answer": testimony.answer,
+        "cite": testimony.cite,
+        "transcript_name": transcript.name,
+        "witness_name": witness_name,
+        "type": witness_type,           # e.g. "Fact Witness"
+        "alignment": witness_alignment  # e.g. "Adverse"
+    }
 
-#     es.index(index=INDEX_NAME, body=doc)
-#     print(f"📌 Indexed testimony ID {testimony.id} with witness type: '{witness_type}' and alignment: '{witness_alignment}'")
+    es.index(index=INDEX_NAME, body=doc)
+    print(f"📌 Indexed testimony ID {testimony.id} with witness type: '{witness_type}' and alignment: '{witness_alignment}'")
 
-# # # ✅ Step 5: Loop over all testimonies and index them
-# def reindex_all_testimonies():
-#     for testimony in Testimony.objects.all():
-#         index_testimony(testimony)
+# # ✅ Step 5: Loop over all testimonies and index them
+def reindex_all_testimonies():
+    for testimony in Testimony.objects.all():
+        index_testimony(testimony)
 
-# reindex_all_testimonies()
+reindex_all_testimonies()
 res = es.search(index="transcripts", body={"query": {"match_all": {}}})
 for hit in res["hits"]["hits"]:
     print(hit["_source"])# mapping = es.indices.get_mapping(index="transcripts")
