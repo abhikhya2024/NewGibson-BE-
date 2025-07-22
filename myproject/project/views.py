@@ -603,7 +603,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
         created = 0
         for item in results:
             fullname = item.get("fullname")
-            transcript_name = item.get("filename")
+            transcript_name = item.get("transcript_name")
 
             if not (fullname or transcript_name):
                 print("not found", transcript_name)
