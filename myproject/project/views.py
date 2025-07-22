@@ -428,6 +428,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         responses={200: TestimonySerializer(many=True)}
     )
     @action(detail=False, methods=["post"], url_path="combined-search")
+    @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         serializer = CombinedSearchInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -437,7 +438,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         mode = validated.get("mode", "exact").lower()
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
-        witness_types = validated.get("witness_types", [])  # ✅ New input
+        witness_types = [t.strip() for t in validated.get("witness_types", []) if t.strip()]
 
         fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
 
@@ -453,7 +454,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 {
                     "match": {
                         "witness_name": {
-                            "query": name.lower(),   # 👈 make sure input is lowercase
+                            "query": name.lower(),  # Lowercase for consistency with ES analyzer
                             "fuzziness": "AUTO"
                         }
                     }
@@ -466,7 +467,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 }
             })
 
-        # ✅ Transcript name filter (exact phrase match)
+        # ✅ Transcript name filter (match_phrase)
         if transcript_names:
             transcript_clauses = [
                 {
@@ -482,23 +483,18 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 }
             })
 
-        # ✅ Witness type filter (exact match on 'type.keyword')
+        # ✅ Witness type filter (on type.keyword)
         if witness_types:
-            # Remove any empty or null values
-            filtered_types = [t for t in witness_types if t.strip()]
-            
-            if filtered_types:
-                bool_query["must"].append({
-                    "terms": {
-                        "type.keyword": filtered_types
-                    }
-                })
-        # ✅ Search query logic
+            bool_query["must"].append({
+                "terms": {
+                    "type.keyword": witness_types
+                }
+            })
+
+        # ✅ Query logic
         if mode == "fuzzy":
             words = query.split()
-            expanded_terms = []
-            for word in words:
-                expanded_terms.extend(expand_word_forms(word))  # optional word expansion
+            expanded_terms = words  # you can add expand_word_forms(word) if implemented
             bool_query["should"].extend([
                 {
                     "multi_match": {
@@ -510,7 +506,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             ])
 
         elif mode == "boolean":
-            import re
             if "/s" in query:
                 parts = [part.strip() for part in query.split("/s")]
                 if len(parts) == 2:
