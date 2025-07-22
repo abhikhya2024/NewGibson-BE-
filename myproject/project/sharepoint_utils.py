@@ -147,6 +147,7 @@ def fetch_from_sharepoint():
 
     for file in files:
         filename = file.get("name")
+        print("filename", filename)
         is_file = "file" in file
 
         if is_file and filename.lower().endswith(".txt"):
