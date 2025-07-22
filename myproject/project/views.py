@@ -618,13 +618,13 @@ class WitnessViewSet(viewsets.ModelViewSet):
             if not Witness.objects.filter(
                 file=transcript,
                 fullname=fullname,
-                alignment=1,
+                alignment=alignment,
                 type=witness_type
             ).exists():
                 Witness.objects.create(
                     file=transcript,
                     fullname=fullname,
-                    alignment=1,
+                    alignment=alignment,
                     type=witness_type
                 )
                 created += 1
