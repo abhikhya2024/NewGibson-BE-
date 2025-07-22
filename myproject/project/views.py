@@ -437,6 +437,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         query = validated.get("q", "").strip()
         mode = validated.get("mode", "exact").lower()
         witness_names = validated.get("witness_names", [])
+        print(witness_names, "witness_names")
         transcript_names = validated.get("transcript_names", [])
         witness_types = [t.strip() for t in validated.get("witness_types", []) if t.strip()]
 
