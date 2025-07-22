@@ -589,7 +589,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
         })
 
     # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
-    @action(detail=False, methods=["post"], url_path="save-witnesses/")
+    @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
         results = fetch_from_sharepoint()
         # Fetch defaults
