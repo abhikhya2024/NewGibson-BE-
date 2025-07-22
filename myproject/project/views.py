@@ -592,10 +592,11 @@ class WitnessViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="save-witnesses")
     def save_witnesses(self, request):
         results = fetch_from_sharepoint()
-
         # Fetch defaults
         witness_type = WitnessType.objects.first()
+
         alignment = WitnessAlignment.objects.first()
+
         default_user = User.objects.first()
         default_project = Project.objects.first()
 
