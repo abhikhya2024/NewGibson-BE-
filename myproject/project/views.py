@@ -453,7 +453,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 {
                     "match": {
                         "witness_name": {
-                            "query": name,
+                            "query": name.lower(),   # 👈 make sure input is lowercase
                             "fuzziness": "AUTO"
                         }
                     }
