@@ -606,6 +606,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
             transcript_name = item.get("filename")
 
             if not (fullname or transcript_name):
+                print("not found", transcript_name)
                 continue
 
             transcript = Transcript.objects.filter(name=transcript_name).first()
