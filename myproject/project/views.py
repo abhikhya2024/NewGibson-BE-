@@ -610,6 +610,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
 
             transcript = Transcript.objects.filter(name=transcript_name).first()
             if not transcript:
+                print("not found", transcript_name, transcript)
                 continue  # 💥 Skip if no transcript found
 
             # Avoid duplicates
