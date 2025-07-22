@@ -51,8 +51,7 @@ class Witness(TimestampedModel):
     An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
     """
     type = models.ForeignKey(WitnessType, on_delete=models.CASCADE)
-    first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
+    fullname = models.CharField(max_length=50)
     alignment = models.ForeignKey(WitnessAlignment, on_delete=models.CASCADE)
     file = models.ForeignKey(Transcript, on_delete=models.CASCADE)
 

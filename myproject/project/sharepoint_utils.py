@@ -184,21 +184,20 @@ def fetch_from_sharepoint():
 
                 raw_witness_name = extracted_data.get("witness_name", "").strip()
                 transcript_date = extracted_data.get("transcript_date", "").strip()
-                formatted_name = format_name(raw_witness_name)
-                parts = formatted_name.strip().split()
-                if not parts:
-                    return "", ""  # empty string case
-                first_name = parts[0]
-                last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+                # formatted_name = format_name(raw_witness_name)
+                # parts = formatted_name.strip().split()
+                # if not parts:
+                #     return "", ""  # empty string case
+                # first_name = parts[0]
+                # last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
 
-                if not formatted_name:
+                if not raw_witness_name:
                     continue
 
                 # ✅ Append to results
                 results.append({
                     "transcript_name": filename,
-                    "first_name": first_name,
-                    "last_name": last_name,
+                    "fullname": raw_witness_name,
                     "transcript_date": transcript_date
                 })
 

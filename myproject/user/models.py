@@ -26,18 +26,18 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
  
 class User(AbstractUser):
-    # Add custom fields
-    username = None  # Remove username field
- 
-    profile_picture = models.ImageField(upload_to=profile, null=True, blank=True)
-    type = models.CharField(max_length=10, blank=True) #User type
-    last_active = models.DateTimeField(null=True,blank=True) #last active timestamp
+    username = None
     email = models.EmailField(unique=True)
-    USERNAME_FIELD = 'email'  
-    REQUIRED_FIELDS = []  # No other required fields
-    msal_id = models.CharField(max_length=255, blank=True, null=True)  # optional: for Microsoft ID
+    name = models.CharField(max_length=255, blank=True)  # ← Add this field
+    msal_id = models.CharField(max_length=255, blank=True, null=True)
+    profile_picture = models.ImageField(upload_to=profile, null=True, blank=True)
+    type = models.CharField(max_length=10, blank=True)
+    last_active = models.DateTimeField(null=True, blank=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
- 
+
     def __str__(self):
         return self.email

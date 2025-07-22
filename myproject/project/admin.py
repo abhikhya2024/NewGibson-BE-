@@ -23,7 +23,7 @@ class WitnessAlignmentAdmin(admin.ModelAdmin):
 
 @admin.register(Witness)
 class WitnessAdmin(admin.ModelAdmin):
-    list_display = ['id', 'type', 'first_name', 'last_name', 'alignment', 'file']
+    list_display = ['id', 'type', 'fullname', 'alignment', 'file']
 
 @admin.register(WitnessFiles)
 class WitnessFilesAdmin(admin.ModelAdmin):

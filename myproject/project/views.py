@@ -16,6 +16,7 @@ from elasticsearch import Elasticsearch
 from django.db.models import Q
 from django.db.models.functions import Lower
 import re
+from user.serializers import UserSerializer
 p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 
@@ -600,11 +601,10 @@ class WitnessViewSet(viewsets.ModelViewSet):
 
         created = 0
         for item in results:
-            first_name = item.get("first_name")
-            last_name = item.get("last_name")
+            fullname = item.get("fullname")
             transcript_name = item.get("filename")
 
-            if not (first_name or last_name or transcript_name):
+            if not (fullname or transcript_name):
                 continue
 
             transcript = Transcript.objects.filter(name=transcript_name).first()
@@ -614,15 +614,13 @@ class WitnessViewSet(viewsets.ModelViewSet):
             # Avoid duplicates
             if not Witness.objects.filter(
                 file=transcript,
-                first_name=first_name,
-                last_name=last_name,
+                fullname=fullname,
                 alignment=alignment,
                 type=witness_type
             ).exists():
                 Witness.objects.create(
                     file=transcript,
-                    first_name=first_name,
-                    last_name=last_name,
+                    fullname=fullname,
                     alignment=alignment,
                     type=witness_type
                 )
@@ -748,3 +746,27 @@ class HighlightsViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
     
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    @action(detail=False, methods=["post"], url_path="msal-sync")
+    def msal_sync(self, request):
+        email = request.data.get("email")
+        name = request.data.get("name", "")
+        msal_id = request.data.get("msal_id")
+
+        if not email:
+            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={"name": name, "msal_id": msal_id}
+        )
+
+        if not created:
+            user.name = name
+            user.msal_id = msal_id
+            user.save()
+
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
