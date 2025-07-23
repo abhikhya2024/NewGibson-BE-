@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from .models import Project, Comment, Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
-from .serializers import ProjectSerializer, CommentSerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
+from .serializers import ProjectSerializer,CommentSerializer, TranscriptFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -19,74 +19,8 @@ import re
 from user.serializers import UserSerializer
 p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
+from rest_framework.parsers import JSONParser
 
-
-# INDEX_NAME = "transcripts"
-# # ✅ Step 1: Define correct mapping with type.keyword
-# mapping = {
-#     "mappings": {
-#         "properties": {
-#             "question": {"type": "text"},
-#             "answer": {"type": "text"},
-#             "cite": {"type": "text"},
-#             "transcript_name": {"type": "text"},
-#             "witness_name": {"type": "text"},
-#             "type": {  # Witness type
-#                 "type": "text",
-#                 "fields": {
-#                     "keyword": {"type": "keyword"}
-#                 }
-#             },
-#             "alignment": {  # ✅ Added alignment mapping
-#                 "type": "text",
-#                 "fields": {
-#                     "keyword": {"type": "keyword"}
-#                 }
-#             }
-#         }
-#     }
-# }
-
-# # ✅ Step 2: Delete old index
-# if es.indices.exists(index=INDEX_NAME):
-#     es.indices.delete(index=INDEX_NAME)
-#     print(f"🗑️ Deleted old index: '{INDEX_NAME}'")
-
-# # ✅ Step 3: Create new index
-# es.indices.create(index=INDEX_NAME, body=mapping)
-# print(f"✅ Created new index: '{INDEX_NAME}' with mapping.")
-
-# # ✅ Step 4: Indexing logic
-# def index_testimony(testimony):
-#     transcript = testimony.file
-#     witness = Witness.objects.filter(file=transcript).first()
-
-#     witness_name = f"{witness.first_name} {witness.last_name}" if witness else ""
-#     witness_type = witness.type.type if (witness and witness.type) else ""
-#     witness_alignment = str(witness.alignment) if (witness and witness.alignment) else ""
-
-#     doc = {
-#         "question": testimony.question,
-#         "answer": testimony.answer,
-#         "cite": testimony.cite,
-#         "transcript_name": transcript.name,
-#         "witness_name": witness_name,
-#         "type": witness_type,           # e.g. "Fact Witness"
-#         "alignment": witness_alignment  # e.g. "Adverse"
-#     }
-
-#     es.index(index=INDEX_NAME, body=doc)
-#     print(f"📌 Indexed testimony ID {testimony.id} with witness type: '{witness_type}' and alignment: '{witness_alignment}'")
-
-# # # ✅ Step 5: Loop over all testimonies and index them
-# def reindex_all_testimonies():
-#     for testimony in Testimony.objects.all():
-#         index_testimony(testimony)
-
-# reindex_all_testimonies()
-res = es.search(index="transcripts", body={"query": {"match_all": {}}})
-for hit in res["hits"]["hits"]:
-    print(hit["_source"])# mapping = es.indices.get_mapping(index="transcripts")
 
 def expand_word_forms(word):
     forms = {word}
@@ -118,6 +52,120 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             "count": transcripts.count(),
             "transcripts": serializer.data
         })
+
+    @action(detail=False, methods=["post"], url_path="create-index")
+    def create_index(self, request):
+        INDEX_NAME = "transcripts"
+
+        # ✅ Step 1: Define index mapping
+        mapping = {
+            "mappings": {
+                "properties": {
+                    "question": {"type": "text"},
+                    "answer": {"type": "text"},
+                    "cite": {"type": "text"},
+                    "transcript_name": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}}
+                    },
+                    "witness_name": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}}
+                    },
+                    "type": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}}
+                    },
+                    "alignment": {
+                        "type": "text",
+                        "fields": {"keyword": {"type": "keyword"}}
+                    }
+                }
+            }
+        }
+
+        try:
+            # ✅ Step 2: Delete old index if exists
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
+                print(f"🗑️ Deleted old index: '{INDEX_NAME}'")
+
+            # ✅ Step 3: Create new index with mapping
+            es.indices.create(index=INDEX_NAME, body=mapping)
+            print(f"✅ Created new index: '{INDEX_NAME}'")
+
+            # ✅ Step 4: Index individual testimony records
+            def index_testimony(testimony):
+                transcript = testimony.file
+                witness = Witness.objects.filter(file=transcript).first()
+
+                doc = {
+                    "question": testimony.question or "",
+                    "answer": testimony.answer or "",
+                    "cite": testimony.cite or "",
+                    "transcript_name": transcript.name if transcript else "",
+                    "witness_name": witness.fullname if witness else "",
+                    "type": witness.type.type if (witness and witness.type) else "",
+                    "alignment": str(witness.alignment) if (witness and witness.alignment) else ""
+                }
+
+                es.index(index=INDEX_NAME, body=doc)
+                print(f"📌 Indexed testimony ID {testimony.id} — {doc['transcript_name']}")
+
+            # ✅ Step 5: Reindex all testimonies
+            for testimony in Testimony.objects.all():
+                index_testimony(testimony)
+
+            # ✅ Optional: Log final sample
+            res = es.search(index=INDEX_NAME, body={"query": {"match_all": {}}}, size=3)
+            print("✅ Sample indexed documents:")
+            for hit in res["hits"]["hits"]:
+                print(hit["_source"])
+
+            return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"❌ Error during indexing: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @swagger_auto_schema(
+        method='post',
+        request_body=TranscriptFuzzySerializer,
+        responses={200: TestimonySerializer(many=True)}
+    )
+    @action(detail=False, methods=["post"], url_path="get-transcripts",parser_classes=[JSONParser])
+    def get_transcripts(self, request):
+        search_term = request.data.get("transcript_name", "").strip()
+
+        if not search_term:
+            return Response({"error": "Missing transcript_name input."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fuzzy match query on transcript_name field
+        query = {
+            "size": 0,
+            "query": {
+                "match": {
+                    "transcript_name": {
+                        "query": search_term,
+                        "fuzziness": "AUTO"
+                    }
+                }
+            },
+            "aggs": {
+                "unique_transcript_names": {
+                    "terms": {
+                        "field": "transcript_name.keyword",
+                        "size": 1000
+                    }
+                }
+            }
+        }
+
+        try:
+            res = es.search(index="transcripts", body=query)
+            matches = [bucket["key"] for bucket in res["aggregations"]["unique_transcript_names"]["buckets"]]
+            return Response({"matching_transcripts": matches}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     # def create(self, request, *args, **kwargs):
     #     files = request.FILES.getlist('files')  # Expecting 'files' key from FormData
     #     print(files)
@@ -226,7 +274,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     qa_objects.append(Testimony(
                         question=question,
                         answer=answer,
-                        cite=cite,
                         index=index,
                         file=transcript
                     ))
@@ -428,7 +475,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         responses={200: TestimonySerializer(many=True)}
     )
     @action(detail=False, methods=["post"], url_path="combined-search")
-    @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         serializer = CombinedSearchInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -437,6 +483,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         query = validated.get("q", "").strip()
         mode = validated.get("mode", "exact").lower()
         witness_names = validated.get("witness_names", [])
+
         print(witness_names, "witness_names")
         transcript_names = validated.get("transcript_names", [])
         witness_types = [t.strip() for t in validated.get("witness_types", []) if t.strip()]
@@ -451,13 +498,11 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         # ✅ Witness name filter (fuzzy match)
         if witness_names:
+       
             witness_clauses = [
                 {
-                    "match": {
-                        "witness_name": {
-                            "query": name.lower(),  # Lowercase for consistency with ES analyzer
-                            "fuzziness": "AUTO"
-                        }
+                    "match_phrase": {
+                        "witness_name": name
                     }
                 } for name in witness_names
             ]

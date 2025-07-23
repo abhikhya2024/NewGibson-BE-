@@ -198,7 +198,7 @@ def fetch_from_sharepoint():
                 # ✅ Append to results
                 results.append({
                     "transcript_name": filename,
-                    "fullname": raw_witness_name,
+                    "witness_name": raw_witness_name,
                     "transcript_date": transcript_date
                 })
 

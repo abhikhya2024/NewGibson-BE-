@@ -80,7 +80,8 @@ class TranscriptNameListInputSerializer(serializers.Serializer):
     transcript_names = serializers.ListField(
         child=serializers.CharField(), allow_empty=False
     )
-
+class TranscriptFuzzySerializer(serializers.Serializer):
+    transcript_name = serializers.CharField()
 
 class WitnessNameListInputSerializer(serializers.Serializer):
     witness_names = serializers.ListField(
