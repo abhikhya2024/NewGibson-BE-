@@ -473,128 +473,127 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         method='post',
         request_body=CombinedSearchInputSerializer,
         responses={200: TestimonySerializer(many=True)}
-    )
+        )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         serializer = CombinedSearchInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
 
-        query = validated.get("q", "").strip()
-        mode = validated.get("mode", "exact").lower()
-        witness_names = validated.get("witness_names", [])
+        q1 = validated.get("q1", "").strip()
+        mode1 = validated.get("mode1", "exact").lower()
+        q2 = validated.get("q2", "").strip()
+        mode2 = validated.get("mode2", "exact").lower()
+        q3 = validated.get("q3", "").strip()
+        mode3 = validated.get("mode3", "exact").lower()
 
-        print(witness_names, "witness_names")
+        witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
         witness_types = [t.strip() for t in validated.get("witness_types", []) if t.strip()]
 
-        fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
-
         bool_query = {
             "must": [],
-            "should": [],
-            "must_not": []
+            "must_not": [],
+            "filter": []
         }
 
-        # ✅ Witness name filter (fuzzy match)
+        fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
+        witness_fields = ["witness_name"]
+        transcript_fields = ["transcript_name"]
+
+        # === Helper for each query block ===
+        def build_query_block(query, mode, target_fields):
+            musts = []
+            if not query:
+                return musts
+
+            if mode == "fuzzy":
+                for word in query.split():
+                    musts.append({
+                        "multi_match": {
+                            "query": word,
+                            "fields": target_fields,
+                            "fuzziness": "AUTO"
+                        }
+                    })
+            elif mode == "boolean":
+                if "/s" in query:
+                    parts = [part.strip() for part in query.split("/s")]
+                    if len(parts) == 2:
+                        term1, term2 = parts
+                        for field in target_fields:
+                            musts.append({
+                                "match_phrase": {
+                                    field: {
+                                        "query": f"{term1} {term2}",
+                                        "slop": 5
+                                    }
+                                }
+                            })
+                else:
+                    not_pattern = r"\bNOT\s+(\w+)"
+                    not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
+                    cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
+
+                    if cleaned_query:
+                        musts.append({
+                            "query_string": {
+                                "query": cleaned_query,
+                                "fields": target_fields,
+                                "default_operator": "AND"
+                            }
+                        })
+
+                    for term in not_terms:
+                        bool_query["must_not"].append({
+                            "multi_match": {
+                                "query": term,
+                                "fields": target_fields
+                            }
+                        })
+            else:
+                for field in target_fields:
+                    musts.append({
+                        "match_phrase": {
+                            field: query
+                        }
+                    })
+            return musts
+
+        # === Filters ===
         if witness_names:
-       
-            witness_clauses = [
-                {
-                    "match_phrase": {
-                        "witness_name": name
-                    }
-                } for name in witness_names
-            ]
-            bool_query["must"].append({
+            bool_query["filter"].append({
                 "bool": {
-                    "should": witness_clauses,
+                    "should": [
+                        {"match_phrase": {"witness_name": name}} for name in witness_names
+                    ],
                     "minimum_should_match": 1
                 }
             })
 
-        # ✅ Transcript name filter (match_phrase)
         if transcript_names:
-            transcript_clauses = [
-                {
-                    "match_phrase": {
-                        "transcript_name": name
-                    }
-                } for name in transcript_names
-            ]
-            bool_query["must"].append({
+            bool_query["filter"].append({
                 "bool": {
-                    "should": transcript_clauses,
+                    "should": [
+                        {"match_phrase": {"transcript_name": name}} for name in transcript_names
+                    ],
                     "minimum_should_match": 1
                 }
             })
 
-        # ✅ Witness type filter (on type.keyword)
         if witness_types:
-            bool_query["must"].append({
+            bool_query["filter"].append({
                 "terms": {
                     "type.keyword": witness_types
                 }
             })
 
-        # ✅ Query logic
-        if mode == "fuzzy":
-            words = query.split()
-            expanded_terms = words  # you can add expand_word_forms(word) if implemented
-            bool_query["should"].extend([
-                {
-                    "multi_match": {
-                        "query": term,
-                        "fields": fields,
-                        "fuzziness": "AUTO"
-                    }
-                } for term in expanded_terms
-            ])
+        # === q1, q2, q3 search ===
+        bool_query["must"].extend(build_query_block(q1, mode1, fields))
+        bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
+        bool_query["must"].extend(build_query_block(q3, mode3, transcript_fields))
 
-        elif mode == "boolean":
-            if "/s" in query:
-                parts = [part.strip() for part in query.split("/s")]
-                if len(parts) == 2:
-                    term1, term2 = parts
-                    bool_query["should"].extend([
-                        {
-                            "match_phrase": {
-                                field: {
-                                    "query": f"{term1} {term2}",
-                                    "slop": 5
-                                }
-                            }
-                        } for field in fields
-                    ])
-                else:
-                    return Response({"error": "Invalid proximity format. Use: word1 /s word2"}, status=400)
-            else:
-                not_pattern = r"\bNOT\s+(\w+)"
-                not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
-                cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
-
-                if cleaned_query:
-                    bool_query["must"].append({
-                        "query_string": {
-                            "query": cleaned_query,
-                            "fields": fields,
-                            "default_operator": "AND"
-                        }
-                    })
-
-                for term in not_terms:
-                    bool_query["must_not"].append({
-                        "multi_match": {
-                            "query": term,
-                            "fields": fields
-                        }
-                    })
-
-        elif query:
-            bool_query["should"].extend([
-                {"match_phrase": {field: query}} for field in fields
-            ])
-
+        # === Final ES Query ===
         es_query = {
             "query": {
                 "bool": bool_query
@@ -605,11 +604,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             response = es.search(index="transcripts", body=es_query)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
-                "query": query,
-                "mode": mode,
-                "witness_names": witness_names,
-                "transcript_names": transcript_names,
-                "witness_types": witness_types,
+                "query1": q1,
+                "query2": q2,
+                "query3": q3,
+                "mode1": mode1,
+                "mode2": mode2,
+                "mode3": mode3,
                 "count": len(results),
                 "results": results
             })

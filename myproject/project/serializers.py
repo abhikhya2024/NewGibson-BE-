@@ -90,8 +90,16 @@ class WitnessNameListInputSerializer(serializers.Serializer):
 
 
 class CombinedSearchInputSerializer(serializers.Serializer):
-    q = serializers.CharField(required=False, allow_blank=True)
-    mode = serializers.ChoiceField(
+    q1 = serializers.CharField(required=False, allow_blank=True)
+    mode1 = serializers.ChoiceField(
+        choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
+    )
+    q2 = serializers.CharField(required=False, allow_blank=True)
+    mode2 = serializers.ChoiceField(
+        choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
+    )
+    q3 = serializers.CharField(required=False, allow_blank=True)
+    mode3 = serializers.ChoiceField(
         choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
     )
     witness_names = serializers.ListField(
