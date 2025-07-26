@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from .models import Project, Comment, Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
-from .serializers import ProjectSerializer,CommentSerializer, TranscriptFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
+from .serializers import ProjectSerializer,CommentSerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from .sharepoint_utils import fetch_from_sharepoint, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
-from .paginators import CustomPageNumberPagination  # Import your pagination
+# from .paginators import CustomPageNumberPagination  # Import your pagination
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 import inflect
@@ -137,11 +137,10 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         search_term = request.data.get("transcript_name", "").strip()
 
         if not search_term:
-            return Response({"error": "Missing transcript_name input."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"matching_transcripts": []}, status=status.HTTP_200_OK)
 
         # Fuzzy match query on transcript_name field
         query = {
-            "size": 0,
             "query": {
                 "match": {
                     "transcript_name": {
@@ -161,11 +160,50 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            res = es.search(index="transcripts", body=query)
+            res = es.search(index="transcripts", body=query, size=1000)
             matches = [bucket["key"] for bucket in res["aggregations"]["unique_transcript_names"]["buckets"]]
             return Response({"matching_transcripts": matches}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @swagger_auto_schema(
+        method='post',
+        request_body=WitnessFuzzySerializer,
+        responses={200: TestimonySerializer(many=True)}
+    )        
+    @action(detail=False, methods=["post"], url_path="get-witnesses",parser_classes=[JSONParser])
+    def get_witnesses(self, request):
+        search_term = request.data.get("witness_name", "").strip().lower()
+
+        if not search_term:
+            return Response({"matching_witnesses": []}, status=status.HTTP_200_OK)
+
+        # Fuzzy match query on transcript_name field
+        query = {
+            "query": {
+                "match": {
+                    "witness_name": {
+                        "query": search_term,
+                        "fuzziness": "AUTO"
+                    }
+                }
+            },
+            "aggs": {
+                "unique_witness_names": {
+                    "terms": {
+                        "field": "witness_name.keyword",
+                        "size": 1000
+                    }
+                }
+            }
+        }
+
+        try:
+            res = es.search(index="transcripts", body=query, size=1000)
+            matches = [bucket["key"] for bucket in res["aggregations"]["unique_witness_names"]["buckets"]]
+            return Response({"matching_witnesses": matches}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+      
     # def create(self, request, *args, **kwargs):
     #     files = request.FILES.getlist('files')  # Expecting 'files' key from FormData
     #     print(files)
@@ -225,20 +263,37 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 class TestimonyViewSet(viewsets.ModelViewSet):
     queryset = Testimony.objects.all().order_by("id")
     serializer_class = TestimonySerializer
-    pagination_class = CustomPageNumberPagination
+    # pagination_class = CustomPageNumberPagination
+
+class TestimonyViewSet(viewsets.ModelViewSet):
+    queryset = Testimony.objects.all().order_by("id")
+    serializer_class = TestimonySerializer
 
     def list(self, request, *args, **kwargs):
+        # Get offset and limit from query parameters
+        try:
+            offset = int(request.GET.get("offset", 0))
+            limit = int(request.GET.get("limit", 100))  # default limit is 100
+        except ValueError:
+            return Response({"error": "Invalid offset or limit"}, status=400)
+
         queryset = self.filter_queryset(self.get_queryset())
 
-        # 🔍 Automatically applies pagination (respects ?page=, ?page_size=)
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        total_count = queryset.count()
 
-        # Fallback (unlikely used)
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        # Apply slicing using offset and limit
+        paginated_queryset = queryset[offset:offset + limit]
+
+        serializer = self.get_serializer(paginated_queryset, many=True)
+
+        return Response({
+            "offset": offset,
+            "limit": limit,
+            "total": total_count,
+            "count": len(serializer.data),
+            "results": serializer.data
+        })
+
     
 # ✅ GET /testimony/save-testimony/ → get names from SharePoint only
     @action(detail=False, methods=["get"], url_path="save-testimony")
@@ -384,7 +439,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             }
 
         try:
-            response = es.search(index="transcripts", body=es_query)
+            response = es.search(index="transcripts", body=es_query, size=1000)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query": query,
@@ -489,8 +544,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
-        witness_types = [t.strip() for t in validated.get("witness_types", []) if t.strip()]
-
+        witness_types = validated.get("witness_types", []) 
+        print("witness_types",witness_types)
         bool_query = {
             "must": [],
             "must_not": [],
@@ -552,12 +607,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                             }
                         })
             else:
-                for field in target_fields:
-                    musts.append({
-                        "match_phrase": {
-                            field: query
-                        }
-                    })
+                # 👇 Best practice for exact token match
+                musts.append({
+                    "simple_query_string": {
+                        "query": f'"{query}"',
+                        "fields": target_fields,
+                        "default_operator": "and"
+                    }
+                })
+
             return musts
 
         # === Filters ===
@@ -583,10 +641,20 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         if witness_types:
             bool_query["filter"].append({
-                "terms": {
-                    "type.keyword": witness_types
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"type": type}} for type in witness_types
+                    ],
+                    "minimum_should_match": 1
                 }
             })
+
+        # if witness_types:
+        #     bool_query["filter"].append({
+        #         "terms": {
+        #             "type.keyword": witness_types
+        #         }
+        #     })
 
         # === q1, q2, q3 search ===
         bool_query["must"].extend(build_query_block(q1, mode1, fields))
@@ -601,7 +669,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            response = es.search(index="transcripts", body=es_query)
+            response = es.search(index="transcripts", body=es_query, size=1000)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
@@ -615,6 +683,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class WitnessViewSet(viewsets.ModelViewSet):
     queryset = Witness.objects.all()
     serializer_class = WitnessSerializer

@@ -81,7 +81,10 @@ class TranscriptNameListInputSerializer(serializers.Serializer):
         child=serializers.CharField(), allow_empty=False
     )
 class TranscriptFuzzySerializer(serializers.Serializer):
-    transcript_name = serializers.CharField()
+    transcript_name = serializers.CharField(allow_blank=True, required=False)
+
+class WitnessFuzzySerializer(serializers.Serializer):
+    witness_name = serializers.CharField(allow_blank=True, required=False)
 
 class WitnessNameListInputSerializer(serializers.Serializer):
     witness_names = serializers.ListField(
@@ -122,6 +125,11 @@ class CombinedSearchInputSerializer(serializers.Serializer):
         required=False,
         allow_empty=True
     )
+
+    # ✅ Pagination support
+    offset = serializers.IntegerField(required=False, default=0, min_value=0)
+    limit = serializers.IntegerField(required=False, default=100, min_value=1, max_value=1000)
+
 
 class CommentSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True)
