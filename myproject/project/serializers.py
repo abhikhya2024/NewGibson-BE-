@@ -13,6 +13,8 @@ from .models import (
     Testimony,
 )
 
+from user.serializers import UserSerializer
+
 
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,10 +68,10 @@ class TestimonySerializer(serializers.ModelSerializer):
         extra_fields = ["transcript_name", "commenter_emails"]
 
     def get_commenter_emails(self, obj):
-        comments = obj.comments.all()  # assuming related_name="comments"
-        if not comments.exists():
-            return None  # or [] if you want empty list instead of null
-        return list(set(comment.user.email for comment in comments))
+        comments = obj.comments.select_related("user").all()
+        users = {comment.user for comment in comments if comment.user}  # set to deduplicate
+        serialized_users = UserSerializer(users, many=True).data
+        return serialized_users if serialized_users else None
 
 
 class TranscriptNameInputSerializer(serializers.Serializer):
@@ -132,11 +134,12 @@ class CombinedSearchInputSerializer(serializers.Serializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    user_email = serializers.EmailField(source="user.email", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    name = serializers.EmailField(source="user.name", read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "user_email", "testimony", "content", "created_at"]
+        fields = ["id", "user", "email", "name", "testimony", "content", "created_at"]
         read_only_fields = ["created_at"]
 
 

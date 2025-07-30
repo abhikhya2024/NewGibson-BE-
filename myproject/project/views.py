@@ -61,6 +61,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         mapping = {
             "mappings": {
                 "properties": {
+                    "id": {"type": "integer"},  # 👈 Add this line
                     "question": {"type": "text"},
                     "answer": {"type": "text"},
                     "cite": {"type": "text"},
@@ -100,6 +101,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 witness = Witness.objects.filter(file=transcript).first()
 
                 doc = {
+                    "id": testimony.id,  # ✅ Include testimony ID
                     "question": testimony.question or "",
                     "answer": testimony.answer or "",
                     "cite": testimony.cite or "",
@@ -109,7 +111,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     "alignment": str(witness.alignment) if (witness and witness.alignment) else ""
                 }
 
-                es.index(index=INDEX_NAME, body=doc)
+                # ✅ Use testimony.id as Elasticsearch document ID
+                es.index(index=INDEX_NAME, id=testimony.id, body=doc)
+
                 print(f"📌 Indexed testimony ID {testimony.id} — {doc['transcript_name']}")
 
             # ✅ Step 5: Reindex all testimonies
@@ -127,6 +131,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"❌ Error during indexing: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
@@ -260,10 +265,10 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class TestimonyViewSet(viewsets.ModelViewSet):
-    queryset = Testimony.objects.all().order_by("id")
-    serializer_class = TestimonySerializer
-    # pagination_class = CustomPageNumberPagination
+# class TestimonyViewSet(viewsets.ModelViewSet):
+#     queryset = Testimony.objects.all().order_by("id")
+#     serializer_class = TestimonySerializer
+#     # pagination_class = CustomPageNumberPagination
 
 class TestimonyViewSet(viewsets.ModelViewSet):
     queryset = Testimony.objects.all().order_by("id")
@@ -545,18 +550,19 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", []) 
-        print("witness_types",witness_types)
+        print("witness_types", witness_types)
+
         bool_query = {
             "must": [],
             "must_not": [],
             "filter": []
         }
 
+        # ✅ FIX: Removed "id" from fields
         fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
         witness_fields = ["witness_name"]
         transcript_fields = ["transcript_name"]
 
-        # === Helper for each query block ===
         def build_query_block(query, mode, target_fields):
             musts = []
             if not query:
@@ -607,7 +613,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                             }
                         })
             else:
-                # 👇 Best practice for exact token match
                 musts.append({
                     "simple_query_string": {
                         "query": f'"{query}"',
@@ -649,13 +654,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 }
             })
 
-        # if witness_types:
-        #     bool_query["filter"].append({
-        #         "terms": {
-        #             "type.keyword": witness_types
-        #         }
-        #     })
-
         # === q1, q2, q3 search ===
         bool_query["must"].extend(build_query_block(q1, mode1, fields))
         bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
@@ -669,7 +667,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            response = es.search(index="transcripts", body=es_query, size=1000)
+            response = es.search(index="transcripts", body=es_query, size=10000)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
@@ -833,23 +831,38 @@ class CommentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "source": "postgres",
-            "witnesses": serializer.data,
+            "comments": serializer.data,
             "count": len(serializer.data)
         })
-
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-
-    # ✅ Default: GET /witness/ → fetch from PostgreSQL DB
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+    
+    # ✅ New: GET /comments/by-testimony/<id>/
+    @swagger_auto_schema(operation_description="Get all comments by testimony ID")
+    @action(detail=False, methods=["get"], url_path="by-testimony/(?P<testimony_id>[^/.]+)")
+    def by_testimony(self, request, testimony_id=None):
+        comments = Comment.objects.filter(testimony_id=testimony_id)
+        serializer = self.get_serializer(comments, many=True)
         return Response({
-            "source": "postgres",
-            "witnesses": serializer.data,
-            "count": len(serializer.data)
+            "testimony_id": testimony_id,
+            "count": len(serializer.data),
+            "comments": serializer.data
         })
+
+# class CommentViewSet(viewsets.ModelViewSet):
+#     queryset = Comment.objects.all()
+#     serializer_class = CommentSerializer
+
+#     # ✅ Default: GET /witness/ → fetch from PostgreSQL DB
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+#         serializer = self.get_serializer(queryset, many=True)
+#         return Response({
+#             "source": "postgres",
+#             "comments": serializer.data,
+#             "count": len(serializer.data)
+#         })
+    
+
+    
     
 class HighlightsViewSet(viewsets.ModelViewSet):
     queryset = Highlights.objects.all()
