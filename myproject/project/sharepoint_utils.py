@@ -15,7 +15,8 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SHAREPOINT_HOST = os.getenv("SHAREPOINT_HOST")
-SITE_PATH = "/sites/FarrarBallTireMFG"
+SITE_PATH1 = "/sites/FarrarBallTireMFG"
+SITE_PATH2 = "/sites/DocsFarrarBallTireMFG"
 FOLDER = "FormattedQA"
 TEXTFILESFOLDER = "Original_Transcripts"
 
@@ -32,13 +33,13 @@ def get_access_token():
     res.raise_for_status()
     return res.json()["access_token"]
 
-def get_dive_id():
+def get_dive_id(site):
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Step 1: Get site ID
     site_res = requests.get(
-        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH}",
+        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH1}",
         headers=headers
     )
     site_res.raise_for_status()
@@ -57,6 +58,32 @@ def get_dive_id():
     drive_id = drive["id"]
     return drive_id
 
+def get_dive_id2(site):
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Step 1: Get site ID
+    site_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH2}",
+        headers=headers
+    )
+    site_res.raise_for_status()
+    site_id = site_res.json()["id"]
+
+    # Step 2: Get drive ID
+    drive_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+        headers=headers
+    )
+    drive_res.raise_for_status()
+    drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
+    if not drive:
+        raise Exception("Documents drive not found")
+
+    drive_id = drive["id"]
+    return drive_id
+
+
 def convert_json_filename_to_txt(json_filename):
     # Remove the _formatted.json suffix
     if json_filename.endswith("_formatted.json"):
@@ -72,7 +99,7 @@ def fetch_json_files_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
-    drive_id = get_dive_id()
+    drive_id = get_dive_id2()
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
