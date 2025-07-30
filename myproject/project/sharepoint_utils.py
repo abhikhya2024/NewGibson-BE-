@@ -58,13 +58,13 @@ def get_dive_id(site):
     drive_id = drive["id"]
     return drive_id
 
-def get_dive_id2(site):
+def get_dive_id(site):
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
     # Step 1: Get site ID
     site_res = requests.get(
-        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH2}",
+        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{site}",
         headers=headers
     )
     site_res.raise_for_status()
@@ -99,7 +99,7 @@ def fetch_json_files_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
-    drive_id = get_dive_id2()
+    drive_id = get_dive_id(SITE_PATH2)
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -161,7 +161,7 @@ def format_name(name):
 def fetch_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id()
+    drive_id = get_dive_id(SITE_PATH1)
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{TEXTFILESFOLDER}:/children",
