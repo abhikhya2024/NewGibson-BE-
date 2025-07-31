@@ -707,10 +707,10 @@ class WitnessViewSet(viewsets.ModelViewSet):
 
         default_user = User.objects.first()
         default_project = Project.objects.first()
-
+        print("resultssssss",results)
         created = 0
         for item in results:
-            fullname = item.get("fullname")
+            fullname = item.get("witness_name")
             transcript_name = item.get("transcript_name")
 
             if not (fullname or transcript_name):
