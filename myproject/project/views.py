@@ -284,8 +284,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         queryset = self.filter_queryset(self.get_queryset())
 
-        total_count = queryset.count()
-
         # Apply slicing using offset and limit
         paginated_queryset = queryset[offset:offset + limit]
 
@@ -294,10 +292,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         return Response({
             "offset": offset,
             "limit": limit,
-            "total": total_count,
             "count": len(serializer.data),
             "results": serializer.data
         })
+
 
     
 # ✅ GET /testimony/save-testimony/ → get names from SharePoint only
