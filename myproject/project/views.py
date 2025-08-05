@@ -20,6 +20,7 @@ from user.serializers import UserSerializer
 p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 from rest_framework.parsers import JSONParser
+from dateutil.parser import parse as parse_date
 
 
 def expand_word_forms(word):
@@ -714,7 +715,8 @@ class WitnessViewSet(viewsets.ModelViewSet):
                 fullname = item.get("witness_name")
                 transcript_name = item.get("transcript_name")
                 transcript_date = item.get("transcript_date")
-                transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
+                # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
+                transcript_date_obj = parse_date(transcript_date).date()
 
 
                 if not (fullname and transcript_name and transcript_date):
