@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, fetch_witness_names_from_json, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -699,7 +699,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
     # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
     @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
-        results = fetch_from_sharepoint()
+        results = fetch_witness_names_from_json()
         # Fetch defaults
         witness_type = WitnessType.objects.first()
 
@@ -708,38 +708,38 @@ class WitnessViewSet(viewsets.ModelViewSet):
         default_user = User.objects.first()
         default_project = Project.objects.first()
         print("resultssssss",results)
-        created = 0
-        for item in results:
-            fullname = item.get("witness_name")
-            transcript_name = item.get("transcript_name")
+        # created = 0
+        # for item in results:
+        #     fullname = item.get("witness_name")
+        #     transcript_name = item.get("transcript_name")
 
-            if not (fullname or transcript_name):
-                print("not found", transcript_name)
-                continue
+        #     if not (fullname or transcript_name):
+        #         print("not found", transcript_name)
+        #         continue
 
-            transcript = Transcript.objects.filter(name=transcript_name).first()
-            if not transcript:
-                print("not found", transcript_name, transcript)
-                continue  # 💥 Skip if no transcript found
+        #     transcript = Transcript.objects.filter(name=transcript_name).first()
+        #     if not transcript:
+        #         print("not found", transcript_name, transcript)
+        #         continue  # 💥 Skip if no transcript found
 
-            # Avoid duplicates
-            if not Witness.objects.filter(
-                file=transcript,
-                fullname=fullname,
-                alignment=alignment,
-                type=witness_type
-            ).exists():
-                Witness.objects.create(
-                    file=transcript,
-                    fullname=fullname,
-                    alignment=alignment,
-                    type=witness_type
-                )
-                created += 1
+        #     # Avoid duplicates
+        #     if not Witness.objects.filter(
+        #         file=transcript,
+        #         fullname=fullname,
+        #         alignment=alignment,
+        #         type=witness_type
+        #     ).exists():
+        #         Witness.objects.create(
+        #             file=transcript,
+        #             fullname=fullname,
+        #             alignment=alignment,
+        #             type=witness_type
+        #         )
+        #         created += 1
 
         return Response({
-            "status": "success",
-            "inserted": created,
+            # "status": "success",
+            # "inserted": created,
             "total_fetched": len(results)
         })
 
