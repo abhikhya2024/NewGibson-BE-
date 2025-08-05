@@ -177,27 +177,30 @@ def fetch_witness_from_sharepoint():
     results = []  # ✅ Your final output list
 
 
-def fetch_witness_names_from_json():
+def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
     drive_id = get_dive_id(SITE_PATH2)
 
-    # Step 1: Download the JSON file content
+    # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
     response = requests.get(file_url, headers=headers)
     response.raise_for_status()
 
-    # Step 2: Parse JSON
     data = response.json()
 
-    # Step 3: Extract witness names
-    witness_names = {
-        entry.get("witness_name")
-        for entry in data
-        if entry.get("witness_name")
-    }
-    print(sorted(witness_names))
-    return sorted(witness_names)
+    # Extract witness name + transcript name pairs
+    results = []
+    for entry in data:
+        witness_name = entry.get("witness_name")
+        transcript_name = entry.get("transcript_name")
+        if witness_name and transcript_name:
+            results.append({
+                "witness_name": witness_name,
+                "transcript_name": transcript_name
+            })
+
+    return results
 
 def fetch_from_sharepoint():
     token = get_access_token()
