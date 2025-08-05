@@ -740,7 +740,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
         return Response({
             # "status": "success",
             # "inserted": created,
-            "total_fetched": len(results)
+            "total_fetched": results
         })
 
 class WitnessTypeViewSet(viewsets.ModelViewSet):
