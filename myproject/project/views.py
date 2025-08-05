@@ -709,37 +709,37 @@ class WitnessViewSet(viewsets.ModelViewSet):
         # default_project = Project.objects.first()
         # print("resultssssss",results)
         created = 0
-        # for item in results:
-            # fullname = item.get("witness_name")
-            # transcript_name = item.get("transcript_name")
+        for item in results:
+            fullname = item.get("witness_name")
+            transcript_name = item.get("transcript_name")
 
-            # if not (fullname or transcript_name):
-            #     print("not found", transcript_name)
-            #     continue
+            if not (fullname or transcript_name):
+                print("not found", transcript_name)
+                continue
 
-            # transcript = Transcript.objects.filter(name=transcript_name).first()
-            # if not transcript:
-            #     print("not found", transcript_name, transcript)
-            #     continue  # 💥 Skip if no transcript found
+            transcript = Transcript.objects.filter(name=transcript_name).first()
+            if not transcript:
+                print("not found", transcript_name, transcript)
+                continue  # 💥 Skip if no transcript found
 
             # # Avoid duplicates
-            # if not Witness.objects.filter(
-            #     file=transcript,
-            #     fullname=fullname,
-            #     alignment=alignment,
-            #     type=witness_type
-            # ).exists():
-            #     Witness.objects.create(
-            #         file=transcript,
-            #         fullname=fullname,
-            #         alignment=alignment,
-            #         type=witness_type
-            #     )
-            #     created += 1
+            if not Witness.objects.filter(
+                file=transcript,
+                fullname=fullname,
+                alignment=alignment,
+                type=witness_type
+            ).exists():
+                Witness.objects.create(
+                    file=transcript,
+                    fullname=fullname,
+                    alignment=alignment,
+                    type=witness_type
+                )
+                created += 1
 
         return Response({
             "status": "success",
-            # "inserted": created,
+            "inserted": created,
             "total_fetched": len(results)
         })
 
