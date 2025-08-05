@@ -194,10 +194,12 @@ def fetch_witness_names_and_transcripts():
     for entry in data:
         witness_name = entry.get("witness_name")
         transcript_name = entry.get("transcript_name")
+        transcript_date = entry.get("transcript_date")
         if witness_name and transcript_name:
             results.append({
                 "witness_name": witness_name,
-                "transcript_name": transcript_name
+                "transcript_name": transcript_name,
+                "transcript_date": transcript_date
             })
 
     return results
