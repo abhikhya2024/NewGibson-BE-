@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_witness_names_from_json, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -699,7 +699,7 @@ class WitnessViewSet(viewsets.ModelViewSet):
     # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
     @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
-        results = fetch_witness_names_from_json()
+        results = fetch_witness_names_and_transcripts()
         # Fetch defaults
         witness_type = WitnessType.objects.first()
 
