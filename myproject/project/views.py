@@ -659,7 +659,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             bool_query["filter"].append({
                 "bool": {
                     "should": [
-                        {"match_phrase": {"source": s}} for s in sources
+                        {"term": {"source": s}} for s in sources
                     ],
                     "minimum_should_match": 1
                 }
