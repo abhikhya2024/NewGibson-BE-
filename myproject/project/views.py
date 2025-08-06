@@ -102,8 +102,11 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     testimonies = Testimony.objects.using(db_alias).all()
                     for testimony in testimonies:
                         try:
-                            transcript = testimony.file  # FK
-                            witness = Witness.objects.using(db_alias).filter(file=transcript).first()
+                            # Get transcript from same DB
+                            transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
+
+                            # Get witness from same DB
+                            witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
                             doc = {
                                 "id": testimony.id,
@@ -122,10 +125,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
                         except Exception as e:
                             print(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
-
-                # ✅ Step 2: Index from both databases
-                index_from_db("default", "default")
-                index_from_db("farrar", "farrar")
+                                # ✅ Step 2: Index from both databases
+                            index_from_db("default", "default")
+                            index_from_db("farrar", "farrar")
 
                 return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
@@ -549,8 +551,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
-        witness_types = validated.get("witness_types", []) 
-        print("witness_types", witness_types)
+        witness_types = validated.get("witness_types", [])
+        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'farrar']
 
         bool_query = {
             "must": [],
@@ -558,7 +560,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "filter": []
         }
 
-        # ✅ FIX: Removed "id" from fields
         fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
         witness_fields = ["witness_name"]
         transcript_fields = ["transcript_name"]
@@ -648,7 +649,18 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             bool_query["filter"].append({
                 "bool": {
                     "should": [
-                        {"match_phrase": {"type": type}} for type in witness_types
+                        {"match_phrase": {"type": wt}} for wt in witness_types
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
+
+        # ✅ Filter by database source
+        if isinstance(sources, list) and sources:
+            bool_query["filter"].append({
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"source": s}} for s in sources
                     ],
                     "minimum_should_match": 1
                 }
@@ -659,7 +671,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
         bool_query["must"].extend(build_query_block(q3, mode3, transcript_fields))
 
-        # === Final ES Query ===
         es_query = {
             "query": {
                 "bool": bool_query
@@ -676,6 +687,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "mode1": mode1,
                 "mode2": mode2,
                 "mode3": mode3,
+                "sources": sources,
                 "count": len(results),
                 "results": results
             })
