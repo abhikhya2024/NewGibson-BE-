@@ -111,6 +111,7 @@ STATIC_URL = '/static/'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -119,9 +120,17 @@ DATABASES = {
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '5432',
-    }
+    },
+    'lageunesse': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'my_sharepoint_db',
+        'USER': 'postgres',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '3306',
+    },
 }
-
+DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

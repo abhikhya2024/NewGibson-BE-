@@ -687,12 +687,21 @@ class WitnessViewSet(viewsets.ModelViewSet):
     queryset = Witness.objects.all()
     serializer_class = WitnessSerializer
 
-    # ✅ Default: GET /witness/ → fetch from PostgreSQL DB
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
+        # Query from default DB
+        witnesses_default = Witness.objects.using('default').all()
+
+        # Query from secondary DB
+        witnesses_secondary = Witness.objects.using('secondary').all()
+
+        # Combine both querysets
+        combined_witnesses = list(witnesses_default) + list(witnesses_secondary)
+
+        # Serialize combined data
+        serializer = self.get_serializer(combined_witnesses, many=True)
+
         return Response({
-            "source": "postgres",
+            "source": "default + secondary",
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
