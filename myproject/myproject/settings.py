@@ -14,6 +14,8 @@ from pathlib import Path
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+import pymysql
+pymysql.install_as_MySQLdb()
 
 
 # Quick-start development settings - unsuitable for production
@@ -121,16 +123,17 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'lageunesse': {
+    'farrar': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'my_sharepoint_db',
+        'NAME': 'farrar_n_ball_db',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '3306',
     },
 }
-DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']
+
+DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']  # adjust path based on your project
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

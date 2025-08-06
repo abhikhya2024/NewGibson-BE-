@@ -683,25 +683,16 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class WitnessViewSet(viewsets.ModelViewSet):
-    queryset = Witness.objects.all()
-    serializer_class = WitnessSerializer
+class WitnessViewSet(viewsets.ViewSet):
+    def list(self, request):
+        pg_witnesses = Witness.objects.using('default').all()
+        mysql_witnesses = Witness.objects.using('farrar').all()
 
-    def list(self, request, *args, **kwargs):
-        # Query from default DB
-        witnesses_default = Witness.objects.using('default').all()
-
-        # Query from lageunesse DB
-        witnesses_lageunesse = Witness.objects.using('lageunesse').all()
-
-        # Combine both querysets
-        combined_witnesses = list(witnesses_default) + list(witnesses_lageunesse)
-
-        # Serialize combined data
-        serializer = self.get_serializer(combined_witnesses, many=True)
+        combined = list(pg_witnesses) + list(mysql_witnesses)
+        serializer = WitnessSerializer(combined, many=True)
 
         return Response({
-            "source": "default + witnesses_lageunesse",
+            "source": "combined",
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
