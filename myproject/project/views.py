@@ -684,18 +684,34 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class WitnessViewSet(viewsets.ViewSet):
-    def list(self, request):
-        pg_witnesses = Witness.objects.using('default').all()
-        mysql_witnesses = Witness.objects.using('farrar').all()
+    def create(self, request):
+        # Expecting JSON body: { "sources": ["default", "farrar"] } or "all"
+        sources_param = request.data.get('sources', 'all')
 
-        combined = list(pg_witnesses) + list(mysql_witnesses)
-        serializer = WitnessSerializer(combined, many=True)
+        if sources_param == 'all':
+            selected_sources = ['default', 'farrar']
+        elif isinstance(sources_param, list):
+            selected_sources = [src for src in sources_param if src in ['default', 'farrar']]
+        else:
+            return Response({"error": "Invalid 'sources' format"}, status=400)
 
+        all_witnesses = []
+
+        if 'default' in selected_sources:
+            pg_witnesses = Witness.objects.using('default').all()
+            all_witnesses.extend(pg_witnesses)
+
+        if 'farrar' in selected_sources:
+            mysql_witnesses = Witness.objects.using('farrar').all()
+            all_witnesses.extend(mysql_witnesses)
+
+        serializer = WitnessSerializer(all_witnesses, many=True)
         return Response({
-            "source": "combined",
+            "source": selected_sources,
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
+
 
     # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
     @action(detail=False, methods=["post"], url_path="save-witnesses")
