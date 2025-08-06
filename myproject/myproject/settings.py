@@ -114,7 +114,7 @@ STATIC_URL = '/static/'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'farrar_n_ball_db',
+        'NAME': 'my_sharepoint_db',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
