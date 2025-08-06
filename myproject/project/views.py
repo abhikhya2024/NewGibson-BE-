@@ -691,17 +691,17 @@ class WitnessViewSet(viewsets.ModelViewSet):
         # Query from default DB
         witnesses_default = Witness.objects.using('default').all()
 
-        # Query from secondary DB
-        witnesses_secondary = Witness.objects.using('secondary').all()
+        # Query from lageunesse DB
+        witnesses_lageunesse = Witness.objects.using('lageunesse').all()
 
         # Combine both querysets
-        combined_witnesses = list(witnesses_default) + list(witnesses_secondary)
+        combined_witnesses = list(witnesses_default) + list(witnesses_lageunesse)
 
         # Serialize combined data
         serializer = self.get_serializer(combined_witnesses, many=True)
 
         return Response({
-            "source": "default + secondary",
+            "source": "default + witnesses_lageunesse",
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
