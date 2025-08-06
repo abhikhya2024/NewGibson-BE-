@@ -124,7 +124,7 @@ DATABASES = {
         'PORT': '5432',
     },
     'farrar': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'farrar_n_ball_db',
         'USER': 'postgres',
         'PASSWORD': '123456',
