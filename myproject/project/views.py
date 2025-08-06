@@ -57,12 +57,13 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
         INDEX_NAME = "transcripts"
+        DATABASES = ["default", "farrar"]  # Update with your actual DB aliases
 
         # ✅ Step 1: Define index mapping
         mapping = {
             "mappings": {
                 "properties": {
-                    "id": {"type": "integer"},  # 👈 Add this line
+                    "id": {"type": "integer"},
                     "question": {"type": "text"},
                     "answer": {"type": "text"},
                     "cite": {"type": "text"},
@@ -81,6 +82,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     "alignment": {
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword"}}
+                    },
+                    "source_db": {
+                        "type": "keyword"
                     }
                 }
             }
@@ -96,38 +100,41 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             es.indices.create(index=INDEX_NAME, body=mapping)
             print(f"✅ Created new index: '{INDEX_NAME}'")
 
-            # ✅ Step 4: Index individual testimony records
-            def index_testimony(testimony):
-                transcript = testimony.file
-                witness = Witness.objects.filter(file=transcript).first()
+            # ✅ Step 4: Index records from each DB
+            for db in DATABASES:
+                print(f"🔄 Indexing from DB: {db}")
+                testimonies = Testimony.objects.using(db).all()
 
-                doc = {
-                    "id": testimony.id,  # ✅ Include testimony ID
-                    "question": testimony.question or "",
-                    "answer": testimony.answer or "",
-                    "cite": testimony.cite or "",
-                    "transcript_name": transcript.name if transcript else "",
-                    "witness_name": witness.fullname if witness else "",
-                    "type": witness.type.type if (witness and witness.type) else "",
-                    "alignment": str(witness.alignment) if (witness and witness.alignment) else ""
-                }
+                for testimony in testimonies:
+                    transcript = testimony.file
+                    witness = Witness.objects.using(db).filter(file=transcript).first()
 
-                # ✅ Use testimony.id as Elasticsearch document ID
-                es.index(index=INDEX_NAME, id=testimony.id, body=doc)
+                    doc = {
+                        "id": int(f"{'1' if db == 'default' else '2'}{testimony.id}"),  # avoid id clash
+                        "question": testimony.question or "",
+                        "answer": testimony.answer or "",
+                        "cite": testimony.cite or "",
+                        "transcript_name": transcript.name if transcript else "",
+                        "witness_name": witness.fullname if witness else "",
+                        "type": witness.type.type if (witness and witness.type) else "",
+                        "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
+                        "source_db": db
+                    }
 
-                print(f"📌 Indexed testimony ID {testimony.id} — {doc['transcript_name']}")
+                    es.index(index=INDEX_NAME, id=doc["id"], body=doc)
+                    print(f"📌 Indexed testimony ID {doc['id']} — {doc['transcript_name']} from {db}")
 
-            # ✅ Step 5: Reindex all testimonies
-            for testimony in Testimony.objects.all():
-                index_testimony(testimony)
-
-            # ✅ Optional: Log final sample
+            # ✅ Optional: Log a few indexed docs
             res = es.search(index=INDEX_NAME, body={"query": {"match_all": {}}}, size=3)
             print("✅ Sample indexed documents:")
             for hit in res["hits"]["hits"]:
                 print(hit["_source"])
 
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print("❌ Indexing failed:", str(e))
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
             print(f"❌ Error during indexing: {str(e)}")
