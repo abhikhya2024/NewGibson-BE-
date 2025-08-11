@@ -117,20 +117,20 @@ STATIC_URL = '/static/'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'my_sharepoint_db',
+        'NAME': 'DocsGibsonDemo',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'farrar': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'farrar_n_ball_db',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    },
+    # 'farrar': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'farrar_n_ball_db',
+    #     'USER': 'postgres',
+    #     'PASSWORD': '123456',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # },
 }
 
 DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']  # adjust path based on your project

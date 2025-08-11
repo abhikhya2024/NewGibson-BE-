@@ -19,7 +19,7 @@ class Transcript(TimestampedModel):
     """
     name = models.CharField(max_length=500)
     transcript_date = models.DateField()
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     file= models.FileField(upload_to="transcripts", null=True)
     def __str__(self):

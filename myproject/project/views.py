@@ -21,6 +21,7 @@ p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 from rest_framework.parsers import JSONParser
 from dateutil.parser import parse as parse_date
+from datetime import datetime, timezone
 
 
 def expand_word_forms(word):
@@ -84,6 +85,17 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     },
                     "source": {
                         "type": "keyword"
+                    },
+                    "commenter_emails": {
+                        "type": "nested",
+                        "properties": {
+                            "name": {"type": "text"},
+                            "email": {"type": "keyword"}
+                        }
+                    },
+                    "created_at": {
+                        "type": "date",
+                        "format": "strict_date_optional_time||epoch_millis"
                     }
                 }
             }
@@ -92,7 +104,6 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         try:
             if es.indices.exists(index=INDEX_NAME):
                 es.indices.delete(index=INDEX_NAME)
-                print(f"🗑️ Deleted old index: '{INDEX_NAME}'")
 
             es.indices.create(index=INDEX_NAME, body=mapping)
             print(f"✅ Created new index: '{INDEX_NAME}'")
@@ -102,9 +113,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 testimonies = Testimony.objects.using(db_alias).select_related("file").all()
                 for testimony in testimonies:
                     try:
-                        # Get the transcript from the correct DB
                         transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
-                        # Get the witness from the correct DB
                         witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
                         doc = {
@@ -116,7 +125,10 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "witness_name": witness.fullname if witness else "",
                             "type": witness.type.type if (witness and witness.type) else "",
                             "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
-                            "source": source_label
+                            "source": source_label,
+                            "commenter_emails": [],  # 🔹 Empty list so field always exists
+                            "created_at": datetime.now(timezone.utc).isoformat()
+
                         }
 
                         es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
@@ -127,7 +139,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
             # Step 2: Index from both databases
             index_from_db("default", "default")
-            index_from_db("farrar", "farrar")
+            # index_from_db("farrar", "farrar")
 
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
@@ -335,9 +347,11 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     qa_objects.append(Testimony(
                         question=question,
                         answer=answer,
+                        cite=cite,
                         index=index,
                         file=transcript
                     ))
+                    print("inserted QA pair")
 
             Testimony.objects.bulk_create(qa_objects, batch_size=1000)
 
@@ -673,11 +687,14 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         es_query = {
             "query": {
                 "bool": bool_query
-            }
+            },
+            "sort": [
+            {"created_at": "asc"}  # or "desc"
+        ]
         }
 
         try:
-            response = es.search(index="transcripts", body=es_query, size=10000)
+            response = es.search(index="transcripts", body=es_query, size=10000, )
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
@@ -694,33 +711,40 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class WitnessViewSet(viewsets.ViewSet):
-    def create(self, request):
-        # Expecting JSON body: { "sources": ["default", "farrar"] } or "all"
-        sources_param = request.data.get('sources', 'all')
-
-        if sources_param == 'all':
-            selected_sources = ['default', 'farrar']
-        elif isinstance(sources_param, list):
-            selected_sources = [src for src in sources_param if src in ['default', 'farrar']]
-        else:
-            return Response({"error": "Invalid 'sources' format"}, status=400)
-
-        all_witnesses = []
-
-        if 'default' in selected_sources:
-            pg_witnesses = Witness.objects.using('default').all()
-            all_witnesses.extend(pg_witnesses)
-
-        if 'farrar' in selected_sources:
-            mysql_witnesses = Witness.objects.using('farrar').all()
-            all_witnesses.extend(mysql_witnesses)
-
-        serializer = WitnessSerializer(all_witnesses, many=True)
+    def list(self, request):
+        witnesses = Witness.objects.all()
+        serializer = WitnessSerializer(witnesses, many=True)
         return Response({
-            "source": selected_sources,
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
+    # def create(self, request):
+    #     # Expecting JSON body: { "sources": ["default", "farrar"] } or "all"
+    #     sources_param = request.data.get('sources', 'all')
+
+    #     if sources_param == 'all':
+    #         selected_sources = ['default', 'farrar']
+    #     elif isinstance(sources_param, list):
+    #         selected_sources = [src for src in sources_param if src in ['default', 'farrar']]
+    #     else:
+    #         return Response({"error": "Invalid 'sources' format"}, status=400)
+
+    #     all_witnesses = []
+
+    #     if 'default' in selected_sources:
+    #         pg_witnesses = Witness.objects.using('default').all()
+    #         all_witnesses.extend(pg_witnesses)
+
+    #     if 'farrar' in selected_sources:
+    #         mysql_witnesses = Witness.objects.using('farrar').all()
+    #         all_witnesses.extend(mysql_witnesses)
+
+    #     serializer = WitnessSerializer(all_witnesses, many=True)
+    #     return Response({
+    #         "source": selected_sources,
+    #         "witnesses": serializer.data,
+    #         "count": len(serializer.data)
+    #     })
 
 
     # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
@@ -880,7 +904,91 @@ class CommentViewSet(viewsets.ModelViewSet):
             "comments": serializer.data,
             "count": len(serializer.data)
         })
-    
+    def create(self, request, *args, **kwargs):
+        # Save the comment in PostgreSQL (only once!)
+        response = super().create(request, *args, **kwargs)
+        INDEX_NAME = "transcripts"
+
+        # Extract data from saved comment
+        testimony_id = response.data.get("testimony")
+        testimony = Testimony.objects.get(id=testimony_id)
+
+        user_id = response.data.get("user")
+        user = User.objects.filter(id=user_id).first()
+
+        commenter_email = user.email
+        commenter_name = user.name
+
+        if testimony_id:
+            es_id = f"default_{testimony_id}"  # Matches your ES indexing format
+            try:
+                # Get current ES document
+                doc = es.get(index=INDEX_NAME, id=es_id)["_source"]
+
+                # If commenter_emails doesn't exist, create it
+                existing_commenters = doc.get("commenter_emails", [])
+
+                # Avoid duplicates
+                if not any(c["email"] == commenter_email for c in existing_commenters):
+                    existing_commenters.append({
+                        "name": commenter_name,
+                        "email": commenter_email
+                    })
+
+                    # Update ES document
+                    es.update(
+                        index=INDEX_NAME,
+                        id=es_id,
+                        body={"doc": {"commenter_emails": existing_commenters}}
+                    )
+                    print(f"✅ Updated commenter_emails for {es_id}")
+
+            except Exception as e:
+                print(f"❌ Error updating ES doc {es_id}: {str(e)}")
+
+        return response
+
+
+    def destroy(self, request, *args, **kwargs):
+        INDEX_NAME = "transcripts"
+        comment = self.get_object()
+
+        # Get details before deleting
+        testimony_id = comment.testimony.id
+        commenter_email = comment.user.email
+
+        # 1️⃣ Delete from PostgreSQL
+        comment.delete()
+
+        # 2️⃣ Check if user still has comments on this testimony
+        still_has_comments = Comment.objects.filter(
+            testimony_id=testimony_id,
+            user__email=commenter_email
+        ).exists()
+
+        # 3️⃣ Update Elasticsearch only if user has no other comments
+        if not still_has_comments:
+            es_id = f"default_{testimony_id}"
+            try:
+                doc = es.get(index=INDEX_NAME, id=es_id)["_source"]
+                existing_commenters = doc.get("commenter_emails", [])
+
+                updated_commenters = [
+                    c for c in existing_commenters 
+                    if c.get("email") != commenter_email
+                ]
+
+                if updated_commenters != existing_commenters:
+                    es.update(
+                        index=INDEX_NAME,
+                        id=es_id,
+                        body={"doc": {"commenter_emails": updated_commenters}}
+                    )
+                    print(f"🗑 Removed {commenter_email} from ES for {es_id}")
+            except Exception as e:
+                print(f"❌ Error updating ES doc {es_id}: {str(e)}")
+
+        return Response({"message": "✅ Comment deleted"}, status=status.HTTP_204_NO_CONTENT)
     # ✅ New: GET /comments/by-testimony/<id>/
     @swagger_auto_schema(operation_description="Get all comments by testimony ID")
     @action(detail=False, methods=["get"], url_path="by-testimony/(?P<testimony_id>[^/.]+)")
