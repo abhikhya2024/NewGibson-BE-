@@ -139,7 +139,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         print(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
             # Step 2: Index from both databases
-            index_from_db("docsshblageunesse", "docsshblageunesse")
+            index_from_db("default", "default")
             # index_from_db("farrar", "farrar")
 
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
