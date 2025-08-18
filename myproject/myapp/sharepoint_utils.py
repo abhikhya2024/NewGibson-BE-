@@ -14,7 +14,7 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SHAREPOINT_HOST = "cloudcourtinc.sharepoint.com"
-SITE_PATH = "/sites/DocsSHBLageunesse"
+SITE_PATH = "/sites/docsshblageunesse"
 FOLDER = "FormattedQA"
 TEXTFILESFOLDER = "OriginalFiles"
 
