@@ -15,9 +15,9 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SHAREPOINT_HOST = os.getenv("SHAREPOINT_HOST")
-SITE_PATH1 = "/sites/FarrarBallTireMFG"
+SITE_PATH1 = "/sites/DocsSHBLageunesse"
 FOLDER = "FormattedQA"
-TEXTFILESFOLDER = "Original_Transcripts"
+TEXTFILESFOLDER = "OriginalFiles"
 SITE_PATH2 = "/sites/DocsFarrarBallTireMFG"
 FILEMETADATAPATH = "Extras"
 JSON_FILENAME = "file_metadata_master.json"
@@ -101,7 +101,7 @@ def fetch_json_files_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -181,7 +181,7 @@ def fetch_witness_from_sharepoint():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
@@ -226,15 +226,17 @@ def fetch_from_sharepoint():
 
         if is_file and filename.lower().endswith(".txt"):
             print(f"📄 Found .txt file: {filename}")
-            download_url = file.get("@microsoft.graph.downloadUrl")
+            download_url = file.get("@microsoft.graph.downloadUrl") # direct file download link
             if not download_url:
                 print(f"⚠️ No download URL for: {filename}")
                 continue
+            web_url = file.get("webUrl")  # SharePoint UI link to view in browser
 
             download_res = requests.get(download_url)
             if download_res.status_code != 200:
                 print(f"❌ Failed to download {filename}")
                 continue
+
 
             raw_data = download_res.content
             encoding_info = chardet.detect(raw_data)
@@ -273,7 +275,9 @@ def fetch_from_sharepoint():
                 results.append({
                     "transcript_name": filename,
                     "witness_name": raw_witness_name,
-                    "transcript_date": transcript_date
+                    "transcript_date": transcript_date,
+                    "sharepoint_url": web_url  # ✅ Add the SharePoint UI link
+
                 })
 
             except Exception as e:

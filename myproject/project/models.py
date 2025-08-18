@@ -74,7 +74,7 @@ class Testimony(TimestampedModel):
     answer = models.TextField()
     index = models.FloatField()
     cite = models.CharField(max_length=50)
-    file = models.ForeignKey(Transcript, on_delete=models.CASCADE)
+    file = models.ForeignKey(Transcript, on_delete=models.CASCADE, related_name="testimony_data")
 
 # class Comments(TimestampedModel):
 #     """

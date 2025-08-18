@@ -22,6 +22,7 @@ es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 from rest_framework.parsers import JSONParser
 from dateutil.parser import parse as parse_date
 from datetime import datetime, timezone
+from django.db.models import Count
 
 
 def expand_word_forms(word):
@@ -311,8 +312,16 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "count": len(serializer.data),
             "results": serializer.data
         })
+    @action(detail=False, methods=["get"], url_path="testimony-cnt-by-transcripts")
+    def get(self, request):
+        # Annotate each transcript with testimony count
+        data = (
+            Transcript.objects
+            .annotate(testimony_count=Count('testimony_data'))
+            .values('name', 'testimony_count')
+        )
 
-    
+        return Response(list(data), status=status.HTTP_200_OK)    
 # ✅ GET /testimony/save-testimony/ → get names from SharePoint only
     @action(detail=False, methods=["get"], url_path="save-testimony")
     def save_testimony(self, request):
@@ -714,9 +723,14 @@ class WitnessViewSet(viewsets.ViewSet):
     def list(self, request):
         witnesses = Witness.objects.all()
         serializer = WitnessSerializer(witnesses, many=True)
+
+        # Get counts grouped by WitnessType
+        type_counts = Witness.objects.values("type__type").annotate(count=Count("id"))
+
         return Response({
             "witnesses": serializer.data,
-            "count": len(serializer.data)
+            "count": len(serializer.data),
+            "type_counts": type_counts
         })
     # def create(self, request):
     #     # Expecting JSON body: { "sources": ["default", "farrar"] } or "all"
@@ -905,19 +919,26 @@ class CommentViewSet(viewsets.ModelViewSet):
             "count": len(serializer.data)
         })
     def create(self, request, *args, **kwargs):
-        # Save the comment in PostgreSQL (only once!)
+        # Save the comment in PostgreSQL
         response = super().create(request, *args, **kwargs)
         INDEX_NAME = "transcripts"
-
         # Extract data from saved comment
         testimony_id = response.data.get("testimony")
         testimony = Testimony.objects.get(id=testimony_id)
+        content = response.data.get("content")
 
-        user_id = response.data.get("user")
-        user = User.objects.filter(id=user_id).first()
+        userData = response.data.get("user")
+        user = User.objects.filter(id=userData).first()
 
         commenter_email = user.email
         commenter_name = user.name
+
+        # Create a comment
+        comment = Comment.objects.create(
+            testimony=testimony,
+            user=user,
+            content=content
+        )
 
         if testimony_id:
             es_id = f"default_{testimony_id}"  # Matches your ES indexing format
@@ -927,7 +948,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
                 # If commenter_emails doesn't exist, create it
                 existing_commenters = doc.get("commenter_emails", [])
-
+                print(existing_commenters)
                 # Avoid duplicates
                 if not any(c["email"] == commenter_email for c in existing_commenters):
                     existing_commenters.append({
@@ -947,7 +968,6 @@ class CommentViewSet(viewsets.ModelViewSet):
                 print(f"❌ Error updating ES doc {es_id}: {str(e)}")
 
         return response
-
 
     def destroy(self, request, *args, **kwargs):
         INDEX_NAME = "transcripts"
