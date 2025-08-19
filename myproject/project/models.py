@@ -22,6 +22,7 @@ class Transcript(TimestampedModel):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     file= models.FileField(upload_to="transcripts", null=True)
+    case_name = models.CharField(max_length=5000)
     def __str__(self):
         return self.file.name
 class ProjectUser(TimestampedModel):

@@ -49,11 +49,13 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         # Serialize the data
         serializer = self.get_serializer(transcripts, many=True)
+        unique_case_count = Transcript.objects.values('case_name').distinct().count()
 
         # Return the data as a Response
         return Response({
             "count": transcripts.count(),
-            "transcripts": serializer.data
+            "transcripts": serializer.data,
+            "unique_cases":unique_case_count
         })
 
     @action(detail=False, methods=["post"], url_path="create-index")
@@ -249,6 +251,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             for item in results:
                 transcript_name = item.get("transcript_name")
                 transcript_date = item.get("transcript_date")
+                case_name = item.get("case_name")
                 transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
 
                 if not (transcript_name and transcript_date):
@@ -259,13 +262,15 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     name=transcript_name,
                     transcript_date=transcript_date_obj,
                     created_by=default_user,
-                    project=default_project
+                    project=default_project,
+                    case_name=case_name
                 ).exists():
                     Transcript.objects.create(
                         name=transcript_name,
                         transcript_date=transcript_date_obj,
                         created_by=default_user,
-                        project=default_project
+                        project=default_project,
+                        case_name=case_name
                     )
                     created += 1
 
@@ -313,6 +318,17 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "results": serializer.data
         })
     @action(detail=False, methods=["get"], url_path="testimony-cnt-by-transcripts")
+    def get(self, request):
+        # Annotate each transcript with testimony count
+        data = (
+            Transcript.objects
+            .annotate(testimony_count=Count('testimony_data'))
+            .values('name', 'testimony_count')
+        )
+
+        return Response(list(data), status=status.HTTP_200_OK)  
+
+    @action(detail=False, methods=["get"], url_path="depositions-per-case")
     def get(self, request):
         # Annotate each transcript with testimony count
         data = (
@@ -779,6 +795,7 @@ class WitnessViewSet(viewsets.ViewSet):
                 fullname = item.get("witness_name")
                 transcript_name = item.get("transcript_name")
                 transcript_date = item.get("transcript_date")
+                case_name = item.get("case_name")
                 # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
                 transcript_date_obj = parse_date(transcript_date).date()
 
@@ -790,13 +807,15 @@ class WitnessViewSet(viewsets.ViewSet):
                     name=transcript_name,
                     transcript_date=transcript_date_obj,
                     created_by=default_user,
-                    project=default_project
+                    project=default_project,
+                    case_name=case_name
                 ).exists():
                     Transcript.objects.create(
                         name=transcript_name,
                         transcript_date=transcript_date_obj,
                         created_by=default_user,
-                        project=default_project
+                        project=default_project,
+                        case_name=case_name
                     )
                     created_t += 1
                 transcript = Transcript.objects.filter(name=transcript_name).first()
