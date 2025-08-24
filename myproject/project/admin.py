@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, Transcript, ProjectUser, WitnessType, WitnessAlignment, Witness, WitnessFiles, Testimony
+from .models import Project, Transcript, ExpertType, Jurisdiction, ProjectUser, WitnessType, WitnessAlignment, Witness, WitnessFiles, Testimony, Attorney
  
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
@@ -9,6 +9,14 @@ class ProjectAdmin(admin.ModelAdmin):
 class TranscriptAdmin(admin.ModelAdmin):
     list_display = ['id', 'name','transcript_date', 'created_by', 'project', 'file']
 
+@admin.register(Attorney)
+class AttorneyAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name','type', 'file', 'law_firm']
+
+@admin.register(Jurisdiction)
+class JurisdictionAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name','project']
+    
 @admin.register(ProjectUser)
 class ProjectUserAdmin(admin.ModelAdmin):
     list_display = ['id', 'project', 'user']
@@ -16,6 +24,10 @@ class ProjectUserAdmin(admin.ModelAdmin):
 @admin.register(WitnessType)
 class WitnessTypeAdmin(admin.ModelAdmin):
     list_display = ['id', 'type']
+
+@admin.register(ExpertType)
+class ExpertTypeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'type', 'file', 'witness']
 
 @admin.register(WitnessAlignment)
 class WitnessAlignmentAdmin(admin.ModelAdmin):

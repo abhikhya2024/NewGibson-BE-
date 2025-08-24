@@ -11,6 +11,9 @@ from .models import (
     Witness,
     WitnessFiles,
     Testimony,
+    Attorney,
+    Jurisdiction,
+    ExpertType
 )
 
 from user.serializers import UserSerializer
@@ -27,18 +30,30 @@ class TranscriptSerializer(serializers.ModelSerializer):
         model = Transcript
         fields = "__all__"
 
+class AttorneySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attorney
+        fields = "__all__"
 
 class ProjectUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectUser
         fields = "__all__"
 
+class JurisdictionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Jurisdiction
+        fields = "__all__"
 
 class WitnessTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = WitnessType
         fields = "__all__"
 
+class ExpertTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpertType
+        fields = "__all__"
 
 class WitnessAlignmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,22 +72,31 @@ class WitnessFilesSerializer(serializers.ModelSerializer):
         model = WitnessFiles
         fields = "__all__"
 
+class CommentSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    name = serializers.EmailField(source="user.name", read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ["id", "user", "email", "name", "testimony", "content", "created_at"]
+        read_only_fields = ["created_at"]
+
 
 class TestimonySerializer(serializers.ModelSerializer):
     transcript_name = serializers.CharField(source="file.name", read_only=True)
     commenter_emails = serializers.SerializerMethodField()
+    comments = CommentSerializer(many=True, read_only=True)  # 👈 adds comments array
 
     class Meta:
         model = Testimony
         fields = "__all__"
-        extra_fields = ["transcript_name", "commenter_emails"]
+        extra_fields = ["transcript_name", "commenter_emails", "comments"]
 
     def get_commenter_emails(self, obj):
         comments = obj.comments.select_related("user").all()
-        users = {comment.user for comment in comments if comment.user}  # set to deduplicate
+        users = {comment.user for comment in comments if comment.user}  # deduplicate
         serialized_users = UserSerializer(users, many=True).data
         return serialized_users if serialized_users else None
-
 
 class TranscriptNameInputSerializer(serializers.Serializer):
     transcript_name = serializers.CharField()
@@ -131,17 +155,6 @@ class CombinedSearchInputSerializer(serializers.Serializer):
     # ✅ Pagination support
     offset = serializers.IntegerField(required=False, default=0, min_value=0)
     limit = serializers.IntegerField(required=False, default=100, min_value=1, max_value=1000)
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(source="user.email", read_only=True)
-    name = serializers.EmailField(source="user.name", read_only=True)
-
-    class Meta:
-        model = Comment
-        fields = ["id", "user", "email", "name", "testimony", "content", "created_at"]
-        read_only_fields = ["created_at"]
-
 
 class HighlightsSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True)

@@ -8,6 +8,8 @@ import json
 import os
 from dotenv import load_dotenv
 from project.models import Transcript
+import spacy
+nlp = spacy.load("en_core_web_sm")
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -21,7 +23,15 @@ TEXTFILESFOLDER = "OriginalFiles"
 SITE_PATH2 = "/sites/DocsFarrarBallTireMFG"
 FILEMETADATAPATH = "Extras"
 JSON_FILENAME = "file_metadata_master.json"
+TAXONOMY_FILENAME = "witness_taxonomy.json"
 
+
+def extract_state(text: str) -> str | None:
+    doc = nlp(text)
+    for ent in doc.ents:
+        if ent.label_ == "GPE":  # Geo-Political Entity
+            return ent.text
+    return None
 
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
@@ -178,6 +188,60 @@ def fetch_witness_from_sharepoint():
     results = []  # ✅ Your final output list
 
 
+def fetch_jurisdictions():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
+
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
+
+    data = response.json()
+    results = []
+
+    for entry in data:
+        jurisdiction = entry.get("jurisdiction")
+        if jurisdiction:
+            
+            results.append({
+                "jurisdiction": extract_state(jurisdiction),
+            })
+    return results
+
+def fetch_attorney():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
+
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
+
+    data = response.json()   # <-- this is a list of dicts
+    results = []
+
+    for entry in data:
+        attorneys = {
+            "taking": entry.get("taking_attorney"),
+            "defending": entry.get("defending_attorney"),
+        }
+
+        for atty_type, atty_info in attorneys.items():
+            if atty_info and (atty_info.get("name") or atty_info.get("law_firm")):
+                results.append({
+                    "type": atty_type,
+                    "name": atty_info.get("name"),
+                    "law_firm": atty_info.get("law_firm"),
+                    "transcript_name": entry.get("transcript_name"),  # optional context
+                })
+
+    return results
+
+
+
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
@@ -296,80 +360,43 @@ def fetch_from_sharepoint():
 def fetch_taxonomy_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
 
-    drive_id = get_dive_id()
-    file_path = "Extras/witness_taxonomy.json"
-
-    response = requests.get(
-        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{file_path}:/content",
-        headers=headers
-    )
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{TAXONOMY_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
     response.raise_for_status()
 
-    # Assuming the file contains JSON
     data = response.json()
-    return data
 
-    for file in files:
-        filename = file.get("name")
-        is_file = "file" in file
+    # Extract witness alignments & types
+    results = []
+    alignments = set()
+    witness_types = set()
 
-        if is_file and filename.lower().endswith(".txt"):
-            print(f"📄 Found .txt file: {filename}")
-            download_url = file.get("@microsoft.graph.downloadUrl")
-            if not download_url:
-                print(f"⚠️ No download URL for: {filename}")
-                continue
+    witnesses = data.get("Witness", [])
+    for entry in witnesses:
+        witness_name = entry.get("Name")
+        alignment = entry.get("Alignment")
+        types = entry.get("Types", [])
 
-            download_res = requests.get(download_url)
-            if download_res.status_code != 200:
-                print(f"❌ Failed to download {filename}")
-                continue
+        if alignment:
+            alignments.add(alignment)
 
-            raw_data = download_res.content
-            encoding_info = chardet.detect(raw_data)
-            file_encoding = encoding_info['encoding'] or 'utf-8'
+        for t in types:
+            transcript_name = t.get("TranscriptName")
+            witness_type = t.get("Type")
+            expert_type = t.get("ExpertType")
+            if witness_type:
+                witness_types.add(witness_type)
+            print("align", alignment)
+            results.append({
+                "witness_name": witness_name,
+                "alignment": alignment,
+                "transcript_name": transcript_name+".txt",
+                "witness_type": witness_type,
+                "expert_type": expert_type
+            })
 
-            try:
-                input_text = raw_data.decode(file_encoding)
-            except Exception as e:
-                print(f"⚠️ Could not decode {filename}: {e}")
-                continue
-
-            truncated_input_text = " ".join(input_text.split()[:5000])
-
-            try:
-                raw_response = GibsonMetadataInference(input_text=truncated_input_text).generate_structure()
-
-                if isinstance(raw_response, str):
-                    cleaned = re.sub(r"^```json|```$", "", raw_response.strip(), flags=re.IGNORECASE).strip()
-                    extracted_data = json.loads(cleaned)
-                else:
-                    extracted_data = raw_response
-
-                raw_witness_name = extracted_data.get("witness_name", "").strip()
-                transcript_date = extracted_data.get("transcript_date", "").strip()
-                formatted_name = format_name(raw_witness_name)
-                parts = formatted_name.strip().split()
-                if not parts:
-                    return "", ""  # empty string case
-                first_name = parts[0]
-                last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-
-                if not formatted_name:
-                    continue
-
-                # ✅ Append to results
-                results.append({
-                    "transcript_name": filename,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "transcript_date": transcript_date
-                })
-
-            except Exception as e:
-                print(f"⛔ Skipping file {filename} due to error: {e}")
-                continue
-
-    print(f"\n✅ Total .txt files processed: {len(results)}")
+    # Return both
     return results

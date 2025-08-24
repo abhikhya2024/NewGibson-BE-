@@ -1,11 +1,11 @@
 from rest_framework import viewsets
-from .models import Project, Comment, Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
-from .serializers import ProjectSerializer,CommentSerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
+from .models import Project, Comment, Jurisdiction, ExpertType, Attorney,Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
+from .serializers import ProjectSerializer,CommentSerializer, ExpertTypeSerializer, JurisdictionSerializer, AttorneySerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -23,6 +23,7 @@ from rest_framework.parsers import JSONParser
 from dateutil.parser import parse as parse_date
 from datetime import datetime, timezone
 from django.db.models import Count
+import unicodedata
 
 
 def expand_word_forms(word):
@@ -39,6 +40,67 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
 
+class JurisdictionViewSet(viewsets.ModelViewSet):
+    queryset = Jurisdiction.objects.all()
+    serializer_class = JurisdictionSerializer
+    parser_classes = [MultiPartParser]  # 👈 required for form-data upload
+
+    def list(self, request, *args, **kwargs):
+        jurisdiction = self.get_queryset()
+
+        # Serialize full list
+        serializer = self.get_serializer(jurisdiction, many=True)
+
+        # Group by jurisdiction name/field and count
+        jurisdiction_counts = (
+            jurisdiction
+            .values("name")   # 👈 replace with the field that identifies jurisdiction
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        return Response({
+            "count": jurisdiction.count(),
+            "jurisdiction": serializer.data,
+            "jurisdiction_counts": jurisdiction_counts
+        })
+    @swagger_auto_schema(
+        method='get',
+        responses={200: JurisdictionSerializer(many=True)}
+    )
+    @action(detail=False, methods=["get"], url_path="save-jurisdictions")
+    def save_jurisdictions(self, request):
+        try:
+            # Annotate each transcript with testimony count
+            results = fetch_jurisdictions()
+
+            created = 0
+            for item in results:
+                jurisdiction = item.get("jurisdiction")
+
+                if not jurisdiction:
+                    continue
+
+                # Avoid duplicates
+                if not Jurisdiction.objects.filter(name=jurisdiction).exists():
+                    Jurisdiction.objects.create(name=jurisdiction)
+                    created += 1
+
+            return Response({
+                "status": "success",
+                "inserted": created,
+                "total_fetched": len(results)
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+ 
+
+
 class TranscriptViewSet(viewsets.ModelViewSet):
     queryset = Transcript.objects.all()
     serializer_class = TranscriptSerializer
@@ -50,12 +112,17 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         # Serialize the data
         serializer = self.get_serializer(transcripts, many=True)
         unique_case_count = Transcript.objects.values('case_name').distinct().count()
-
+        case_counts = (
+            Transcript.objects.values("case_name")
+            .annotate(transcript_count=Count("id"))
+            .order_by("-transcript_count")
+        )
         # Return the data as a Response
         return Response({
             "count": transcripts.count(),
             "transcripts": serializer.data,
-            "unique_cases":unique_case_count
+            "unique_cases":unique_case_count,
+            "depo_per_case": case_counts
         })
 
     @action(detail=False, methods=["post"], url_path="create-index")
@@ -289,6 +356,75 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 #     serializer_class = TestimonySerializer
 #     # pagination_class = CustomPageNumberPagination
 
+class AttorneyViewSet(viewsets.ModelViewSet):
+    queryset = Attorney.objects.all()
+    serializer_class = AttorneySerializer
+    parser_classes = [MultiPartParser]
+
+    def list(self, request, *args, **kwargs):
+        attorneys = self.get_queryset()
+        serializer = self.get_serializer(attorneys, many=True)
+
+        # Group by law_firm and count distinct files (Transcript instances)
+        law_firm_file_counts = (
+            attorneys
+            .values('law_firm')
+            .annotate(file_count=Count('file', distinct=True))
+            .order_by('law_firm')
+        )
+
+        return Response({
+            "count": attorneys.count(),
+            "attorneys": serializer.data,
+            "file_counts_by_law_firm": list(law_firm_file_counts),
+        })
+    @action(detail=False, methods=["get"], url_path="save-attorney")
+    def get(self, request):
+        results = fetch_attorney()
+        created = 0
+
+        for item in results:
+            if not item:  # skip None entries just in case
+                continue
+
+            atty_type = item.get("type")
+            name = item.get("name")
+            law_firm = item.get("law_firm")
+            transcript_name = item.get("transcript_name")
+
+            # Ensure transcript exists
+            transcript = Transcript.objects.filter(name__icontains=transcript_name).first()
+            if not transcript:
+                print("Transcript not found for:", transcript_name)
+                continue  # skip if transcript missing
+
+            # Ensure we have a valid name
+            if not name:
+                print("Attorney name missing for transcript:", transcript_name)
+                continue
+
+            # Avoid duplicates
+            if not Attorney.objects.filter(
+                name=name,
+                type=atty_type,
+                law_firm=law_firm,
+                file=transcript
+            ).exists():
+                Attorney.objects.create(
+                    name=name,
+                    type=atty_type,
+                    law_firm=law_firm,
+                    file=transcript
+                )
+                created += 1
+
+        return Response({
+            "status": "success",
+            "inserted": created,
+            "total_fetched": len([i for i in results if i])  # count only valid items
+        })
+
+
 class TestimonyViewSet(viewsets.ModelViewSet):
     queryset = Testimony.objects.all().order_by("id")
     serializer_class = TestimonySerializer
@@ -317,17 +453,20 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "count": len(serializer.data),
             "results": serializer.data
         })
+
+    @swagger_auto_schema(
+        method='get',
+        operation_description="Get testimony count for each transcript",
+        responses={200: 'A list of transcripts with testimony count'}
+    )
     @action(detail=False, methods=["get"], url_path="testimony-cnt-by-transcripts")
-    def get(self, request):
-        # Annotate each transcript with testimony count
+    def testimony_count_by_transcript(self, request):
         data = (
             Transcript.objects
             .annotate(testimony_count=Count('testimony_data'))
             .values('name', 'testimony_count')
         )
-
-        return Response(list(data), status=status.HTTP_200_OK)  
-
+        return Response(list(data), status=status.HTTP_200_OK)
     @action(detail=False, methods=["get"], url_path="depositions-per-case")
     def get(self, request):
         # Annotate each transcript with testimony count
@@ -737,47 +876,116 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
 class WitnessViewSet(viewsets.ViewSet):
     def list(self, request):
+        # Serialize all witnesses
         witnesses = Witness.objects.all()
         serializer = WitnessSerializer(witnesses, many=True)
 
-        # Get counts grouped by WitnessType
-        type_counts = Witness.objects.values("type__type").annotate(count=Count("id"))
+        # Counts grouped by WitnessType (excluding null types)
+        type_counts = (
+            Witness.objects
+            .exclude(type__isnull=True)
+            .values("type__type")
+            .annotate(count=Count("id"))
+        )
+
+        # Counts grouped by Alignment (excluding null alignments)
+        alignment_counts = (
+            Witness.objects
+            .exclude(alignment__isnull=True)
+            .values("alignment__alignment")
+            .annotate(count=Count("id"))
+        )
 
         return Response({
             "witnesses": serializer.data,
             "count": len(serializer.data),
-            "type_counts": type_counts
+            "type_counts": type_counts,
+            "alignment_counts": alignment_counts
         })
-    # def create(self, request):
-    #     # Expecting JSON body: { "sources": ["default", "farrar"] } or "all"
-    #     sources_param = request.data.get('sources', 'all')
+    
+    @action(detail=False, methods=["get"], url_path="save-taxonomy")
+    def save_taxonomy(self, request):
+        try:
+            result = fetch_taxonomy_from_sharepoint()
 
-    #     if sources_param == 'all':
-    #         selected_sources = ['default', 'farrar']
-    #     elif isinstance(sources_param, list):
-    #         selected_sources = [src for src in sources_param if src in ['default', 'farrar']]
-    #     else:
-    #         return Response({"error": "Invalid 'sources' format"}, status=400)
+            created_a = 0
+            created_t = 0
+            updated_w = 0
+            created_e = 0
 
-    #     all_witnesses = []
+            def normalize_name(name):
+                return unicodedata.normalize("NFKC", name).strip()
 
-    #     if 'default' in selected_sources:
-    #         pg_witnesses = Witness.objects.using('default').all()
-    #         all_witnesses.extend(pg_witnesses)
+            for item in result:
+                alignment = item.get("alignment")
+                witness_name = item.get("witness_name")
+                witness_type = item.get("witness_type")
+                expert_type = item.get("expert_type")
+                transcript_name = item.get("transcript_name")
+                print("transcript", transcript_name)
 
-    #     if 'farrar' in selected_sources:
-    #         mysql_witnesses = Witness.objects.using('farrar').all()
-    #         all_witnesses.extend(mysql_witnesses)
+                # ⚠️ Ensure all required fields exist
+                if not witness_name or not alignment or not witness_type and expert_type:
+                    print(f"⚠️ Skipping witness: {witness_name} (missing alignment/type)")
+                    continue
 
-    #     serializer = WitnessSerializer(all_witnesses, many=True)
-    #     return Response({
-    #         "source": selected_sources,
-    #         "witnesses": serializer.data,
-    #         "count": len(serializer.data)
-    #     })
+                # ✅ Ensure alignment exists
+                alignment_obj, created = WitnessAlignment.objects.get_or_create(
+                    alignment=alignment.strip()
+                )
+                if created:
+                    created_a += 1
 
+                # ✅ Ensure type exists
+                type_obj, created = WitnessType.objects.get_or_create(
+                    type=witness_type.strip()
+                )
+                if created:
+                    created_t += 1
 
-    # ✅ GET /witness/save-witnesses/ → get names from SharePoint only
+                # ✅ Normalize witness name and find all matching witnesses
+
+                # Avoid duplicates
+                witness = Witness.objects.filter(fullname=witness_name).first()
+                transcript = Transcript.objects.filter(name=transcript_name).first()
+                if witness and transcript:
+                    ExpertType.objects.create(type=expert_type, witness=witness,file=transcript )
+                    created_e += 1
+                normalized_name = normalize_name(witness_name)
+                witnesses = Witness.objects.filter(fullname__iexact=normalized_name)
+
+                if witnesses.exists():
+                    for witness in witnesses:
+                        updated = False
+                        if witness.alignment != alignment_obj:
+                            witness.alignment = alignment_obj
+                            updated = True
+                        if witness.type != type_obj:
+                            witness.type = type_obj
+                            updated = True
+
+                        if updated:
+                            witness.save()
+                            updated_w += 1
+                else:
+                    print(f"⚠️ Witness '{witness_name}' not found in DB")
+
+            # ✅ Return after processing all items
+            return Response({
+                "status": "success",
+                "inserted_alignments": created_a,
+                "inserted_types": created_t,
+                "total_fetched": len(result),
+                "witness_updated": updated_w,
+                "expert_type_inserted": created_e
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
     @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
             results = fetch_witness_names_and_transcripts()
@@ -823,20 +1031,6 @@ class WitnessViewSet(viewsets.ViewSet):
                     print("Transcript not found for:", transcript_name)
 
                 # # Avoid duplicates
-                if not Witness.objects.filter(
-                    file=transcript,
-                    fullname=fullname,
-                    alignment=alignment,
-                    type=witness_type
-                ).exists():
-                    Witness.objects.create(
-                        file=transcript,
-                        fullname=fullname,
-                        alignment=alignment,
-                        type=witness_type
-                    )
-                    created_w += 1
-                                # Avoid duplicates
 
 
             return Response({
@@ -845,6 +1039,9 @@ class WitnessViewSet(viewsets.ViewSet):
                 "inserted_witnesses": created_w,
                 "total_fetched": len(results)
             })
+
+
+
 
 class WitnessTypeViewSet(viewsets.ModelViewSet):
     http_method_names = ["get"]
@@ -871,54 +1068,6 @@ class WitnessAlignmentViewSet(viewsets.ModelViewSet):
             "witnesses": serializer.data,
             "count": len(serializer.data)
         })
-    @action(detail=False, methods=["get"], url_path="save-taxonomy")
-    def save_taxonomy(self, request):
-        try:
-            data = fetch_taxonomy_from_sharepoint()
-            witness_list = data.get("Witness", [])
-
-            for item in witness_list:
-                full_name = item.get("Name")
-                types = item.get("Types", [])
-
-                if not full_name or not types:
-                    print(f"Skipping — name or types missing.")
-                    continue
-
-                witness_type_raw = types[0].get("Type")
-                if not witness_type_raw or not isinstance(witness_type_raw, str):
-                    print(f"Skipping {full_name} — invalid type.")
-                    continue
-
-                witness_type_name = witness_type_raw.strip()
-                if not witness_type_name:
-                    print(f"Skipping {full_name} — empty type.")
-                    continue
-
-                # Get or create witness type
-                witness_type_obj, _ = WitnessType.objects.get_or_create(type=witness_type_name)
-
-                try:
-                    last_name, first_name = [x.strip() for x in full_name.split(",")]
-                except Exception:
-                    print(f"Skipping invalid name format: {full_name}")
-                    continue
-
-                try:
-                    witness = Witness.objects.get(first_name=last_name+",", last_name=first_name)
-                    witness.type_id = witness_type_obj.id
-                    witness.save()
-                    print(f"✅ Updated: {first_name} {last_name} with type '{witness_type_name}' (ID {witness_type_obj.id})")
-                except Witness.DoesNotExist:
-                    print(f"❌ Witness not found: {first_name} {last_name}")
-                except Exception as e:
-                    print(f"⚠️ Error updating {full_name}: {e}")
-
-
-            return Response({"message": "Witness types updated successfully"}, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 
@@ -1089,3 +1238,26 @@ class UserViewSet(viewsets.ModelViewSet):
             user.save()
 
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+    
+class ExpertTypeViewSet(viewsets.ModelViewSet):
+    queryset = ExpertType.objects.all()
+    serializer_class = ExpertTypeSerializer
+
+    def list(self, request, *args, **kwargs):
+        # Get all experts
+        experts = self.get_queryset()
+        serializer = self.get_serializer(experts, many=True)
+
+        # Count by type (exclude null types)
+        type_counts = ExpertType.objects \
+            .exclude(type__isnull=True) \
+            .values("type") \
+            .annotate(count=Count("id")) \
+            .order_by("type")
+
+        return Response({
+            "experts": serializer.data,
+            "total_experts": experts.count(),
+            "type_counts": type_counts
+        }, status=status.HTTP_200_OK)
+    

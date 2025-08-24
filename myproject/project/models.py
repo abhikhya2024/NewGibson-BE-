@@ -25,12 +25,32 @@ class Transcript(TimestampedModel):
     case_name = models.CharField(max_length=5000)
     def __str__(self):
         return self.file.name
+    
+class Attorney(TimestampedModel):
+    """
+    An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
+    """
+    name = models.CharField(max_length=500)
+    type = models.CharField(max_length=100)
+    file = models.ForeignKey(Transcript, on_delete=models.CASCADE, null=True, related_name="attorneys")
+    law_firm = models.CharField(max_length=500)
+
+    def __str__(self):
+        return self.file.name
+
 class ProjectUser(TimestampedModel):
     """
     An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
+
+class Jurisdiction(TimestampedModel):
+    """
+    An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
+    """
+    name = models.CharField(max_length=1000)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
 
 class WitnessType(TimestampedModel):
     """
@@ -65,6 +85,13 @@ class WitnessFiles(TimestampedModel):
     witness = models.ForeignKey(Witness, on_delete=models.CASCADE)
     file = models.ForeignKey(Transcript, on_delete=models.CASCADE)
 
+class ExpertType(TimestampedModel):
+    """
+    An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
+    """
+    file = models.ForeignKey(Transcript, on_delete=models.CASCADE)
+    witness = models.ForeignKey(Witness, on_delete=models.CASCADE)
+    type = models.CharField(max_length=500, null=True)
 
 
 class Testimony(TimestampedModel):
