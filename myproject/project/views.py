@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
+from .tasks import save_testimony_task
 
 def expand_word_forms(word):
     forms = {word}
@@ -480,54 +481,59 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 # ✅ GET /testimony/save-testimony/ → get names from SharePoint only
     @action(detail=False, methods=["get"], url_path="save-testimony")
     def save_testimony(self, request):
-        try:
-            results = fetch_json_files_from_sharepoint()
+        task = save_testimony_task.delay()  # 🔥 async call
+        return Response({
+            "status": "processing",
+            "task_id": task.id
+        })
+        # try:
+        #     results = fetch_json_files_from_sharepoint()
 
-            qa_objects = []
-            skipped = 0
+        #     qa_objects = []
+        #     skipped = 0
 
-            for item in results:
-                item.pop("id", None)
-                txt_filename = item.get("filename")
+        #     for item in results:
+        #         item.pop("id", None)
+        #         txt_filename = item.get("filename")
 
-                transcript = Transcript.objects.filter(name=txt_filename).first()
-                if not transcript:
-                    print(f"❌ Skipping again: No transcript found for {txt_filename}")
-                    skipped += 1
-                    continue
+        #         transcript = Transcript.objects.filter(name=txt_filename).first()
+        #         if not transcript:
+        #             print(f"❌ Skipping again: No transcript found for {txt_filename}")
+        #             skipped += 1
+        #             continue
 
-                question = item.get("question")
-                answer = item.get("answer")
-                cite = item.get("cite")
-                index = item.get("index")
+        #         question = item.get("question")
+        #         answer = item.get("answer")
+        #         cite = item.get("cite")
+        #         index = item.get("index")
 
-                if not Testimony.objects.filter(
-                    question=question,
-                    answer=answer,
-                    cite=cite,
-                    index=index,
-                    file=transcript
-                ).exists():
-                    qa_objects.append(Testimony(
-                        question=question,
-                        answer=answer,
-                        cite=cite,
-                        index=index,
-                        file=transcript
-                    ))
-                    print("inserted QA pair")
+        #         if not Testimony.objects.filter(
+        #             question=question,
+        #             answer=answer,
+        #             cite=cite,
+        #             index=index,
+        #             file=transcript
+        #         ).exists():
+        #             qa_objects.append(Testimony(
+        #                 question=question,
+        #                 answer=answer,
+        #                 cite=cite,
+        #                 index=index,
+        #                 file=transcript
+        #             ))
+        #             print("inserted QA pair")
 
-            Testimony.objects.bulk_create(qa_objects, batch_size=1000)
+        #     Testimony.objects.bulk_create(qa_objects, batch_size=1000)
 
-            return Response({
-                "status": "success",
-                "inserted": len(qa_objects),
-                "skipped_due_to_missing_transcript": skipped,
-                "total_fetched": len(results)
-            })
+        #     return Response({
+        #         "status": "success",
+        #         "inserted": len(qa_objects),
+        #         "skipped_due_to_missing_transcript": skipped,
+        #         "total_fetched": len(results)
+        #     })
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # except Exception as e:
+        #     return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # ✅ GET /testimony/search-testimony/ → get names from SharePoint only
     @action(detail=False, methods=["get"], url_path="search-testimony")
