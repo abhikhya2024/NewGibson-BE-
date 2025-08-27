@@ -1044,6 +1044,21 @@ class WitnessViewSet(viewsets.ViewSet):
                     print("Transcript not found for:", transcript_name)
 
                 # # Avoid duplicates
+                if not Witness.objects.filter(
+                            file=transcript,
+                            fullname=fullname,
+                            alignment=alignment,
+                            type=witness_type
+                        ).exists():
+                            Witness.objects.create(
+                                file=transcript,
+                                fullname=fullname,
+                                alignment=alignment,
+                                type=witness_type
+                            )
+                created_w += 1
+                                # Avoid duplicates
+
 
 
             return Response({

@@ -259,6 +259,7 @@ def fetch_witness_names_and_transcripts():
     results = []
     for entry in data:
         witness_name = entry.get("witness_name")
+        print(witness_name)
         transcript_name = entry.get("transcript_name")+".txt"
         transcript_date = entry.get("transcript_date")
         case_name = entry.get("case_name")
