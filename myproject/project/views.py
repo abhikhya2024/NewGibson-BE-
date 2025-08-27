@@ -24,7 +24,7 @@ from dateutil.parser import parse as parse_date
 from datetime import datetime, timezone
 from django.db.models import Count
 import unicodedata
-
+from collections import defaultdict
 
 def expand_word_forms(word):
     forms = {word}
@@ -880,6 +880,18 @@ class WitnessViewSet(viewsets.ViewSet):
         witnesses = Witness.objects.all()
         serializer = WitnessSerializer(witnesses, many=True)
 
+        # Fetch witnesses along with their transcripts
+        witnesses_with_files = Witness.objects.select_related('file').all()
+
+        # Prepare list of dicts: one row per witness-transcript pair
+        transcripts_by_witness = []
+        for w in witnesses_with_files:
+            if w.fullname:
+                transcripts_by_witness.append({
+                    "witness": w.fullname,
+                    "transcript": w.file.name if w.file else None
+                })
+
         # Counts grouped by WitnessType (excluding null types)
         type_counts = (
             Witness.objects
@@ -900,7 +912,8 @@ class WitnessViewSet(viewsets.ViewSet):
             "witnesses": serializer.data,
             "count": len(serializer.data),
             "type_counts": type_counts,
-            "alignment_counts": alignment_counts
+            "alignment_counts": alignment_counts,
+            "transcripts_by_witness": transcripts_by_witness
         })
     
     @action(detail=False, methods=["get"], url_path="save-taxonomy")
