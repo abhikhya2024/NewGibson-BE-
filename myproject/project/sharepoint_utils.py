@@ -246,7 +246,7 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsSHBLageunesse")
+    drive_id = get_dive_id("/sites/DocsSHB-PM-Proctor")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
