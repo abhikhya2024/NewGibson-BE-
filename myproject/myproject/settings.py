@@ -179,3 +179,43 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+"file": {
+    "level": "INFO",
+    "class": "logging.FileHandler",
+    "filename": os.path.join(BASE_DIR, "django_api.log"),
+    "formatter": "verbose",
+    "encoding": "utf-8",  # 👈 important for emojis
+},
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "formatters": {
+        "verbose": {
+            "format": "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+        },
+        "simple": {
+            "format": "%(levelname)s - %(message)s"
+        },
+    },
+    "loggers": {
+        "logging_handler": {   # 👈 same name as in views.py
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.server": {  # keep Django’s server logs separate
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
