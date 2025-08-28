@@ -218,10 +218,10 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         }
 
                         es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
-                        print(f"📌 Indexed {source_label} testimony ID {testimony.id}")
+                        logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
 
                     except Exception as e:
-                        print(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
+                        logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
             # Step 2: Index from both databases
             index_from_db("default", "proctor")
