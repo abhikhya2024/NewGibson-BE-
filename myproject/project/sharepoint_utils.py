@@ -26,6 +26,9 @@ SITE_PATH3 = "/sites/DocsSHB-PM-Proctor"
 JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
+import logging
+
+logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
 
 def extract_state(text: str) -> str | None:
@@ -134,6 +137,7 @@ def fetch_json_files_from_sharepoint():
         # ✅ Skip if there's no matching Transcript in DB
         if not Transcript.objects.filter(name=txt_file_name).exists():
             print(f"❌ Skipping: No transcript found for filename: {txt_file_name}")
+            
             continue
 
         # Now fetch and process the file

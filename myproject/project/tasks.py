@@ -6,6 +6,9 @@ from datetime import datetime, timezone
 from rest_framework.response import Response
 from rest_framework import status, permissions
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
+import logging
+
+logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
 @shared_task
 def save_testimony_task():
@@ -41,7 +44,7 @@ def save_testimony_task():
                 index=item.get("index"),
                 file=transcript
             ))
-
+        logging.info("Testiony created:", len(qa_objects) )
     Testimony.objects.bulk_create(qa_objects, batch_size=5000)
     return {
         "inserted": len(qa_objects),
