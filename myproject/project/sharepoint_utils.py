@@ -117,10 +117,10 @@ def fetch_json_files_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        logging.info("Hii1")
+        logger.info("Hii1")
 
         drive_id = get_dive_id("/sites/DocsSHBPMCummings")
-        logging.info("hii2")
+        logger.info("hii2")
 
         files_res = requests.get(
             f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -128,11 +128,11 @@ def fetch_json_files_from_sharepoint():
         )
         files_res.raise_for_status()
         files = files_res.json().get("value", [])
-        logging.info("hii3")
+        logger.info("hii3")
 
         results = []
     except Exception as e:
-        logging.info(f"⛔ error: {e}")
+        logger.info(f"⛔ error: {e}")
         print(f"⛔ error: {e}")
 
 
