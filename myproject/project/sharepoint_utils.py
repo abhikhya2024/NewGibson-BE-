@@ -119,7 +119,7 @@ def fetch_json_files_from_sharepoint():
     try:
         logger.info("Hii1")
 
-        drive_id = get_dive_id("/sites/DocsSHBPMCummings")
+        drive_id = get_dive_id("/sites/DocsSHBPMRuckdeschel")
         logger.info("hii2")
 
         files_res = requests.get(
@@ -193,7 +193,7 @@ def format_name(name):
 def fetch_witness_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/site/DocsSHBPMCummings")
+    drive_id = get_dive_id("/site/DocsSHBPMRuckdeschel")
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}:/children",
@@ -263,7 +263,7 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsSHBPMCummings")
+    drive_id = get_dive_id("/sites/DocsSHBPMRuckdeschel")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
