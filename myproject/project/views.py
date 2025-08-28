@@ -188,8 +188,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            if es.indices.exists(index=INDEX_NAME):
-                es.indices.delete(index=INDEX_NAME)
+            # if es.indices.exists(index=INDEX_NAME):
+            #     es.indices.delete(index=INDEX_NAME)
 
             es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
