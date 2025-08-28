@@ -128,6 +128,8 @@ def fetch_json_files_from_sharepoint():
     results = []
 
     for file in files:
+        logging.info("Testimony fetched outside loop")
+
         filename = file.get("name")
         if not filename.endswith(".json"):
             continue
@@ -158,7 +160,7 @@ def fetch_json_files_from_sharepoint():
                     "index": record.get("index"),
                     "filename": txt_file_name
                 })
-            logging.info("Testimony fetched")
+            logging.info("Testimony fetched inside loop")
         except Exception as e:
             print(f"⛔ Skipping file {filename} due to error: {e}")
             continue
