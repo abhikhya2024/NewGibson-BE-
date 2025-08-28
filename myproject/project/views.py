@@ -191,7 +191,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             # if es.indices.exists(index=INDEX_NAME):
             #     es.indices.delete(index=INDEX_NAME)
 
-            es.indices.create(index=INDEX_NAME, body=mapping)
+            # es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
             # Indexing logic from multiple databases
