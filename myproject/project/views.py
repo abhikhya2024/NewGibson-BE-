@@ -282,7 +282,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     )        
     @action(detail=False, methods=["post"], url_path="get-witnesses",parser_classes=[JSONParser])
     def get_witnesses(self, request):
-        search_term = request.data.get("witness_name", "").strip().lower()
+        search_term = c("witness_name", "").strip().lower()
 
         if not search_term:
             return Response({"matching_witnesses": []}, status=status.HTTP_200_OK)
