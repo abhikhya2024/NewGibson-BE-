@@ -192,7 +192,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 es.indices.delete(index=INDEX_NAME)
 
             es.indices.create(index=INDEX_NAME, body=mapping)
-            print(f"✅ Created new index: '{INDEX_NAME}'")
+            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
             # Indexing logic from multiple databases
             def index_from_db(db_alias, source_label):
