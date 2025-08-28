@@ -26,6 +26,8 @@ from django.db.models import Count
 import unicodedata
 from collections import defaultdict
 from .tasks import save_testimony_task, create_index_task
+from celery import group
+from celery.result import GroupResult
 
 def expand_word_forms(word):
     forms = {word}
@@ -128,12 +130,13 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        task = save_testimony_task.delay()  # 🔥 async call
-        
+        job = group(save_testimony_task.s() for _ in range(1000))()  # group of tasks
+
         return Response({
             "status": "processing",
-            "task_id": task.id
+            "group_id": job.id
         })
+
         # INDEX_NAME = "transcripts"
 
         # # Step 1: Define mapping
@@ -222,6 +225,18 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         # except Exception as e:
         #     return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @action(detail=False, methods=["get"], url_path="group-status")
+    def group_status(self, request):
+        group_id = request.query_params.get("group_id")
+        job = GroupResult.restore(group_id)  # load group result
+
+        return Response({
+            "group_id": group_id,
+            "completed": job.completed_count(),
+            "total": len(job),
+            "ready": job.ready(),          # ✅ True when ALL tasks finished
+            "successful": job.successful() # ✅ True when ALL tasks succeeded
+        })
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
