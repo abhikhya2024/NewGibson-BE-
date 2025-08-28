@@ -158,7 +158,7 @@ def fetch_json_files_from_sharepoint():
                     "index": record.get("index"),
                     "filename": txt_file_name
                 })
-            
+            logging.info("Testimony fetched")
         except Exception as e:
             print(f"⛔ Skipping file {filename} due to error: {e}")
             continue
