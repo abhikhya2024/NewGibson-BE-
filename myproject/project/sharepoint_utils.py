@@ -26,10 +26,11 @@ SITE_PATH3 = "/sites/DocsSHB-PM-Proctor"
 JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
+
+
 import logging
-
-logger = logging.getLogger("logging_handler")  # 👈 custom logger name
-
+logger = logging.getLogger("logging_handler")  # same as views.py
+logger.info("✅ Log from sharepoint_utils.py")
 
 def extract_state(text: str) -> str | None:
     doc = nlp(text)
