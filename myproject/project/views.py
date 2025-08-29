@@ -188,8 +188,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            if es.indices.exists(index=INDEX_NAME):
-                es.indices.delete(index=INDEX_NAME)
+            # if es.indices.exists(index=INDEX_NAME):
+            #     es.indices.delete(index=INDEX_NAME)
 
             # es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
@@ -224,7 +224,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
             # Step 2: Index from both databases
-            index_from_db("default", "prochaska")
+            index_from_db("default", "ruck")
 
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
