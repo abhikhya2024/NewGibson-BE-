@@ -107,29 +107,51 @@ class JurisdictionViewSet(viewsets.ModelViewSet):
  
 
 
+from itertools import chain
+from django.db.models import Count
+from rest_framework.response import Response
+
 class TranscriptViewSet(viewsets.ModelViewSet):
     queryset = Transcript.objects.all()
     serializer_class = TranscriptSerializer
-    parser_classes = [MultiPartParser]  # 👈 required for form-data upload
-    def list(self, request, *args, **kwargs):
-        # Optional: Add filtering logic here
-        transcripts = self.get_queryset()  # This is self.queryset
+    parser_classes = [MultiPartParser]
 
-        # Serialize the data
-        serializer = self.get_serializer(transcripts, many=True)
-        unique_case_count = Transcript.objects.values('case_name').distinct().count()
-        case_counts = (
-            Transcript.objects.values("case_name")
-            .annotate(transcript_count=Count("id"))
-            .order_by("-transcript_count")
-        )
-        # Return the data as a Response
+    def list(self, request, *args, **kwargs):
+        # Fetch from both databases
+        transcripts_default = Transcript.objects.using('default').all()
+        transcripts_farrar = Transcript.objects.using('farrar').all()
+
+        # Combine querysets
+        combined_transcripts = list(chain(transcripts_default, transcripts_farrar))
+
+        # Serialize combined data
+        serializer = self.get_serializer(combined_transcripts, many=True)
+
+        # Unique case count across both databases
+        unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
+        unique_cases_farrar = Transcript.objects.using('farrar').values('case_name').distinct()
+        unique_case_count = len(set([case['case_name'] for case in chain(unique_cases_default, unique_cases_farrar)]))
+
+        # Deposition count per case
+        case_counts_default = Transcript.objects.using('default').values("case_name").annotate(transcript_count=Count("id"))
+        case_counts_farrar = Transcript.objects.using('farrar').values("case_name").annotate(transcript_count=Count("id"))
+
+        # Merge case counts
+        from collections import defaultdict
+        case_count_map = defaultdict(int)
+        for entry in chain(case_counts_default, case_counts_farrar):
+            case_count_map[entry['case_name']] += entry['transcript_count']
+
+        # Convert to list of dicts
+        case_counts = [{"case_name": k, "transcript_count": v} for k, v in sorted(case_count_map.items(), key=lambda x: x[1], reverse=True)]
+
         return Response({
-            "count": transcripts.count(),
+            "count": len(combined_transcripts),
             "transcripts": serializer.data,
-            "unique_cases":unique_case_count,
+            "unique_cases": unique_case_count,
             "depo_per_case": case_counts
         })
+
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
