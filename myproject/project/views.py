@@ -119,27 +119,27 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         # Fetch from both databases
         transcripts_default = Transcript.objects.using('default').all()
-        transcripts_farrar = Transcript.objects.using('cummings').all()
+        transcripts_cummings = Transcript.objects.using('cummings').all()
 
         # Combine querysets
-        combined_transcripts = list(chain(transcripts_default, transcripts_farrar))
+        combined_transcripts = list(chain(transcripts_default, transcripts_cummings))
 
         # Serialize combined data
         serializer = self.get_serializer(combined_transcripts, many=True)
 
         # Unique case count across both databases
         unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
-        unique_cases_farrar = Transcript.objects.using('farrar').values('case_name').distinct()
-        unique_case_count = len(set([case['case_name'] for case in chain(unique_cases_default, unique_cases_farrar)]))
+        unique_cases_cummings = Transcript.objects.using('cummings').values('case_name').distinct()
+        unique_case_count = len(set([case['case_name'] for case in chain(unique_cases_default, unique_cases_cummings)]))
 
         # Deposition count per case
         case_counts_default = Transcript.objects.using('default').values("case_name").annotate(transcript_count=Count("id"))
-        case_counts_farrar = Transcript.objects.using('farrar').values("case_name").annotate(transcript_count=Count("id"))
+        case_counts_cummings = Transcript.objects.using('cummings').values("case_name").annotate(transcript_count=Count("id"))
 
         # Merge case counts
         from collections import defaultdict
         case_count_map = defaultdict(int)
-        for entry in chain(case_counts_default, case_counts_farrar):
+        for entry in chain(case_counts_default, case_counts_cummings):
             case_count_map[entry['case_name']] += entry['transcript_count']
 
         # Convert to list of dicts
@@ -771,7 +771,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
-        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'farrar']
+        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
 
         bool_query = {
             "must": [],
