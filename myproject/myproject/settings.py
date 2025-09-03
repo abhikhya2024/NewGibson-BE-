@@ -127,9 +127,9 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'proctor': {
+    'cummings': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'proctor',
+        'NAME': 'cummings',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
