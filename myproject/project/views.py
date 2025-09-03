@@ -27,6 +27,7 @@ import unicodedata
 from collections import defaultdict
 from .tasks import save_testimony_task, create_index_task
 import logging
+import traceback
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -259,8 +260,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    @swagger_auto_schema(
+            logger.error(f"⛔ Error: {str(e)}\n{traceback.format_exc()}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
         responses={200: TestimonySerializer(many=True)}
