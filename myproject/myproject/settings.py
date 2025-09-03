@@ -127,9 +127,9 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'farrar': {
+    'proctor': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'farrar_n_ball_db',
+        'NAME': 'proctor',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
