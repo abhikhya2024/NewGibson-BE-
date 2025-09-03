@@ -144,7 +144,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         # Convert to list of dicts
         case_counts = [{"case_name": k, "transcript_count": v} for k, v in sorted(case_count_map.items(), key=lambda x: x[1], reverse=True)]
-
+        
         return Response({
             "count": len(combined_transcripts),
             "transcripts": serializer.data,

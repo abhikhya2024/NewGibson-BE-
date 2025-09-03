@@ -135,6 +135,22 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
+        'prochaska': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'prochaska',
+        'USER': 'postgres',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    },
+    'proctor': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'proctor',
+        'USER': 'postgres',
+        'PASSWORD': '123456',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    },
 }
 
 DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']  # adjust path based on your project
