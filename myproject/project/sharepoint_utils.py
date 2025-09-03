@@ -26,6 +26,7 @@ SITE_PATH3 = "/sites/DocsSHB-PM-Proctor"
 JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
+DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
 
 
 import logging
@@ -116,11 +117,11 @@ def convert_json_filename_to_txt(json_filename):
 def fetch_json_files_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    try:
-        logger.info("Hii1")
+    results = []
 
+    try:
+        logger.info("Fetching drive id…")
         drive_id = get_dive_id("/sites/DocsSHBLageunesse")
-        logger.info("hii2")
 
         files_res = requests.get(
             f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -128,31 +129,27 @@ def fetch_json_files_from_sharepoint():
         )
         files_res.raise_for_status()
         files = files_res.json().get("value", [])
-        logger.info("hii3")
-
-        results = []
     except Exception as e:
-        logger.info(f"⛔ error: {e}")
-        print(f"⛔ error: {e}")
-
-
+        logger.error(f"⛔ error: {e}")
+        return []
 
     for file in files:
-        logging.info("Testimony fetched outside loop")
-
         filename = file.get("name")
         if not filename.endswith(".json"):
             continue
 
         txt_file_name = convert_json_filename_to_txt(filename)
 
-        # ✅ Skip if there's no matching Transcript in DB
-        if not Transcript.objects.filter(name=txt_file_name).exists():
-            print(f"❌ Skipping: No transcript found for filename: {txt_file_name}")
-            
+        # ✅ check in *all databases* for transcript
+        transcript_exists = any(
+            Transcript.objects.using(db).filter(name=txt_file_name).exists()
+            for db in DB_NAMES
+        )
+        if not transcript_exists:
+            logger.warning(f"❌ Skipping: No transcript found for {txt_file_name}")
             continue
 
-        # Now fetch and process the file
+        # Fetch file content
         file_path = f"{FOLDER}/{filename}"
         encoded_file_path = urllib.parse.quote(file_path)
         file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{encoded_file_path}:/content"
@@ -170,9 +167,8 @@ def fetch_json_files_from_sharepoint():
                     "index": record.get("index"),
                     "filename": txt_file_name
                 })
-            logging.info("Testimony fetched inside loop")
         except Exception as e:
-            print(f"⛔ Skipping file {filename} due to error: {e}")
+            logger.error(f"⛔ Skipping file {filename} due to error: {e}")
             continue
 
     print(f"\n✅ Total QA Pairs processed: {len(results)}")

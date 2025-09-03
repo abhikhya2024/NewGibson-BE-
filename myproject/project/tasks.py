@@ -9,6 +9,7 @@ es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 import logging
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
+DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
 
 @shared_task
 def save_testimony_task():
@@ -16,18 +17,31 @@ def save_testimony_task():
     qa_objects = []
     skipped = 0
 
-    transcripts = {t.name: t for t in Transcript.objects.all()}  # preload transcripts
-    existing = set(Testimony.objects.values_list(
-        "question", "answer", "cite", "index", "file_id"
-    ))
+    # preload transcripts from all databases
+    transcripts = {}
+    for db in DB_NAMES:
+        for t in Transcript.objects.using(db).all():
+            transcripts[t.name] = (t, db)   # keep track of db also
+
+    # preload existing testimonies from all databases
+    existing = set()
+    for db in DB_NAMES:
+        existing |= set(
+            Testimony.objects.using(db).values_list(
+                "question", "answer", "cite", "index", "file_id"
+            )
+        )
 
     for item in results:
         item.pop("id", None)
         txt_filename = item.get("filename")
-        transcript = transcripts.get(txt_filename)
-        if not transcript:
+        transcript_info = transcripts.get(txt_filename)
+
+        if not transcript_info:
             skipped += 1
             continue
+
+        transcript, db = transcript_info
 
         qa_key = (
             item.get("question"),
@@ -36,6 +50,7 @@ def save_testimony_task():
             item.get("index"),
             transcript.id
         )
+
         if qa_key not in existing:
             qa_objects.append(Testimony(
                 question=item.get("question"),
@@ -44,13 +59,19 @@ def save_testimony_task():
                 index=item.get("index"),
                 file=transcript
             ))
-        logging.info("Testiony created:", len(qa_objects) )
-    Testimony.objects.bulk_create(qa_objects, batch_size=5000)
+
+    # insert testimonies into *same DB as transcript*
+    for db in DB_NAMES:
+        objs_for_db = [obj for obj in qa_objects if obj.file._state.db == db]
+        if objs_for_db:
+            Testimony.objects.using(db).bulk_create(objs_for_db, batch_size=5000)
+
     return {
         "inserted": len(qa_objects),
         "skipped": skipped,
         "total": len(results)
     }
+
 
 @shared_task
 def create_index_task():
