@@ -117,39 +117,44 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
 
     def list(self, request, *args, **kwargs):
-        # Fetch from both databases
-        transcripts_default = Transcript.objects.using('default').all()
-        transcripts_cummings = Transcript.objects.using('cummings').all()
+        # List of database aliases
+        db_names = ['default', 'cummings', 'prochaska', 'proctor']
 
-        # Combine querysets
-        combined_transcripts = list(chain(transcripts_default, transcripts_cummings))
+        # Fetch transcripts from all databases
+        transcripts = [Transcript.objects.using(db).all() for db in db_names]
+        combined_transcripts = list(chain(*transcripts))
 
         # Serialize combined data
         serializer = self.get_serializer(combined_transcripts, many=True)
 
-        # Unique case count across both databases
-        unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
-        unique_cases_cummings = Transcript.objects.using('cummings').values('case_name').distinct()
-        unique_case_count = len(set([case['case_name'] for case in chain(unique_cases_default, unique_cases_cummings)]))
+        # Unique cases across all databases
+        unique_cases = [
+            Transcript.objects.using(db).values_list('case_name', flat=True).distinct()
+            for db in db_names
+        ]
+        unique_case_count = len(set(chain(*unique_cases)))
 
-        # Deposition count per case
-        case_counts_default = Transcript.objects.using('default').values("case_name").annotate(transcript_count=Count("id"))
-        case_counts_cummings = Transcript.objects.using('cummings').values("case_name").annotate(transcript_count=Count("id"))
+        # Deposition count per case across all databases
+        case_counts_per_db = [
+            Transcript.objects.using(db).values("case_name").annotate(transcript_count=Count("id"))
+            for db in db_names
+        ]
 
-        # Merge case counts
-        from collections import defaultdict
         case_count_map = defaultdict(int)
-        for entry in chain(case_counts_default, case_counts_cummings):
+        for entry in chain(*case_counts_per_db):
             case_count_map[entry['case_name']] += entry['transcript_count']
 
-        # Convert to list of dicts
-        case_counts = [{"case_name": k, "transcript_count": v} for k, v in sorted(case_count_map.items(), key=lambda x: x[1], reverse=True)]
-        
+        # Convert to list of dicts sorted by transcript_count
+        case_counts = [
+            {"case_name": k, "transcript_count": v}
+            for k, v in sorted(case_count_map.items(), key=lambda x: x[1], reverse=True)
+        ]
+
         return Response({
             "count": len(combined_transcripts),
             "transcripts": serializer.data,
             "unique_cases": unique_case_count,
-            "depo_per_case": case_counts
+            "depo_per_case": case_counts,
         })
 
 
