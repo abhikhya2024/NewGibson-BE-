@@ -119,7 +119,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         # Fetch from both databases
         transcripts_default = Transcript.objects.using('default').all()
-        transcripts_farrar = Transcript.objects.using('farrar').all()
+        transcripts_farrar = Transcript.objects.using('cummings').all()
 
         # Combine querysets
         combined_transcripts = list(chain(transcripts_default, transcripts_farrar))
