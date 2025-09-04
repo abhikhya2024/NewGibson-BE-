@@ -27,6 +27,7 @@ import unicodedata
 from collections import defaultdict
 from .tasks import save_testimony_task, create_index_task
 import logging
+from elasticsearch.helpers import bulk
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -220,12 +221,15 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             def index_from_db(source_label):
                 testimonies = Testimony.objects.select_related("file").all()
 
+                actions = []
                 for testimony in testimonies:
-                    try:
-                        transcript = Transcript.objects.filter(id=testimony.file_id).first()
-                        witness = Witness.objects.filter(file_id=testimony.file_id).first()
+                    transcript = Transcript.objects.filter(id=testimony.file_id).first()
+                    witness = Witness.objects.filter(file_id=testimony.file_id).first()
 
-                        doc = {
+                    doc = {
+                        "_index": INDEX_NAME,
+                        "_id": f"{source_label}_{testimony.id}",
+                        "_source": {
                             "id": testimony.id,
                             "question": testimony.question or "",
                             "answer": testimony.answer or "",
@@ -235,19 +239,18 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "type": witness.type.type if (witness and witness.type) else "",
                             "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
                             "source": source_label,
-                            "commenter_emails": [],  # keep field always present
+                            "commenter_emails": [],
                             "created_at": datetime.now(timezone.utc).isoformat(),
-                        }
+                        },
+                    }
+                    actions.append(doc)
 
-                        es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
-                        logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
+                if actions:
+                    bulk(es, actions)
+                    logger.info(f"📌 Bulk indexed {len(actions)} testimonies from {source_label}")
+                index_from_db("ruck")
 
-                    except Exception as e:
-                        logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
-            # Step 2: Index from both databases
-            index_from_db("ruck")
-
-            return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+                return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
