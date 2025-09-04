@@ -154,11 +154,21 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         })
 
 
-
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
+        # task = save_testimony_task.delay()  # 🔥 async call
+        # if task.ready():                     # True if finished
+        #     print("✅ Task is completed")
+
+        # if task.successful():
+        #     print("🎉 Task completed successfully")
+        # return Response({
+        #     "status": "processing",
+        #     "task_id": task.id
+        # })
         INDEX_NAME = "transcripts"
 
+        # Step 1: Define mapping
         mapping = {
             "mappings": {
                 "properties": {
@@ -182,7 +192,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword"}}
                     },
-                    "source": {"type": "keyword"},
+                    "source": {
+                        "type": "keyword"
+                    },
                     "commenter_emails": {
                         "type": "nested",
                         "properties": {
@@ -199,20 +211,21 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            logger.info(f"✅ Using index: '{INDEX_NAME}'")
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
 
-            def index_from_db(source_label):
-                testimonies = Testimony.objects.select_related("file").all()
-                actions = []
+            # es.indices.create(index=INDEX_NAME, body=mapping)
+            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
+            # Indexing logic from multiple databases
+            def index_from_db(db_alias, source_label):
+                testimonies = Testimony.objects.using(db_alias).select_related("file").all()
                 for testimony in testimonies:
-                    transcript = Transcript.objects.filter(id=testimony.file_id).first()
-                    witness = Witness.objects.filter(file_id=testimony.file_id).first()
+                    try:
+                        transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
+                        witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
-                    doc = {
-                        "_index": INDEX_NAME,
-                        "_id": f"{source_label}_{testimony.id}",
-                        "_source": {
+                        doc = {
                             "id": testimony.id,
                             "question": testimony.question or "",
                             "answer": testimony.answer or "",
@@ -222,31 +235,28 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "type": witness.type.type if (witness and witness.type) else "",
                             "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
                             "source": source_label,
-                            "commenter_emails": [],
-                            "created_at": datetime.now(timezone.utc).isoformat(),
-                        },
-                    }
-                    actions.append(doc)
+                            "commenter_emails": [],  # 🔹 Empty list so field always exists
+                            "created_at": datetime.now(timezone.utc).isoformat()
 
-                if actions:
-                    bulk(es, actions)
-                    logger.info(f"📌 Bulk indexed {len(actions)} testimonies from {source_label}")
+                        }
 
-            # ✅ Call function here
-            index_from_db("ruck")
+                        es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
+                        logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
 
-            # ✅ Always return a Response
-            return Response(
-                {"message": "✅ Indexing complete."},
-                status=status.HTTP_200_OK
-            )
+                    except Exception as e:
+                        logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
+
+            # Step 2: Index from both databases
+            index_from_db("default", "ruck")
+            # index_from_db("cummings", "cummings")
+            # index_from_db("prochaska", "prochaska")
+            # index_from_db("proctor", "proctor")
+
+            return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"❌ Error during indexing: {str(e)}")
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
