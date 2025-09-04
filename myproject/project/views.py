@@ -161,19 +161,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        # task = save_testimony_task.delay()  # 🔥 async call
-        # if task.ready():                     # True if finished
-        #     print("✅ Task is completed")
-
-        # if task.successful():
-        #     print("🎉 Task completed successfully")
-        # return Response({
-        #     "status": "processing",
-        #     "task_id": task.id
-        # })
         INDEX_NAME = "transcripts"
 
-        # Step 1: Define mapping
         mapping = {
             "mappings": {
                 "properties": {
@@ -197,9 +186,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword"}}
                     },
-                    "source": {
-                        "type": "keyword"
-                    },
+                    "source": {"type": "keyword"},
                     "commenter_emails": {
                         "type": "nested",
                         "properties": {
@@ -216,15 +203,21 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
+            # Step 1: Delete old index if exists
             if es.indices.exists(index=INDEX_NAME):
                 es.indices.delete(index=INDEX_NAME)
 
-            # es.indices.create(index=INDEX_NAME, body=mapping)
+            es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
-            # Indexing logic from multiple databases
-            def index_from_db(db_alias, source_label):
-                testimonies = Testimony.objects.using(db_alias).select_related("file").all()
+            # Step 2: Indexing function with streaming
+            def index_from_db(db_alias, source_label, batch_size=1000):
+                qs = Testimony.objects.using(db_alias).select_related("file")
+                total = qs.count()
+                logger.info(f"📦 Found {total} testimonies in DB: {db_alias}")
+
+                testimonies = qs.iterator(chunk_size=batch_size)  # 🔥 stream results
+
                 for testimony in testimonies:
                     try:
                         transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
@@ -240,18 +233,17 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "type": witness.type.type if (witness and witness.type) else "",
                             "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
                             "source": source_label,
-                            "commenter_emails": [],  # 🔹 Empty list so field always exists
+                            "commenter_emails": [],
                             "created_at": datetime.now(timezone.utc).isoformat()
-
                         }
 
                         es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
                         logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
 
                     except Exception as e:
-                        logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
+                        logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
-            # Step 2: Index from both databases
+            # Step 3: Index from all DBs
             index_from_db("default", "ruck")
             index_from_db("cummings", "cummings")
             index_from_db("prochaska", "prochaska")
@@ -261,7 +253,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             logger.error(f"⛔ Error: {str(e)}\n{traceback.format_exc()}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    @swagger_auto_schema(
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
+    @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
         responses={200: TestimonySerializer(many=True)}
