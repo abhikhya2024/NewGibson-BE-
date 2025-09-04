@@ -136,9 +136,9 @@ def index_task():
 
         # Index multiple DBs in the background
         index_from_db("default", "ruck")
-        # index_from_db("cummings", "cummings")
-        # index_from_db("prochaska", "prochaska")
-        # index_from_db("proctor", "proctor")
+        index_from_db("cummings", "cummings")
+        index_from_db("prochaska", "prochaska")
+        index_from_db("proctor", "proctor")
 
         logger.info("🎉 Indexing task completed successfully")
         return {"status": "success", "message": "Indexing complete."}
