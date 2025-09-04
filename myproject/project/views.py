@@ -245,7 +245,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     except Exception as e:
                         logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
             # Step 2: Index from both databases
-            index_from_db("default", "ruck")
+            index_from_db("ruck")
 
             return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
 
