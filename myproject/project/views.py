@@ -28,6 +28,7 @@ from collections import defaultdict
 from .tasks import save_testimony_task, create_index_task
 import logging
 import traceback
+from elasticsearch import helpers
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -212,37 +213,56 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
             # Step 2: Indexing function with streaming
             def index_from_db(db_alias, source_label, batch_size=1000):
-                qs = Testimony.objects.using(db_alias).select_related("file")
+                qs = (
+                    Testimony.objects.using(db_alias)
+                    .select_related("file")
+                    .prefetch_related("file__witness_set")  # ✅ fetch witnesses in one go
+                )
+
                 total = qs.count()
                 logger.info(f"📦 Found {total} testimonies in DB: {db_alias}")
 
-                testimonies = qs.iterator(chunk_size=batch_size)  # 🔥 stream results
+                testimonies = qs.iterator(chunk_size=batch_size)
 
+                actions = []  # for bulk indexing
                 for testimony in testimonies:
                     try:
-                        transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
-                        witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
+                        transcript = testimony.file
+                        witness = transcript.witness_set.first() if transcript else None
 
                         doc = {
-                            "id": testimony.id,
-                            "question": testimony.question or "",
-                            "answer": testimony.answer or "",
-                            "cite": testimony.cite or "",
-                            "transcript_name": transcript.name if transcript else "",
-                            "witness_name": witness.fullname if witness else "",
-                            "type": witness.type.type if (witness and witness.type) else "",
-                            "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
-                            "source": source_label,
-                            "commenter_emails": [],
-                            "created_at": datetime.now(timezone.utc).isoformat()
+                            "_index": INDEX_NAME,
+                            "_id": f"{source_label}_{testimony.id}",
+                            "_source": {
+                                "id": testimony.id,
+                                "question": testimony.question or "",
+                                "answer": testimony.answer or "",
+                                "cite": testimony.cite or "",
+                                "transcript_name": transcript.name if transcript else "",
+                                "witness_name": witness.fullname if witness else "",
+                                "type": witness.type.type if (witness and witness.type) else "",
+                                "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
+                                "source": source_label,
+                                "commenter_emails": [],
+                                "created_at": datetime.now(timezone.utc).isoformat(),
+                            },
                         }
 
-                        es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
-                        logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
+                        actions.append(doc)
+
+                        # 🔥 Bulk push every batch_size docs
+                        if len(actions) >= batch_size:
+                            helpers.bulk(es, actions)
+                            logger.info(f"✅ Bulk indexed {len(actions)} docs for {source_label}")
+                            actions.clear()
 
                     except Exception as e:
-                        logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
+                        logger.error(f"❌ Error preparing {source_label} testimony ID {testimony.id}: {str(e)}")
 
+                # Index remaining docs
+                    if actions:
+                        helpers.bulk(es, actions)
+                        logger.info(f"✅ Bulk indexed remaining {len(actions)} docs for {source_label}")
             # Step 3: Index from all DBs
             index_from_db("default", "ruck")
             index_from_db("cummings", "cummings")
