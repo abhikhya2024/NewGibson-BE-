@@ -154,21 +154,11 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         })
 
 
+
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        # task = save_testimony_task.delay()  # 🔥 async call
-        # if task.ready():                     # True if finished
-        #     print("✅ Task is completed")
-
-        # if task.successful():
-        #     print("🎉 Task completed successfully")
-        # return Response({
-        #     "status": "processing",
-        #     "task_id": task.id
-        # })
         INDEX_NAME = "transcripts"
 
-        # Step 1: Define mapping
         mapping = {
             "mappings": {
                 "properties": {
@@ -192,9 +182,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword"}}
                     },
-                    "source": {
-                        "type": "keyword"
-                    },
+                    "source": {"type": "keyword"},
                     "commenter_emails": {
                         "type": "nested",
                         "properties": {
@@ -211,17 +199,12 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            # if es.indices.exists(index=INDEX_NAME):
-            #     es.indices.delete(index=INDEX_NAME)
+            logger.info(f"✅ Using index: '{INDEX_NAME}'")
 
-            # es.indices.create(index=INDEX_NAME, body=mapping)
-            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
-
-            # Indexing logic from multiple databases
             def index_from_db(source_label):
                 testimonies = Testimony.objects.select_related("file").all()
-
                 actions = []
+
                 for testimony in testimonies:
                     transcript = Transcript.objects.filter(id=testimony.file_id).first()
                     witness = Witness.objects.filter(file_id=testimony.file_id).first()
@@ -248,12 +231,22 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 if actions:
                     bulk(es, actions)
                     logger.info(f"📌 Bulk indexed {len(actions)} testimonies from {source_label}")
-                index_from_db("ruck")
 
-                return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+            # ✅ Call function here
+            index_from_db("ruck")
+
+            # ✅ Always return a Response
+            return Response(
+                {"message": "✅ Indexing complete."},
+                status=status.HTTP_200_OK
+            )
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"❌ Error during indexing: {str(e)}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
