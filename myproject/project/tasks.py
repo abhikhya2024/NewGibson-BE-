@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 import logging
+from elasticsearch.helpers import bulk
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
@@ -73,92 +74,75 @@ def save_testimony_task():
     }
 
 
-@shared_task
-def create_index_task():
+def index_from_db(db_alias, source_label, batch_size=500):
+    """
+    Stream testimonies from the database and bulk index into Elasticsearch.
+    """
     INDEX_NAME = "transcripts"
 
-    # Step 1: Define mapping
-    mapping = {
-        "mappings": {
-            "properties": {
-                "id": {"type": "integer"},
-                "question": {"type": "text"},
-                "answer": {"type": "text"},
-                "cite": {"type": "text"},
-                "transcript_name": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword"}}
+    testimonies = (
+        Testimony.objects.using(db_alias)
+        .select_related("file")
+        .iterator(chunk_size=batch_size)
+    )
+
+    actions = []
+    for testimony in testimonies:
+        try:
+            transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
+            witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
+
+            doc = {
+                "_index": INDEX_NAME,
+                "_id": f"{source_label}_{testimony.id}",
+                "_source": {
+                    "id": testimony.id,
+                    "question": testimony.question or "",
+                    "answer": testimony.answer or "",
+                    "cite": testimony.cite or "",
+                    "transcript_name": transcript.name if transcript else "",
+                    "witness_name": witness.fullname if witness else "",
+                    "type": witness.type.type if (witness and witness.type) else "",
+                    "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
+                    "source": source_label,
+                    "commenter_emails": [],
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
-                "witness_name": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword"}}
-                },
-                "type": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword"}}
-                },
-                "alignment": {
-                    "type": "text",
-                    "fields": {"keyword": {"type": "keyword"}}
-                },
-                "source": {
-                    "type": "keyword"
-                },
-                "commenter_emails": {
-                    "type": "nested",
-                    "properties": {
-                        "name": {"type": "text"},
-                        "email": {"type": "keyword"}
-                    }
-                },
-                "created_at": {
-                    "type": "date",
-                    "format": "strict_date_optional_time||epoch_millis"
-                }
             }
-        }
-    }
+            actions.append(doc)
 
+            # Bulk push every `batch_size`
+            if len(actions) >= batch_size:
+                bulk(es, actions)
+                logger.info(f"✅ Bulk indexed {len(actions)} testimonies from {source_label}")
+                actions.clear()
+
+        except Exception as e:
+            logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
+
+    # Final flush
+    if actions:
+        bulk(es, actions)
+        logger.info(f"✅ Bulk indexed remaining {len(actions)} testimonies from {source_label}")
+
+
+@shared_task
+def index_task():
+    """
+    Celery task to run Elasticsearch indexing in background.
+    """
     try:
-        if es.indices.exists(index=INDEX_NAME):
-            es.indices.delete(index=INDEX_NAME)
+        logger.info(f"📂 Starting indexing task for index '{INDEX_NAME}'")
 
-        es.indices.create(index=INDEX_NAME, body=mapping)
-        print(f"✅ Created new index: '{INDEX_NAME}'")
+        # Index multiple DBs in the background
+        index_from_db("default", "ruck")
+        # index_from_db("cummings", "cummings")
+        # index_from_db("prochaska", "prochaska")
+        # index_from_db("proctor", "proctor")
 
-        # Indexing logic from multiple databases
-        def index_from_db(db_alias, source_label):
-            testimonies = Testimony.objects.using(db_alias).select_related("file").all()
-            for testimony in testimonies:
-                try:
-                    transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
-                    witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
-
-                    doc = {
-                        "id": testimony.id,
-                        "question": testimony.question or "",
-                        "answer": testimony.answer or "",
-                        "cite": testimony.cite or "",
-                        "transcript_name": transcript.name if transcript else "",
-                        "witness_name": witness.fullname if witness else "",
-                        "type": witness.type.type if (witness and witness.type) else "",
-                        "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
-                        "source": source_label,
-                        "commenter_emails": [],  # 🔹 Empty list so field always exists
-                        "created_at": datetime.now(timezone.utc).isoformat()
-
-                    }
-
-                    es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
-                    print(f"📌 Indexed {source_label} testimony ID {testimony.id}")
-
-                except Exception as e:
-                    print(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
-
-        # Step 2: Index from both databases
-        index_from_db("default", "proctor")
-        # index_from_db("farrar", "farrar")
-        return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+        logger.info("🎉 Indexing task completed successfully")
+        return {"status": "success", "message": "Indexing complete."}
 
     except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        logger.error(f"❌ Indexing task failed: {str(e)}")
+        return {"status": "error", "message": str(e)}
