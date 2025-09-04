@@ -217,12 +217,13 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
             # Indexing logic from multiple databases
-            def index_from_db(db_alias, source_label):
-                testimonies = Testimony.objects.using(db_alias).select_related("file").all()
+            def index_from_db(source_label):
+                testimonies = Testimony.objects.select_related("file").all()
+
                 for testimony in testimonies:
                     try:
-                        transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
-                        witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
+                        transcript = Transcript.objects.filter(id=testimony.file_id).first()
+                        witness = Witness.objects.filter(file_id=testimony.file_id).first()
 
                         doc = {
                             "id": testimony.id,
@@ -234,17 +235,15 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "type": witness.type.type if (witness and witness.type) else "",
                             "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
                             "source": source_label,
-                            "commenter_emails": [],  # 🔹 Empty list so field always exists
-                            "created_at": datetime.now(timezone.utc).isoformat()
-
+                            "commenter_emails": [],  # keep field always present
+                            "created_at": datetime.now(timezone.utc).isoformat(),
                         }
 
                         es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
                         logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
 
                     except Exception as e:
-                        logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
-
+                        logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
             # Step 2: Index from both databases
             index_from_db("default", "ruck")
 
