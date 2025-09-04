@@ -28,8 +28,6 @@ from collections import defaultdict
 from .tasks import save_testimony_task, create_index_task
 import logging
 import traceback
-from elasticsearch import helpers
-import gc
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -161,11 +159,21 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         })
 
 
-
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
+        # task = save_testimony_task.delay()  # 🔥 async call
+        # if task.ready():                     # True if finished
+        #     print("✅ Task is completed")
+
+        # if task.successful():
+        #     print("🎉 Task completed successfully")
+        # return Response({
+        #     "status": "processing",
+        #     "task_id": task.id
+        # })
         INDEX_NAME = "transcripts"
 
+        # Step 1: Define mapping
         mapping = {
             "mappings": {
                 "properties": {
@@ -189,7 +197,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "type": "text",
                         "fields": {"keyword": {"type": "keyword"}}
                     },
-                    "source": {"type": "keyword"},
+                    "source": {
+                        "type": "keyword"
+                    },
                     "commenter_emails": {
                         "type": "nested",
                         "properties": {
@@ -206,75 +216,42 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            # Step 1: Reset index
             if es.indices.exists(index=INDEX_NAME):
                 es.indices.delete(index=INDEX_NAME)
 
-            es.indices.create(index=INDEX_NAME, body=mapping)
+            # es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
-            # Step 2: Indexing function with streaming
-            def index_from_db(db_alias, source_label, batch_size=500):
-                qs = (
-                    Testimony.objects.using(db_alias)
-                    .select_related("file")  # only join file, avoid witness prefetch
-                )
-
-                total = qs.count()
-                logger.info(f"📦 Found {total} testimonies in DB: {db_alias}")
-
-                testimonies = qs.iterator(chunk_size=batch_size)
-                actions = []
-
+            # Indexing logic from multiple databases
+            def index_from_db(db_alias, source_label):
+                testimonies = Testimony.objects.using(db_alias).select_related("file").all()
                 for testimony in testimonies:
                     try:
-                        transcript = testimony.file
-                        # query witness on demand (avoids preloading entire set in memory)
-                        witness = (
-                            Witness.objects.using(db_alias)
-                            .filter(file_id=testimony.file_id)
-                            .first()
-                        )
+                        transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
+                        witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
                         doc = {
-                            "_index": INDEX_NAME,
-                            "_id": f"{source_label}_{testimony.id}",
-                            "_source": {
-                                "id": testimony.id,
-                                "question": testimony.question or "",
-                                "answer": testimony.answer or "",
-                                "cite": testimony.cite or "",
-                                "transcript_name": transcript.name if transcript else "",
-                                "witness_name": witness.fullname if witness else "",
-                                "type": witness.type.type if (witness and witness.type) else "",
-                                "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
-                                "source": source_label,
-                                "commenter_emails": [],
-                                "created_at": datetime.now(timezone.utc).isoformat(),
-                            },
+                            "id": testimony.id,
+                            "question": testimony.question or "",
+                            "answer": testimony.answer or "",
+                            "cite": testimony.cite or "",
+                            "transcript_name": transcript.name if transcript else "",
+                            "witness_name": witness.fullname if witness else "",
+                            "type": witness.type.type if (witness and witness.type) else "",
+                            "alignment": str(witness.alignment) if (witness and witness.alignment) else "",
+                            "source": source_label,
+                            "commenter_emails": [],  # 🔹 Empty list so field always exists
+                            "created_at": datetime.now(timezone.utc).isoformat()
+
                         }
 
-                        actions.append(doc)
-
-                        # Bulk push when batch is ready
-                        if len(actions) >= batch_size:
-                            helpers.bulk(es, actions)
-                            logger.info(f"✅ Bulk indexed {len(actions)} docs for {source_label}")
-                            actions.clear()
+                        es.index(index=INDEX_NAME, id=f"{source_label}_{testimony.id}", body=doc)
+                        logger.info(f"📌 Indexed {source_label} testimony ID {testimony.id}")
 
                     except Exception as e:
-                        logger.error(f"❌ Error preparing {source_label} testimony ID {testimony.id}: {str(e)}")
+                        logger.info(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
-                # ✅ Final flush (outside loop!)
-                if actions:
-                    helpers.bulk(es, actions)
-                    logger.info(f"✅ Bulk indexed remaining {len(actions)} docs for {source_label}")
-
-                # free memory
-                del qs, testimonies, actions
-                gc.collect()
-
-            # Step 3: Index from all DBs
+            # Step 2: Index from both databases
             index_from_db("default", "ruck")
             index_from_db("cummings", "cummings")
             index_from_db("prochaska", "prochaska")
@@ -284,10 +261,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             logger.error(f"⛔ Error: {str(e)}\n{traceback.format_exc()}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-    @swagger_auto_schema(
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
         responses={200: TestimonySerializer(many=True)}
