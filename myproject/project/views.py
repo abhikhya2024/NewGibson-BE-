@@ -29,6 +29,7 @@ from .tasks import save_testimony_task, create_index_task
 import logging
 import traceback
 from elasticsearch import helpers
+import gc
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -160,6 +161,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         })
 
 
+
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
         INDEX_NAME = "transcripts"
@@ -204,7 +206,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            # Step 1: Delete old index if exists
+            # Step 1: Reset index
             if es.indices.exists(index=INDEX_NAME):
                 es.indices.delete(index=INDEX_NAME)
 
@@ -212,23 +214,27 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
             # Step 2: Indexing function with streaming
-            def index_from_db(db_alias, source_label, batch_size=1000):
+            def index_from_db(db_alias, source_label, batch_size=500):
                 qs = (
                     Testimony.objects.using(db_alias)
-                    .select_related("file")
-                    .prefetch_related("file__witness_set")  # ✅ fetch witnesses in one go
+                    .select_related("file")  # only join file, avoid witness prefetch
                 )
 
                 total = qs.count()
                 logger.info(f"📦 Found {total} testimonies in DB: {db_alias}")
 
                 testimonies = qs.iterator(chunk_size=batch_size)
+                actions = []
 
-                actions = []  # for bulk indexing
                 for testimony in testimonies:
                     try:
                         transcript = testimony.file
-                        witness = transcript.witness_set.first() if transcript else None
+                        # query witness on demand (avoids preloading entire set in memory)
+                        witness = (
+                            Witness.objects.using(db_alias)
+                            .filter(file_id=testimony.file_id)
+                            .first()
+                        )
 
                         doc = {
                             "_index": INDEX_NAME,
@@ -250,7 +256,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
                         actions.append(doc)
 
-                        # 🔥 Bulk push every batch_size docs
+                        # Bulk push when batch is ready
                         if len(actions) >= batch_size:
                             helpers.bulk(es, actions)
                             logger.info(f"✅ Bulk indexed {len(actions)} docs for {source_label}")
@@ -259,10 +265,15 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     except Exception as e:
                         logger.error(f"❌ Error preparing {source_label} testimony ID {testimony.id}: {str(e)}")
 
-                # Index remaining docs
-                    if actions:
-                        helpers.bulk(es, actions)
-                        logger.info(f"✅ Bulk indexed remaining {len(actions)} docs for {source_label}")
+                # ✅ Final flush (outside loop!)
+                if actions:
+                    helpers.bulk(es, actions)
+                    logger.info(f"✅ Bulk indexed remaining {len(actions)} docs for {source_label}")
+
+                # free memory
+                del qs, testimonies, actions
+                gc.collect()
+
             # Step 3: Index from all DBs
             index_from_db("default", "ruck")
             index_from_db("cummings", "cummings")
@@ -273,7 +284,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             logger.error(f"⛔ Error: {str(e)}\n{traceback.format_exc()}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)   
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
