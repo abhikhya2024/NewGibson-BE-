@@ -11,6 +11,7 @@ from elasticsearch.helpers import bulk
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
+INDEX_NAME = "transcripts"
 
 @shared_task
 def save_testimony_task():
@@ -78,7 +79,6 @@ def index_from_db(db_alias, source_label, batch_size=500):
     """
     Stream testimonies from the database and bulk index into Elasticsearch.
     """
-    INDEX_NAME = "transcripts"
 
     testimonies = (
         Testimony.objects.using(db_alias)
