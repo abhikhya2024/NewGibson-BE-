@@ -156,70 +156,40 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        # task = save_testimony_task.delay()  # 🔥 async call
-        # if task.ready():                     # True if finished
-        #     print("✅ Task is completed")
-
-        # if task.successful():
-        #     print("🎉 Task completed successfully")
-        # return Response({
-        #     "status": "processing",
-        #     "task_id": task.id
-        # })
         INDEX_NAME = "transcripts"
 
-        # Step 1: Define mapping
-        mapping = {
-            "mappings": {
-                "properties": {
-                    "id": {"type": "integer"},
-                    "question": {"type": "text"},
-                    "answer": {"type": "text"},
-                    "cite": {"type": "text"},
-                    "transcript_name": {
-                        "type": "text",
-                        "fields": {"keyword": {"type": "keyword"}}
-                    },
-                    "witness_name": {
-                        "type": "text",
-                        "fields": {"keyword": {"type": "keyword"}}
-                    },
-                    "type": {
-                        "type": "text",
-                        "fields": {"keyword": {"type": "keyword"}}
-                    },
-                    "alignment": {
-                        "type": "text",
-                        "fields": {"keyword": {"type": "keyword"}}
-                    },
-                    "source": {
-                        "type": "keyword"
-                    },
-                    "commenter_emails": {
-                        "type": "nested",
-                        "properties": {
-                            "name": {"type": "text"},
-                            "email": {"type": "keyword"}
-                        }
-                    },
-                    "created_at": {
-                        "type": "date",
-                        "format": "strict_date_optional_time||epoch_millis"
+        try:
+            # Step 1: Delete old index if exists
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
+                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
+
+            # Step 2: Create new index
+            mapping = {
+                "mappings": {
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "question": {"type": "text"},
+                        "answer": {"type": "text"},
+                        "cite": {"type": "text"},
+                        "transcript_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "type": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "alignment": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "source": {"type": "keyword"},
+                        "commenter_emails": {
+                            "type": "nested",
+                            "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}}
+                        },
+                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"}
                     }
                 }
             }
-        }
-
-        try:
-            if es.indices.exists(index=INDEX_NAME):
-                es.indices.delete(index=INDEX_NAME)
-
-            # es.indices.create(index=INDEX_NAME, body=mapping)
+            es.indices.create(index=INDEX_NAME, body=mapping)
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
-                        # Indexing logic from multiple databases
-            # Step 2: Index from both databases
-            task = index_task.delay()  # 🚀 Run in background
+            # Step 3: Trigger background task
+            task = index_task.delay()  # 🚀 Run indexing asynchronously
 
             return Response(
                 {
@@ -228,16 +198,12 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     "message": "Indexing started in background."
                 },
                 status=status.HTTP_202_ACCEPTED,
-            )            
-    # index_from_db("cummings", "cummings")
-            # index_from_db("prochaska", "prochaska")
-            # index_from_db("proctor", "proctor")
-
-            return Response({"message": "✅ Indexing complete."}, status=status.HTTP_200_OK)
+            )
 
         except Exception as e:
+            logger.error(f"❌ Error in create_index: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
+
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
