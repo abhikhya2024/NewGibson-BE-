@@ -153,10 +153,10 @@ def index_task(index_name):
         logger.info(f"📂 Starting indexing task for index '{index_name}'")
 
         total = 0
-        total += index_from_db("default", "ruck", index_name)
-        total += index_from_db("cummings", "cummings", index_name)
-        total += index_from_db("prochaska", "prochaska", index_name)
-        total += index_from_db("proctor", "proctor", index_name)
+        total += index_from_db("default", "docsgibsondemo", index_name)
+        # total += index_from_db("cummings", "cummings", index_name)
+        # total += index_from_db("prochaska", "prochaska", index_name)
+        # total += index_from_db("proctor", "proctor", index_name)
 
         logger.info(f"🎉 Indexing task completed successfully, total indexed: {total}")
         return {"status": "success", "indexed": total}
