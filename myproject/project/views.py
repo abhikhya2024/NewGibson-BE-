@@ -156,7 +156,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        INDEX_NAME = "transcripts"
+        INDEX_NAME = "testimonies"
 
         try:
             # Step 1: Delete old index if exists

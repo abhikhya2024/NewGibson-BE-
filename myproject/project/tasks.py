@@ -11,7 +11,7 @@ from elasticsearch.helpers import bulk
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
-INDEX_NAME = "transcripts"
+INDEX_NAME = "testimonies"
 
 @shared_task
 def save_testimony_task():
