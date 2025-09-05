@@ -156,8 +156,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
-        INDEX_NAME = "testimonies"
-
+        INDEX_NAME="testimonies"
         try:
             # Step 1: Delete old index if exists
             if es.indices.exists(index=INDEX_NAME):
@@ -179,9 +178,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "source": {"type": "keyword"},
                         "commenter_emails": {
                             "type": "nested",
-                            "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}}
+                            "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}},
                         },
-                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"}
+                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
                     }
                 }
             }
@@ -189,13 +188,13 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             logger.info(f"✅ Created new index: '{INDEX_NAME}'")
 
             # Step 3: Trigger background task
-            task = index_task.delay()  # 🚀 Run indexing asynchronously
+            task = index_task.delay(INDEX_NAME)
 
             return Response(
                 {
                     "status": "processing",
                     "task_id": task.id,
-                    "message": "Indexing started in background."
+                    "message": f"Indexing started for '{INDEX_NAME}' in background.",
                 },
                 status=status.HTTP_202_ACCEPTED,
             )

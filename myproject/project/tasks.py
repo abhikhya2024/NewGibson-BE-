@@ -75,25 +75,26 @@ def save_testimony_task():
     }
 
 
-def index_from_db(db_alias, source_label, batch_size=500):
+def index_from_db(db_alias, source_label, index_name, batch_size=500):
     """
     Stream testimonies from the database and bulk index into Elasticsearch.
     """
-
     testimonies = (
         Testimony.objects.using(db_alias)
         .select_related("file")
         .iterator(chunk_size=batch_size)
     )
 
+    total_indexed = 0
     actions = []
+
     for testimony in testimonies:
         try:
             transcript = Transcript.objects.using(db_alias).filter(id=testimony.file_id).first()
             witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
             doc = {
-                "_index": INDEX_NAME,
+                "_index": index_name,
                 "_id": f"{source_label}_{testimony.id}",
                 "_source": {
                     "id": testimony.id,
@@ -111,37 +112,46 @@ def index_from_db(db_alias, source_label, batch_size=500):
             }
             actions.append(doc)
 
-            # Bulk push every `batch_size`
             if len(actions) >= batch_size:
-                bulk(es, actions)
-                logger.info(f"✅ Bulk indexed {len(actions)} testimonies from {source_label}")
+                success, errors = bulk(es, actions)
+                total_indexed += success
+                if errors:
+                    logger.error(f"⚠️ Bulk errors for {source_label}: {errors[:3]}")  # log first 3 errors
+                logger.info(f"✅ Bulk indexed {success} testimonies from {source_label}")
                 actions.clear()
 
         except Exception as e:
             logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
-    # Final flush
     if actions:
-        bulk(es, actions)
-        logger.info(f"✅ Bulk indexed remaining {len(actions)} testimonies from {source_label}")
+        success, errors = bulk(es, actions)
+        total_indexed += success
+        if errors:
+            logger.error(f"⚠️ Final bulk errors for {source_label}: {errors[:3]}")
+        logger.info(f"✅ Bulk indexed remaining {success} testimonies from {source_label}")
+
+    if total_indexed == 0:
+        logger.warning(f"⚠️ No testimonies found in DB alias '{db_alias}'")
+
+    return total_indexed
 
 
 @shared_task
-def index_task():
+def index_task(index_name):
     """
     Celery task to run Elasticsearch indexing in background.
     """
     try:
-        logger.info(f"📂 Starting indexing task for index '{INDEX_NAME}'")
+        logger.info(f"📂 Starting indexing task for index '{index_name}'")
 
-        # Index multiple DBs in the background
-        index_from_db("default", "ruck")
-        index_from_db("cummings", "cummings")
-        index_from_db("prochaska", "prochaska")
-        index_from_db("proctor", "proctor")
+        total = 0
+        total += index_from_db("default", "ruck", index_name)
+        total += index_from_db("cummings", "cummings", index_name)
+        total += index_from_db("prochaska", "prochaska", index_name)
+        total += index_from_db("proctor", "proctor", index_name)
 
-        logger.info("🎉 Indexing task completed successfully")
-        return {"status": "success", "message": "Indexing complete."}
+        logger.info(f"🎉 Indexing task completed successfully, total indexed: {total}")
+        return {"status": "success", "indexed": total}
 
     except Exception as e:
         logger.error(f"❌ Indexing task failed: {str(e)}")
