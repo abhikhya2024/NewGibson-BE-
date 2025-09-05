@@ -12,7 +12,6 @@ from elasticsearch.helpers import bulk
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
 INDEX_NAME = "transcripts"
-INDEX_NAME2 = "testimonies"
 
 @shared_task
 def save_testimony_task():
@@ -76,7 +75,7 @@ def save_testimony_task():
     }
 
 
-def index_from_db(db_alias, source_label, batch_size=500, index_name="transcripts"):
+def index_from_db(db_alias, source_label, batch_size=500):
     """
     Stream testimonies from the database and bulk index into Elasticsearch.
     """
@@ -94,7 +93,7 @@ def index_from_db(db_alias, source_label, batch_size=500, index_name="transcript
             witness = Witness.objects.using(db_alias).filter(file_id=testimony.file_id).first()
 
             doc = {
-                "_index": index_name,
+                "_index": INDEX_NAME,
                 "_id": f"{source_label}_{testimony.id}",
                 "_source": {
                     "id": testimony.id,
@@ -136,31 +135,10 @@ def index_task():
         logger.info(f"📂 Starting indexing task for index '{INDEX_NAME}'")
 
         # Index multiple DBs in the background
-        index_from_db("default", "ruck", INDEX_NAME)
-        index_from_db("cummings", "cummings", INDEX_NAME)
-        index_from_db("prochaska", "prochaska", INDEX_NAME)
-        index_from_db("proctor", "proctor", INDEX_NAME)
-
-        logger.info("🎉 Indexing task completed successfully")
-        return {"status": "success", "message": "Indexing complete."}
-
-    except Exception as e:
-        logger.error(f"❌ Indexing task failed: {str(e)}")
-        return {"status": "error", "message": str(e)}
-    
-@shared_task
-def index_task2():
-    """
-    Celery task to run Elasticsearch indexing in background.
-    """
-    try:
-        logger.info(f"📂 Starting indexing task for index '{INDEX_NAME2}'")
-
-        # Index multiple DBs in the background
-        index_from_db("default", "docsgibsondemo", INDEX_NAME2)
-        # index_from_db("cummings", "cummings")
-        # index_from_db("prochaska", "prochaska")
-        # index_from_db("proctor", "proctor")
+        index_from_db("default", "ruck")
+        index_from_db("cummings", "cummings")
+        index_from_db("prochaska", "prochaska")
+        index_from_db("proctor", "proctor")
 
         logger.info("🎉 Indexing task completed successfully")
         return {"status": "success", "message": "Indexing complete."}
