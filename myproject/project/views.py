@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
-from .tasks import save_testimony_task, index_task
+from .tasks import save_testimony_task, index_task, index_task2
 import logging
 from elasticsearch.helpers import bulk
 
@@ -190,6 +190,62 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
             # Step 3: Trigger background task
             task = index_task.delay()  # 🚀 Run indexing asynchronously
+
+            return Response(
+                {
+                    "status": "processing",
+                    "task_id": task.id,
+                    "message": "Indexing started in background."
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Error in create_index: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @swagger_auto_schema(
+        method='post',
+        request_body=TranscriptFuzzySerializer,
+        responses={200: TestimonySerializer(many=True)}
+    )
+
+    @action(detail=False, methods=["post"], url_path="create-index2")
+    def create_index2(self, request):
+        INDEX_NAME = "testimonies"
+
+        try:
+            # Step 1: Delete old index if exists
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
+                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
+
+            # Step 2: Create new index
+            mapping = {
+                "mappings": {
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "question": {"type": "text"},
+                        "answer": {"type": "text"},
+                        "cite": {"type": "text"},
+                        "transcript_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "type": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "alignment": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "source": {"type": "keyword"},
+                        "commenter_emails": {
+                            "type": "nested",
+                            "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}}
+                        },
+                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"}
+                    }
+                }
+            }
+            es.indices.create(index=INDEX_NAME, body=mapping)
+            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
+
+            # Step 3: Trigger background task
+            task = index_task2.delay()  # 🚀 Run indexing asynchronously
 
             return Response(
                 {
