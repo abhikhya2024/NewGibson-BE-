@@ -74,6 +74,17 @@ def save_testimony_task():
         "total": len(results)
     }
 
+def safe_bulk(client, actions, source_label):
+    """
+    Run Elasticsearch bulk safely and log errors.
+    """
+    success, errors = bulk(client, actions, raise_on_error=False)
+    logger.info(f"✅ Indexed {success} docs from {source_label}")
+    if errors:
+        logger.error(f"⚠️ {len(errors)} bulk errors from {source_label}")
+        for err in errors[:3]:  # log only first 3 for readability
+            logger.error(err)
+    return success, errors
 
 def index_from_db(db_alias, source_label, index_name, batch_size=500):
     """
@@ -112,27 +123,24 @@ def index_from_db(db_alias, source_label, index_name, batch_size=500):
             }
             actions.append(doc)
 
+            # Flush in batches
             if len(actions) >= batch_size:
-                success, errors = bulk(es, actions)
+                success, _ = safe_bulk(es, actions, source_label)
                 total_indexed += success
-                if errors:
-                    logger.error(f"⚠️ Bulk errors for {source_label}: {errors[:3]}")  # log first 3 errors
-                logger.info(f"✅ Bulk indexed {success} testimonies from {source_label}")
                 actions.clear()
 
         except Exception as e:
             logger.error(f"❌ Error indexing {source_label} testimony ID {testimony.id}: {str(e)}")
 
+    # Final flush
     if actions:
-        success, errors = bulk(es, actions)
+        success, _ = safe_bulk(es, actions, source_label)
         total_indexed += success
-        if errors:
-            logger.error(f"⚠️ Final bulk errors for {source_label}: {errors[:3]}")
-        logger.info(f"✅ Bulk indexed remaining {success} testimonies from {source_label}")
 
     if total_indexed == 0:
         logger.warning(f"⚠️ No testimonies found in DB alias '{db_alias}'")
 
+    logger.info(f"🎯 Finished indexing {total_indexed} testimonies from {source_label}")
     return total_indexed
 
 
