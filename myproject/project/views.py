@@ -851,7 +851,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            response = es.search(index="transcripts", body=es_query, size=10000, )
+            response = es.search(index="testimonies", body=es_query, size=10000, )
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
