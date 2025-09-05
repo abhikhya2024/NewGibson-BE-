@@ -121,36 +121,36 @@ STATIC_URL = '/static/'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'ruckd',
+        'NAME': 'docsgibsondemo',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    'cummings': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cummings',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    },
-        'prochaska': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'prochaska',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    },
-    'proctor': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'proctor',
-        'USER': 'postgres',
-        'PASSWORD': '123456',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    },
+    # 'cummings': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'cummings',
+    #     'USER': 'postgres',
+    #     'PASSWORD': '123456',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # },
+    #     'prochaska': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'prochaska',
+    #     'USER': 'postgres',
+    #     'PASSWORD': '123456',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # },
+    # 'proctor': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'proctor',
+    #     'USER': 'postgres',
+    #     'PASSWORD': '123456',
+    #     'HOST': 'localhost',
+    #     'PORT': '5432',
+    # },
 }
 
 DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']  # adjust path based on your project
