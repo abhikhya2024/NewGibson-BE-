@@ -118,41 +118,33 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
 
     def list(self, request, *args, **kwargs):
-        # Fetch from both databases
+        # Fetch transcripts from default DB
         transcripts_default = Transcript.objects.using('default').all()
-        transcripts_cummings = Transcript.objects.using('cummings').all()
 
-        # Combine querysets
-        combined_transcripts = list(chain(transcripts_default, transcripts_cummings))
+        # Serialize data
+        serializer = self.get_serializer(transcripts_default, many=True)
 
-        # Serialize combined data
-        serializer = self.get_serializer(combined_transcripts, many=True)
-
-        # Unique case count across both databases
+        # Unique case count (default DB only)
         unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
-        unique_cases_cummings = Transcript.objects.using('cummings').values('case_name').distinct()
-        unique_case_count = len(set([case['case_name'] for case in chain(unique_cases_default, unique_cases_cummings)]))
+        unique_case_count = len(unique_cases_default)
 
-        # Deposition count per case
-        case_counts_default = Transcript.objects.using('default').values("case_name").annotate(transcript_count=Count("id"))
-        case_counts_cummings = Transcript.objects.using('cummings').values("case_name").annotate(transcript_count=Count("id"))
+        # Deposition count per case (default DB only)
+        case_counts_default = (
+            Transcript.objects.using('default')
+            .values("case_name")
+            .annotate(transcript_count=Count("id"))
+            .order_by("-transcript_count")
+        )
 
-        # Merge case counts
-        from collections import defaultdict
-        case_count_map = defaultdict(int)
-        for entry in chain(case_counts_default, case_counts_cummings):
-            case_count_map[entry['case_name']] += entry['transcript_count']
+        # Convert QuerySet into list of dicts
+        case_counts = list(case_counts_default)
 
-        # Convert to list of dicts
-        case_counts = [{"case_name": k, "transcript_count": v} for k, v in sorted(case_count_map.items(), key=lambda x: x[1], reverse=True)]
-        
         return Response({
-            "count": len(combined_transcripts),
+            "count": transcripts_default.count(),
             "transcripts": serializer.data,
             "unique_cases": unique_case_count,
-            "depo_per_case": case_counts
+            "depo_per_case": case_counts,
         })
-
 
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
