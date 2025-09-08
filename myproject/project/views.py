@@ -119,18 +119,18 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
     # Fetch transcripts from default DB
-        transcripts_default = Transcript.objects.using('default').all()
+        transcripts_default = Transcript.objects.all()
 
         # Serialize data
         serializer = self.get_serializer(transcripts_default, many=True)
 
         # Unique case count (default DB only)
-        unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
+        unique_cases_default = Transcript.objects.values('case_name').distinct()
         unique_case_count = len(unique_cases_default)
 
         # Deposition count per case (default DB only)
         case_counts_default = (
-            Transcript.objects.using('default')
+            Transcript.objects
             .values("case_name")
             .annotate(transcript_count=Count("id"))
             .order_by("-transcript_count")
