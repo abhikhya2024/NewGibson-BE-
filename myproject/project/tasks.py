@@ -19,38 +19,31 @@ def save_testimony_task():
     qa_objects = []
     skipped = 0
 
-    # preload transcripts from all databases
-    transcripts = {}
-    for db in DB_NAMES:
-        for t in Transcript.objects.using(db).all():
-            transcripts[t.name] = (t, db)   # keep track of db also
+    # preload transcripts from default database
+    transcripts = {t.name: t for t in Transcript.objects.all()}
 
-    # preload existing testimonies from all databases
-    existing = set()
-    for db in DB_NAMES:
-        existing |= set(
-            Testimony.objects.using(db).values_list(
-                "question", "answer", "cite", "index", "file_id"
-            )
+    # preload existing testimonies from default database
+    existing = set(
+        Testimony.objects.values_list(
+            "question", "answer", "cite", "index", "file_id"
         )
+    )
 
     for item in results:
         item.pop("id", None)
         txt_filename = item.get("filename")
-        transcript_info = transcripts.get(txt_filename)
+        transcript = transcripts.get(txt_filename)
 
-        if not transcript_info:
+        if not transcript:
             skipped += 1
             continue
-
-        transcript, db = transcript_info
 
         qa_key = (
             item.get("question"),
             item.get("answer"),
             item.get("cite"),
             item.get("index"),
-            transcript.id
+            transcript.id,
         )
 
         if qa_key not in existing:
@@ -59,19 +52,17 @@ def save_testimony_task():
                 answer=item.get("answer"),
                 cite=item.get("cite"),
                 index=item.get("index"),
-                file=transcript
+                file=transcript,
             ))
 
-    # insert testimonies into *same DB as transcript*
-    for db in DB_NAMES:
-        objs_for_db = [obj for obj in qa_objects if obj.file._state.db == db]
-        if objs_for_db:
-            Testimony.objects.using(db).bulk_create(objs_for_db, batch_size=5000)
+    # insert testimonies into default DB
+    if qa_objects:
+        Testimony.objects.bulk_create(qa_objects, batch_size=5000)
 
     return {
         "inserted": len(qa_objects),
         "skipped": skipped,
-        "total": len(results)
+        "total": len(results),
     }
 
 def safe_bulk(client, actions, source_label):
