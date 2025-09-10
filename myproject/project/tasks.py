@@ -111,6 +111,7 @@ def index_from_db(db_alias, source_label, index_name, batch_size=500):
                     "commenter_emails": [],
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "transcript_date":transcript.transcript_date,
+                    "case_name": transcript.case_name
                 },
             }
             actions.append(doc)

@@ -175,7 +175,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
                         "transcript_date": {
                             "type": "date",
-                        }
+                        },
+                        "case_name": {"type": "text"},
+
                     }
                 }
             }
