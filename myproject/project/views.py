@@ -173,6 +173,9 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                             "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}},
                         },
                         "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
+                        "transcript_date": {
+                            "type": "date",
+                        }
                     }
                 }
             }
