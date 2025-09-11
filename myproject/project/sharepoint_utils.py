@@ -9,6 +9,8 @@ import os
 from dotenv import load_dotenv
 from project.models import Transcript
 import spacy
+from django.http import StreamingHttpResponse, JsonResponse
+
 nlp = spacy.load("en_core_web_sm")
 
 load_dotenv()
@@ -27,7 +29,7 @@ JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
-
+TEXTFILES = "TextFiles"
 
 import logging
 logger = logging.getLogger("logging_handler")  # same as views.py
@@ -416,3 +418,23 @@ def fetch_taxonomy_from_sharepoint():
 
     # Return both
     return results
+
+def download_transcripts(filename):
+    token = get_access_token()
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+
+    # SharePoint API endpoint for file
+    url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/Documents/TextFiles/{filename}:/content"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(url, headers=headers, stream=True)
+
+    if response.status_code != 200:
+        return JsonResponse({"error": "File not found or access denied"}, status=404)
+
+    django_response = StreamingHttpResponse(
+        response.iter_content(chunk_size=8192),
+        content_type="application/octet-stream"
+    )
+    django_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return django_response

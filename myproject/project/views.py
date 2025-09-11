@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, download_transcripts, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -146,6 +146,12 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             "depo_per_case": case_counts,
         })
 
+    @action(detail=False, methods=["post"], url_path="download-transcripts")
+    def download_transcripts(self, request):
+        filename = request.query_params.get("filename")
+        download_transcripts(filename)
+
+    
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
         INDEX_NAME="testimonies"
