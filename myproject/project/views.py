@@ -200,6 +200,64 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             logger.error(f"❌ Error in create_index: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=["post"], url_path="create-transcript-index")
+    def create_index(self, request):
+        INDEX_NAME="transcriptindex"
+        try:
+            # Step 1: Delete old index if exists
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
+                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
+
+            # Step 2: Create new index
+            mapping = {
+                "mappings": {
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "created_at": {
+                            "type": "date",
+                            "format": "strict_date_optional_time||epoch_millis"
+                        },
+                        "updated_at": {
+                            "type": "date",
+                            "format": "strict_date_optional_time||epoch_millis"
+                        },
+                        "name": {
+                            "type": "text",
+                            "fields": {
+                                "keyword": {"type": "keyword"}
+                            }
+                        },
+                        "transcript_date": {
+                            "type": "date",
+                            "format": "yyyy-MM-dd||strict_date_optional_time||epoch_millis"
+                        },
+                        "file": {"type": "keyword"},   # nullable → safe to store as keyword
+                        "case_name": {"type": "text"},
+                        "created_by": {"type": "integer"},
+                        "project": {"type": "integer"}
+                    }
+                }
+            }
+            es.indices.create(index=INDEX_NAME, body=mapping)
+            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
+
+            # Step 3: Trigger background task
+            task = index_task.delay(INDEX_NAME)
+
+            return Response(
+                {
+                    "status": "processing",
+                    "task_id": task.id,
+                    "message": f"Indexing started for '{INDEX_NAME}' in background.",
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Error in create_index: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
