@@ -146,7 +146,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             "depo_per_case": case_counts,
         })
 
-    @action(detail=False, methods=["post"], url_path="download-transcripts")
+    @action(detail=False, methods=["get"], url_path="download-transcripts")
     def download_transcripts(self, request):
         filename = request.query_params.get("filename")
         download_transcripts(filename)
