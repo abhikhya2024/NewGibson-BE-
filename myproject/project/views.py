@@ -1073,15 +1073,22 @@ class WitnessViewSet(viewsets.ViewSet):
                 if not (fullname and transcript_name and transcript_date):
                     print("not found", transcript_name)
                     continue
-                if not Transcript.objects.filter(
+                transcript = Transcript.objects.filter(
                     name=transcript_name,
                     transcript_date=transcript_date_obj,
                     created_by=default_user,
                     project=default_project,
-                    case_name=case_name,
-                    witness_name=witness_name
-                ).exists():
-                    Transcript.objects.create(
+                    case_name=case_name
+                ).first()
+
+                if transcript:
+                    # Update witness_name if different
+                    if transcript.witness_name != witness_name:
+                        transcript.witness_name = witness_name
+                        transcript.save(update_fields=["witness_name"])
+                else:
+                    # Create new transcript
+                    transcript = Transcript.objects.create(
                         name=transcript_name,
                         transcript_date=transcript_date_obj,
                         created_by=default_user,
