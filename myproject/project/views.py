@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, download_transcripts, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, get_access_token, get_dive_id, fetch_jurisdictions, fetch_witness_names_and_transcripts, download_transcripts, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -28,6 +28,8 @@ from collections import defaultdict
 from .tasks import save_testimony_task, index_task
 import logging
 from elasticsearch.helpers import bulk
+import requests
+from django.http import StreamingHttpResponse, Http404
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -146,11 +148,34 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             "depo_per_case": case_counts,
         })
 
-    @action(detail=False, methods=["get"], url_path="download-transcripts")
-    def download_transcripts(self, request):
-        filename = request.query_params.get("filename")
-        download_transcripts(filename)
+    @action(detail=False, methods=["post"], url_path="download-transcript")
+    def download_transcript(self, request):
+        """
+        POST JSON: { "filename": "IPR2019-01313 1022 - Lipson Deposition.txt" }
+        """
+        filename = request.data.get("filename")
+        if not filename:
+            return Response({"error": "filename is required"}, status=400)
 
+        # Get token and drive ID dynamically
+        token = get_access_token()
+        drive_id = get_dive_id("/sites/DocsGibsonDemo")
+
+        # Build SharePoint API URL
+        sharepoint_path = f"/Documents/TextFiles/{filename}"
+        url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:{sharepoint_path}:/content"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = requests.get(url, headers=headers, stream=True)
+        if response.status_code != 200:
+            raise Http404("File not found or access denied in SharePoint")
+
+        django_response = StreamingHttpResponse(
+            response.iter_content(chunk_size=8192),
+            content_type="application/octet-stream"
+        )
+        django_response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return django_response
     
     @action(detail=False, methods=["post"], url_path="create-index")
     def create_index(self, request):
