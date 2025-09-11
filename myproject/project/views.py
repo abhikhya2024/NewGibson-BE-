@@ -1063,6 +1063,7 @@ class WitnessViewSet(viewsets.ViewSet):
             for item in results:
                 fullname = item.get("witness_name")
                 transcript_name = item.get("transcript_name")
+                witness_name = item.get("witness_name")
                 transcript_date = item.get("transcript_date")
                 case_name = item.get("case_name")
                 # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
@@ -1077,14 +1078,16 @@ class WitnessViewSet(viewsets.ViewSet):
                     transcript_date=transcript_date_obj,
                     created_by=default_user,
                     project=default_project,
-                    case_name=case_name
+                    case_name=case_name,
+                    witness_name=witness_name
                 ).exists():
                     Transcript.objects.create(
                         name=transcript_name,
                         transcript_date=transcript_date_obj,
                         created_by=default_user,
                         project=default_project,
-                        case_name=case_name
+                        case_name=case_name,
+                        witness_name=witness_name
                     )
                     created_t += 1
                 transcript = Transcript.objects.filter(name=transcript_name).first()

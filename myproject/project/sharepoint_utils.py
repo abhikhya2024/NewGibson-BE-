@@ -281,7 +281,8 @@ def fetch_witness_names_and_transcripts():
                 "witness_name": witness_name,
                 "transcript_name": transcript_name,
                 "transcript_date": transcript_date,
-                "case_name": case_name
+                "case_name": case_name,
+                "witness_name": witness_name
             })
 
     return results
