@@ -120,32 +120,51 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
 
     def list(self, request, *args, **kwargs):
-        # Fetch transcripts from default DB
+        # ---- Step 1: Get site_id and drive_id
+        site_id, drive_id = get_dive_id()   # make sure this returns (site_id, drive_id)
+
+        # ---- Step 2: Build Graph API URL
+        graph_url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/Shared Documents/TextFiles:/children"
+
+        # ---- Step 3: Add Authorization header
+        access_token = get_access_token()   # write a helper to fetch/refresh token
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+
+        # ---- Step 4: Call Microsoft Graph API
+        graph_response = requests.get(graph_url, headers=headers)
+        if graph_response.status_code == 200:
+            graph_data = graph_response.json()
+        else:
+            graph_data = {"error": graph_response.json()}
+
+        # ---- Step 5: Fetch transcripts from default DB
         transcripts_default = Transcript.objects.using('default').all()
 
         # Serialize data
         serializer = self.get_serializer(transcripts_default, many=True)
 
-        # Unique case count (default DB only)
+        # Unique case count
         unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
         unique_case_count = len(unique_cases_default)
 
-        # Deposition count per case (default DB only)
+        # Deposition count per case
         case_counts_default = (
             Transcript.objects.using('default')
             .values("case_name")
             .annotate(transcript_count=Count("id"))
             .order_by("-transcript_count")
         )
-
-        # Convert QuerySet into list of dicts
         case_counts = list(case_counts_default)
 
+        # ---- Step 6: Return combined response
         return Response({
             "count": transcripts_default.count(),
             "transcripts": serializer.data,
             "unique_cases": unique_case_count,
             "depo_per_case": case_counts,
+            "sharepoint_files": graph_data   # 👈 Graph API response added here
         })
 
     @action(detail=False, methods=["post"], url_path="download-transcript")
