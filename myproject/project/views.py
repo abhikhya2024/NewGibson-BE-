@@ -131,7 +131,6 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
-
         # ---- Step 4: Call Microsoft Graph API
         graph_response = requests.get(graph_url, headers=headers)
         if graph_response.status_code == 200:
