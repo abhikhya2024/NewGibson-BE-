@@ -54,7 +54,7 @@ def get_access_token():
     res.raise_for_status()
     return res.json()["access_token"]
 
-def get_dive_id(site):
+def get_dive_id():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
 
