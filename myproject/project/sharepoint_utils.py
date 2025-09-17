@@ -54,31 +54,31 @@ def get_access_token():
     res.raise_for_status()
     return res.json()["access_token"]
 
-def get_dive_id():
-    token = get_access_token()
-    headers = {"Authorization": f"Bearer {token}"}
+# def get_dive_id():
+#     token = get_access_token()
+#     headers = {"Authorization": f"Bearer {token}"}
 
-    # Step 1: Get site ID
-    site_res = requests.get(
-        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH1}",
-        headers=headers
-    )
-    site_res.raise_for_status()
-    site_id = site_res.json()["id"]
+#     # Step 1: Get site ID
+#     site_res = requests.get(
+#         f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH1}",
+#         headers=headers
+#     )
+#     site_res.raise_for_status()
+#     site_id = site_res.json()["id"]
 
-    # Step 2: Get drive ID
-    drive_res = requests.get(
-        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
-        headers=headers
-    )
-    drive_res.raise_for_status()
-    drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
-    if not drive:
-        raise Exception("Documents drive not found")
+#     # Step 2: Get drive ID
+#     drive_res = requests.get(
+#         f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+#         headers=headers
+#     )
+#     drive_res.raise_for_status()
+#     drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
+#     if not drive:
+#         raise Exception("Documents drive not found")
 
-    drive_id = drive["id"]
+#     drive_id = drive["id"]
     
-    return drive_id, site_id
+#     return drive_id, site_id
 
 def get_dive_id(site):
     token = get_access_token()
@@ -103,7 +103,7 @@ def get_dive_id(site):
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    return drive_id
+    return drive_id, site_id
 
 
 def convert_json_filename_to_txt(json_filename):
