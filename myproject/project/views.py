@@ -121,7 +121,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         # ---- Step 1: Get site_id and drive_id
-        site_id, drive_id = get_dive_id()   # make sure this returns (site_id, drive_id)
+        site_id, drive_id = get_dive_id("/sites/DocsGibsonDemo")   # make sure this returns (site_id, drive_id)
 
         # ---- Step 2: Build Graph API URL
         graph_url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/Shared Documents/TextFiles:/children"
