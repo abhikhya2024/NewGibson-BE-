@@ -156,7 +156,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             .order_by("-transcript_count")
         )
         case_counts = list(case_counts_default)
-
+        print(graph_data)
         # ---- Step 6: Return combined response
         return Response({
             "count": transcripts_default.count(),
