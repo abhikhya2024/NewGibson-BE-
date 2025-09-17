@@ -15,7 +15,7 @@ nlp = spacy.load("en_core_web_sm")
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
-TENANT_ID = os.getenv("TENANT_ID")
+TENANT_ID = "b917edf1-b482-4145-a6a5-c028777c3168"
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SHAREPOINT_HOST = os.getenv("SHAREPOINT_HOST")
