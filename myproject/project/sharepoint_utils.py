@@ -43,7 +43,7 @@ def extract_state(text: str) -> str | None:
     return None
 
 def get_access_token():
-    url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    url = f"https://login.microsoftonline.com/b917edf1-b482-4145-a6a5-c028777c3168/oauth2/v2.0/token"
     data = {
         "grant_type": "client_credentials",
         "client_id": CLIENT_ID,
