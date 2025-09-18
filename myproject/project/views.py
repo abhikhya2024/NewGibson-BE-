@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_dive_id, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -28,6 +28,7 @@ from collections import defaultdict
 from .tasks import save_testimony_task, index_task
 import logging
 from elasticsearch.helpers import bulk
+import requests
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -118,32 +119,50 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser]
 
     def list(self, request, *args, **kwargs):
-    # Fetch transcripts from default DB
-        transcripts_default = Transcript.objects.all()
+        # ---- Step 1: Get site_id and drive_id
+        site_id, drive_id = get_dive_id("/sites/DocsGibsonDemo")   # make sure this returns (site_id, drive_id)
+
+        # ---- Step 2: Build Graph API URL
+        graph_url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/Shared Documents/TextFiles:/children"
+
+        # ---- Step 3: Add Authorization header
+        access_token = get_access_token()   # write a helper to fetch/refresh token
+        headers = {
+            "Authorization": f"Bearer {access_token}"
+        }
+        # ---- Step 4: Call Microsoft Graph API
+        graph_response = requests.get(graph_url, headers=headers)
+        if graph_response.status_code == 200:
+            graph_data = graph_response.json()
+        else:
+            graph_data = {"error": graph_response.json()}
+
+        # ---- Step 5: Fetch transcripts from default DB
+        transcripts_default = Transcript.objects.using('default').all()
 
         # Serialize data
         serializer = self.get_serializer(transcripts_default, many=True)
 
-        # Unique case count (default DB only)
-        unique_cases_default = Transcript.objects.values('case_name').distinct()
+        # Unique case count
+        unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
         unique_case_count = len(unique_cases_default)
 
-        # Deposition count per case (default DB only)
+        # Deposition count per case
         case_counts_default = (
-            Transcript.objects
+            Transcript.objects.using('default')
             .values("case_name")
             .annotate(transcript_count=Count("id"))
             .order_by("-transcript_count")
         )
-
-        # Convert QuerySet into list of dicts
         case_counts = list(case_counts_default)
-
+        print(graph_data)
+        # ---- Step 6: Return combined response
         return Response({
             "count": transcripts_default.count(),
             "transcripts": serializer.data,
             "unique_cases": unique_case_count,
             "depo_per_case": case_counts,
+            "sharepoint_files": graph_data   # 👈 Graph API response added here
         })
 
 
