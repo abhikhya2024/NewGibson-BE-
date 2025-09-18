@@ -48,6 +48,8 @@ def get_access_token():
         "client_secret": CLIENT_SECRET,
         "scope": "https://graph.microsoft.com/.default"
     }
+
+    print("data!!!!!!!!!!!!!", data)
     res = requests.post(url, data=data)
     res.raise_for_status()
     return res.json()["access_token"]
