@@ -127,6 +127,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
         # ---- Step 3: Add Authorization header
         access_token = get_access_token()   # write a helper to fetch/refresh token
+        print("access_token!!!!!!!!!!!!", access_token)
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
