@@ -1,6 +1,6 @@
 from celery import shared_task
 from .models import Transcript, Testimony, Witness
-from .sharepoint_utils import fetch_json_files_from_sharepoint
+from .sharepoint_utils import fetch_json_files_from_sharepoint, download_all_transcripts
 from elasticsearch import Elasticsearch
 from datetime import datetime, timezone
 from rest_framework.response import Response
@@ -165,3 +165,8 @@ def index_task(index_name):
     except Exception as e:
         logger.error(f"❌ Indexing task failed: {str(e)}")
         return {"status": "error", "message": str(e)}
+    
+@shared_task
+def download_transcripts_task():
+    """Background task to download all SharePoint transcripts"""
+    return download_all_transcripts()  # this returns your dict {"message", "files"}

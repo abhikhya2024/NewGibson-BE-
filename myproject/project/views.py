@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, download_all_transcripts, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
-from .tasks import save_testimony_task, index_task
+from .tasks import save_testimony_task, index_task, download_transcripts_task
 import logging
 from elasticsearch.helpers import bulk
 import requests
@@ -204,14 +204,14 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="download-all-transcripts")
     def download_all_transcripts(self, request):
-        try:
-            result = download_all_transcripts()  # returns dict {message, files}
-            return Response(result, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        task = download_transcripts_task.delay()
+        return Response(
+            {
+                "message": "✅ Download started in background",
+                "task_id": task.id,
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
     @swagger_auto_schema(
         method='post',
