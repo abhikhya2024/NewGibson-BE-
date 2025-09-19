@@ -82,28 +82,33 @@ def get_dive_id(site):
 def get_dive_id(site):
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
+    logger.info(f"Fetching site info for: {site}")
 
     # Step 1: Get site ID
     site_res = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{site}",
         headers=headers
     )
+    logger.info(f"Site response status: {site_res.status_code}")
     site_res.raise_for_status()
     site_id = site_res.json()["id"]
+    logger.info(f"Resolved site ID: {site_id}")
 
     # Step 2: Get drive ID
     drive_res = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
         headers=headers
     )
+    logger.info(f"Drive response status: {drive_res.status_code}")
     drive_res.raise_for_status()
+
     drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
     if not drive:
+        logger.error("Documents drive not found")
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    test = "abc"
-    return test
+    logger.info(f"Found drive ID: {drive_id}")
     return drive_id, site
 
 
@@ -263,19 +268,27 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    logger.info("Fetching drive ID for DocsGibsonDemo")
+    drive_id, site = get_dive_id("/sites/DocsGibsonDemo")
 
-    # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:DocsGibsonDemo"
+    logger.info(f"Making request to: {file_url}")
+
     try:
         response = requests.get(file_url, headers=headers, timeout=10)
+        logger.info(f"Response status: {response.status_code}")
+
         response.raise_for_status()
         data = response.json()
+        logger.debug(f"Response JSON: {data}")   # careful: could be large
         return data
 
-    # except requests.exceptions.Timeout:
-    #     return {"error": "Microsoft Graph request timed out"}
+    except requests.exceptions.Timeout:
+        logger.error("Microsoft Graph request timed out", exc_info=True)
+        return {"error": "Microsoft Graph request timed out"}
+
     except requests.exceptions.RequestException as e:
+        logger.error(f"Graph API request failed: {e}", exc_info=True)
         return {"error": str(e)}
     
 def fetch_from_sharepoint():
