@@ -269,6 +269,8 @@ def fetch_witness_names_and_transcripts():
         response = requests.get(file_url, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
+        return data
+
     # except requests.exceptions.Timeout:
     #     return {"error": "Microsoft Graph request timed out"}
     except requests.exceptions.RequestException as e:
