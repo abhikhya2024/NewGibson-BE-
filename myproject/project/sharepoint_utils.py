@@ -77,7 +77,7 @@ def get_dive_id(site):
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    return drive_id
+    return drive_id, site_id
 
 def get_dive_id(site):
     token = get_access_token()
@@ -102,7 +102,7 @@ def get_dive_id(site):
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    return drive_id
+    return drive_id, site
 
 
 def convert_json_filename_to_txt(json_filename):

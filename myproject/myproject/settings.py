@@ -80,10 +80,15 @@ CELERY_RESULT_SERIALIZER = "json"
 
 ROOT_URLCONF = "myproject.urls"
 
+STATICFILES_DIRS = [
+    "/var/www/gibson-ipr-demo-fe/NewGibson-FE/build/static",
+]
+
+# Templates → point to React build folder
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": ["/var/www/gibson-ipr-demo-fe/NewGibson-FE/build"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
