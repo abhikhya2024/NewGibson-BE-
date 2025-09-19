@@ -265,14 +265,15 @@ def fetch_witness_names_and_transcripts():
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/sites?search=DocsGibsonDemo"
-    response = requests.get(file_url, headers=headers, timeout=10)
-    response.raise_for_status()
-
-    data = response.json()
-
-
-    return data
-
+    try:
+        response = requests.get(file_url, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    # except requests.exceptions.Timeout:
+    #     return {"error": "Microsoft Graph request timed out"}
+    except requests.exceptions.RequestException as e:
+        return {"error": str(e)}
+    
 def fetch_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
