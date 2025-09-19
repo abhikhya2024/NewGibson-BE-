@@ -422,6 +422,7 @@ def fetch_taxonomy_from_sharepoint():
 
 def download_all_transcripts():
     """Download all .txt transcripts from SharePoint TextFiles folder to user's Downloads."""
+    logger.info("Starting download of all transcripts")
 
     # --- Authenticate with MSAL ---
     app = msal.ConfidentialClientApplication(
@@ -437,6 +438,7 @@ def download_all_transcripts():
         raise Exception("❌ Could not obtain token", result.get("error_description"))
 
     access_token = result["access_token"]
+    logger.info("Fetched token")
 
     # --- Settings ---
     drive_name = "Documents"
@@ -468,6 +470,7 @@ def download_all_transcripts():
     # Step 4: Download only .txt files
     downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
     os.makedirs(downloads_path, exist_ok=True)
+    logger.info("testing 1111")
 
     downloaded_files = []
 
@@ -483,6 +486,7 @@ def download_all_transcripts():
                 downloaded_files.append(name)
             else:
                 print(f"❌ Failed to download {name}: {file_res.status_code}")
+    logger.info("testing 2222")
 
     return {
         "message": "✅ Download completed",
