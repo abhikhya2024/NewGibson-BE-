@@ -264,7 +264,7 @@ def fetch_witness_names_and_transcripts():
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
 
     # Download the JSON file content
-    file_url = f"https://graph.microsoft.com/v1.0/sites?search=DocsGibsonDemo"
+    file_url = f"https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:DocsGibsonDemo"
     try:
         response = requests.get(file_url, headers=headers, timeout=10)
         response.raise_for_status()
