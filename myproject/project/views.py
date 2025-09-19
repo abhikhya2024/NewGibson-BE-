@@ -205,11 +205,8 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="download-all-transcripts")
     def download_all_transcripts(self, request):
         try:
-            downloaded_files = download_all_transcripts()  # this should return list of downloaded filenames/paths
-            return Response(
-                {"message": "✅ Download completed", "files": downloaded_files},
-                status=status.HTTP_200_OK,
-            )
+            result = download_all_transcripts()  # returns dict {message, files}
+            return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(
                 {"error": str(e)},

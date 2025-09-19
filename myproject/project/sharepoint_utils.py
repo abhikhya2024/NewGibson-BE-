@@ -28,8 +28,8 @@ JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
-authority = f"https://login.microsoftonline.com/TENANT_ID"
-scope = ["https://graph.microsoft.com/.default"]
+AUTHORITY = f"https://login.microsoftonline.com/TENANT_ID"
+SCOPE = ["https://graph.microsoft.com/.default"]
 
 import logging
 logger = logging.getLogger("logging_handler")  # same as views.py
@@ -421,23 +421,24 @@ def fetch_taxonomy_from_sharepoint():
     return results
 
 def download_all_transcripts():
+    """Download all .txt transcripts from SharePoint TextFiles folder to user's Downloads."""
+
+    # --- Authenticate with MSAL ---
     app = msal.ConfidentialClientApplication(
         CLIENT_ID,
-        authority=authority,
+        authority=AUTHORITY,
         client_credential=CLIENT_SECRET
     )
-    result = app.acquire_token_silent(scope, account=None)
-
+    result = app.acquire_token_silent(SCOPE, account=None)
     if not result:
-        result = app.acquire_token_for_client(scopes=scope)
+        result = app.acquire_token_for_client(scopes=SCOPE)
 
     if "access_token" not in result:
-        raise Exception("Could not obtain token", result.get("error_description"))
+        raise Exception("❌ Could not obtain token", result.get("error_description"))
 
     access_token = result["access_token"]
 
-    # Settings
-    site_name = "DocsGibsonDemo"
+    # --- Settings ---
     drive_name = "Documents"
     folder = "TextFiles"
 
@@ -458,7 +459,7 @@ def download_all_transcripts():
     drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
     drive_id = drive["id"]
 
-    # Step 3: List all items in folder
+    # Step 3: List all items in TextFiles folder
     list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}:/children"
     list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
     list_res.raise_for_status()
@@ -468,15 +469,22 @@ def download_all_transcripts():
     downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
     os.makedirs(downloads_path, exist_ok=True)
 
+    downloaded_files = []
+
     for item in items:
         name = item["name"]
         if name.lower().endswith(".txt"):
             download_url = item["@microsoft.graph.downloadUrl"]
             file_res = requests.get(download_url)
             if file_res.status_code == 200:
-                file_path = os.path.join(downloads_path, name)  # save in Downloads
+                file_path = os.path.join(downloads_path, name)
                 with open(file_path, "wb") as f:
                     f.write(file_res.content)
-                print(f"✅ Downloaded {name} to {file_path}")
+                downloaded_files.append(name)
             else:
                 print(f"❌ Failed to download {name}: {file_res.status_code}")
+
+    return {
+        "message": "✅ Download completed",
+        "files": downloaded_files
+    }
