@@ -270,6 +270,11 @@ def fetch_witness_names_and_transcripts():
 
     data = response.json()
 
+    file_url2 = f"https://graph.microsoft.com/v1.0/sites?search=DocsGibsonDemo"
+    response2 = requests.get(file_url2, headers=headers)
+    response2.raise_for_status()
+
+    data2 = response.json()
     # Extract witness name + transcript name pairs
     results = []
     for entry in data:
@@ -283,7 +288,8 @@ def fetch_witness_names_and_transcripts():
                 "witness_name": witness_name,
                 "transcript_name": transcript_name,
                 "transcript_date": transcript_date,
-                "case_name": case_name
+                "case_name": case_name, 
+                "response": data2
             })
 
     return results

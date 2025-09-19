@@ -120,7 +120,6 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         # ---- Step 1: Get site_id and drive_id
-        site_id, drive_id = get_dive_id("/sites/DocsGibsonDemo")   # make sure this returns (site_id, drive_id)
 
         
         # ---- Step 5: Fetch transcripts from default DB
