@@ -268,24 +268,31 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
+    
+    # Step 1: Get drive ID
     logger.info("Fetching drive ID for DocsGibsonDemo")
     drive_id, site = get_dive_id("/sites/DocsGibsonDemo")
 
-    file_url = f"https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:DocsGibsonDemo"
+    # Step 2: Correct file URL (example: list root folder contents)
+    file_url = f"https://graph.microsoft.com/v1.0/sites/{site}/drives/{drive_id}/root/children"
     logger.info(f"Making request to: {file_url}")
 
     try:
-        response = requests.get(file_url, headers=headers, timeout=10)
+        response = requests.get(file_url, headers=headers, timeout=20)
         logger.info(f"Response status: {response.status_code}")
 
-        response.raise_for_status()
+        response.raise_for_status()  # Raises exception if 4xx/5xx
         data = response.json()
-        logger.debug(f"Response JSON: {data}")   # careful: could be large
+        logger.debug(f"Response JSON keys: {list(data.keys())}")  # safer than dumping entire JSON
         return data
 
     except requests.exceptions.Timeout:
         logger.error("Microsoft Graph request timed out", exc_info=True)
         return {"error": "Microsoft Graph request timed out"}
+
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"Graph API returned error {response.status_code}: {response.text}", exc_info=True)
+        return {"error": f"HTTP {response.status_code}: {response.text}"}
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Graph API request failed: {e}", exc_info=True)

@@ -992,16 +992,18 @@ class WitnessViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
-    @action(detail=False, methods=["post"], url_path="save-witnesses")
-    def save_witnesses(self, request):
-            results = fetch_witness_names_and_transcripts()
+@action(detail=False, methods=["post"], url_path="save-witnesses")
+def save_witnesses(self, request):
+    logger.warning("🚀 Entered save_witnesses view")
+    print("🚀 DEBUG: inside save_witnesses")  # Gunicorn always captures print
 
+    results = fetch_witness_names_and_transcripts()
+    logger.warning(f"🚀 Results fetched: {results}")
 
-            return Response({
-                "status": "success",
-                "results": results
-
-            })
+    return Response({
+        "status": "success",
+        "results": results
+    })
 
 
 
