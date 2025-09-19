@@ -995,71 +995,12 @@ class WitnessViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
             results = fetch_witness_names_and_transcripts()
-            # Fetch defaults
-            # witness_type = WitnessType.objects.first()
-
-            # alignment = WitnessAlignment.objects.first()
-
-            # default_user = User.objects.first()
-            # default_project = Project.objects.first()
-            # # print("resultssssss",results)
-            # created_t = 0
-            # created_w = 0
-            # for item in results:
-            #     fullname = item.get("witness_name")
-            #     transcript_name = item.get("transcript_name")
-            #     transcript_date = item.get("transcript_date")
-            #     case_name = item.get("case_name")
-            #     # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
-            #     transcript_date_obj = parse_date(transcript_date).date()
-
-
-            #     if not (fullname and transcript_name and transcript_date):
-            #         print("not found", transcript_name)
-            #         continue
-            #     if not Transcript.objects.filter(
-            #         name=transcript_name,
-            #         transcript_date=transcript_date_obj,
-            #         created_by=default_user,
-            #         project=default_project,
-            #         case_name=case_name
-            #     ).exists():
-            #         Transcript.objects.create(
-            #             name=transcript_name,
-            #             transcript_date=transcript_date_obj,
-            #             created_by=default_user,
-            #             project=default_project,
-            #             case_name=case_name
-            #         )
-            #         created_t += 1
-            #     transcript = Transcript.objects.filter(name=transcript_name).first()
-            #     if not transcript:
-            #         print("Transcript not found for:", transcript_name)
-
-            #     # # Avoid duplicates
-            #     if not Witness.objects.filter(
-            #                 file=transcript,
-            #                 fullname=fullname,
-            #                 alignment=alignment,
-            #                 type=witness_type
-            #             ).exists():
-            #                 Witness.objects.create(
-            #                     file=transcript,
-            #                     fullname=fullname,
-            #                     alignment=alignment,
-            #                     type=witness_type
-            #                 )
-            #     created_w += 1
-            #                     # Avoid duplicates
-
 
 
             return Response({
                 "status": "success",
                 "results": results
-                # "inserted_transcripts": created_t,
-                # "inserted_witnesses": created_w,
-                # "total_fetched": len(results)
+
             })
 
 
