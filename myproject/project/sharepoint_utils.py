@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from project.models import Transcript
 import spacy
 nlp = spacy.load("en_core_web_sm")
+import msal
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -27,7 +28,8 @@ JSON_FILENAME = "file_metadata_master.json"
 TAXONOMY_FILENAME = "witness_taxonomy.json"
 SITE_PATH4 = "/sites/DocsSHBPMCummings"
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
-
+authority = f"https://login.microsoftonline.com/TENANT_ID"
+scope = ["https://graph.microsoft.com/.default"]
 
 import logging
 logger = logging.getLogger("logging_handler")  # same as views.py
@@ -77,39 +79,32 @@ def get_dive_id(site):
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    return drive_id, site_id
+    return drive_id
 
 def get_dive_id(site):
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    logger.info(f"Fetching site info for: {site}")
 
     # Step 1: Get site ID
     site_res = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{site}",
         headers=headers
     )
-    logger.info(f"Site response status: {site_res.status_code}")
     site_res.raise_for_status()
     site_id = site_res.json()["id"]
-    logger.info(f"Resolved site ID: {site_id}")
 
     # Step 2: Get drive ID
     drive_res = requests.get(
         f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
         headers=headers
     )
-    logger.info(f"Drive response status: {drive_res.status_code}")
     drive_res.raise_for_status()
-
     drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
     if not drive:
-        logger.error("Documents drive not found")
         raise Exception("Documents drive not found")
 
     drive_id = drive["id"]
-    logger.info(f"Found drive ID: {drive_id}")
-    return drive_id, site
+    return drive_id
 
 
 def convert_json_filename_to_txt(json_filename):
@@ -268,36 +263,33 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    
-    # Step 1: Get drive ID
-    logger.info("Fetching drive ID for DocsGibsonDemo")
-    drive_id, site = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
 
-    # Step 2: Correct file URL (example: list root folder contents)
-    file_url = f"https://graph.microsoft.com/v1.0/sites/{site}/drives/{drive_id}/root/children"
-    logger.info(f"Making request to: {file_url}")
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
 
-    try:
-        response = requests.get(file_url, headers=headers, timeout=20)
-        logger.info(f"Response status: {response.status_code}")
+    data = response.json()
 
-        response.raise_for_status()  # Raises exception if 4xx/5xx
-        data = response.json()
-        logger.debug(f"Response JSON keys: {list(data.keys())}")  # safer than dumping entire JSON
-        return data
+    # Extract witness name + transcript name pairs
+    results = []
+    for entry in data:
+        witness_name = entry.get("witness_name")
+        print(witness_name)
+        transcript_name = entry.get("transcript_name")+".txt"
+        transcript_date = entry.get("transcript_date")
+        case_name = entry.get("case_name")
+        if witness_name and transcript_name:
+            results.append({
+                "witness_name": witness_name,
+                "transcript_name": transcript_name,
+                "transcript_date": transcript_date,
+                "case_name": case_name
+            })
 
-    except requests.exceptions.Timeout:
-        logger.error("Microsoft Graph request timed out", exc_info=True)
-        return {"error": "Microsoft Graph request timed out"}
+    return results
 
-    except requests.exceptions.HTTPError as e:
-        logger.error(f"Graph API returned error {response.status_code}: {response.text}", exc_info=True)
-        return {"error": f"HTTP {response.status_code}: {response.text}"}
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Graph API request failed: {e}", exc_info=True)
-        return {"error": str(e)}
-    
 def fetch_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
@@ -427,3 +419,64 @@ def fetch_taxonomy_from_sharepoint():
 
     # Return both
     return results
+
+def download_all_transcripts():
+    app = msal.ConfidentialClientApplication(
+        CLIENT_ID,
+        authority=authority,
+        client_credential=CLIENT_SECRET
+    )
+    result = app.acquire_token_silent(scope, account=None)
+
+    if not result:
+        result = app.acquire_token_for_client(scopes=scope)
+
+    if "access_token" not in result:
+        raise Exception("Could not obtain token", result.get("error_description"))
+
+    access_token = result["access_token"]
+
+    # Settings
+    site_name = "DocsGibsonDemo"
+    drive_name = "Documents"
+    folder = "TextFiles"
+
+    # Step 1: Get Site ID
+    site_res = requests.get(
+        "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    site_res.raise_for_status()
+    site_id = site_res.json()["id"]
+
+    # Step 2: Get Drive ID
+    drive_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    drive_res.raise_for_status()
+    drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
+    drive_id = drive["id"]
+
+    # Step 3: List all items in folder
+    list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}:/children"
+    list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
+    list_res.raise_for_status()
+    items = list_res.json().get("value", [])
+
+    # Step 4: Download only .txt files
+    downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    os.makedirs(downloads_path, exist_ok=True)
+
+    for item in items:
+        name = item["name"]
+        if name.lower().endswith(".txt"):
+            download_url = item["@microsoft.graph.downloadUrl"]
+            file_res = requests.get(download_url)
+            if file_res.status_code == 200:
+                file_path = os.path.join(downloads_path, name)  # save in Downloads
+                with open(file_path, "wb") as f:
+                    f.write(file_res.content)
+                print(f"✅ Downloaded {name} to {file_path}")
+            else:
+                print(f"❌ Failed to download {name}: {file_res.status_code}")

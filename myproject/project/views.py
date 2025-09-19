@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_dive_id, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, download_all_transcripts, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -146,8 +146,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             "transcripts": serializer.data,
             "unique_cases": unique_case_count,
             "depo_per_case": case_counts,
-            "site_id": site_id,   # 👈 Graph API response added here
-            "drive_id": drive_id
+
         })
 
 
@@ -202,6 +201,20 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"❌ Error in create_index: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="download-all-transcripts")
+    def download_all_transcripts(self, request):
+        try:
+            downloaded_files = download_all_transcripts()  # this should return list of downloaded filenames/paths
+            return Response(
+                {"message": "✅ Download completed", "files": downloaded_files},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @swagger_auto_schema(
         method='post',
