@@ -36,8 +36,8 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-import tempfile
-from django.http import FileResponse
+import io
+import zipfile
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -259,26 +259,21 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         list_res.raise_for_status()
         items = list_res.json().get("value", [])
 
-        # Step 4: Download only .txt files
-        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
-        os.makedirs(downloads_path, exist_ok=True)
-        logger.info("testing 1111")
+        # Step 4: Create a ZIP file in memory
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as zf:
+            for item in items:
+                name = item["name"]
+                if name.lower().endswith(".txt"):
+                    download_url = item["@microsoft.graph.downloadUrl"]
+                    file_res = requests.get(download_url)
+                    if file_res.status_code == 200:
+                        zf.writestr(name, file_res.content)
 
-        downloaded_files = []
-
-        for item in items:
-            name = item["name"]
-            if name.lower().endswith(".txt"):
-                download_url = item["@microsoft.graph.downloadUrl"]
-                file_res = requests.get(download_url)
-                if file_res.status_code == 200:
-                    tmp_path = os.path.join(tempfile.gettempdir(), name)
-                    with open(tmp_path, "wb") as f:
-                        f.write(file_res.content)
-                    return FileResponse(open(tmp_path, "rb"), as_attachment=True, filename=name)
-
-        return Response({"message": "❌ No files found"}, status=404)
-
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type="application/zip")
+        response["Content-Disposition"] = 'attachment; filename="transcripts.zip"'
+        return response
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
