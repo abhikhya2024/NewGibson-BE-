@@ -29,6 +29,13 @@ from .tasks import save_testimony_task, index_task, download_transcripts_task
 import logging
 from elasticsearch.helpers import bulk
 import requests
+import msal
+import os
+AUTHORITY = f"https://login.microsoftonline.com/TENANT_ID"
+SCOPE = ["https://graph.microsoft.com/.default"]
+TENANT_ID = os.getenv("TENANT_ID")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -204,14 +211,77 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="download-all-transcripts")
     def download_all_transcripts(self, request):
-        task = download_transcripts_task.delay()
-        return Response(
-            {
-                "message": "✅ Download started in background",
-                "task_id": task.id,
-            },
-            status=status.HTTP_202_ACCEPTED,
+        """Download all .txt transcripts from SharePoint TextFiles folder to user's Downloads."""
+        logger.info("Starting download of all transcripts")
+
+        # --- Authenticate with MSAL ---
+        app = msal.ConfidentialClientApplication(
+            CLIENT_ID,
+            authority=AUTHORITY,
+            client_credential=CLIENT_SECRET
         )
+        result = app.acquire_token_silent(SCOPE, account=None)
+        if not result:
+            result = app.acquire_token_for_client(scopes=SCOPE)
+
+        if "access_token" not in result:
+            raise Exception("❌ Could not obtain token", result.get("error_description"))
+
+        access_token = result["access_token"]
+        logger.info("Fetched token")
+
+        # --- Settings ---
+        drive_name = "Documents"
+        folder = "TextFiles"
+
+        # Step 1: Get Site ID
+        site_res = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        site_res.raise_for_status()
+        site_id = site_res.json()["id"]
+
+        # Step 2: Get Drive ID
+        drive_res = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        drive_res.raise_for_status()
+        drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
+        drive_id = drive["id"]
+
+        # Step 3: List all items in TextFiles folder
+        list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}:/children"
+        list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
+        list_res.raise_for_status()
+        items = list_res.json().get("value", [])
+
+        # Step 4: Download only .txt files
+        downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+        os.makedirs(downloads_path, exist_ok=True)
+        logger.info("testing 1111")
+
+        downloaded_files = []
+
+        for item in items:
+            name = item["name"]
+            if name.lower().endswith(".txt"):
+                download_url = item["@microsoft.graph.downloadUrl"]
+                file_res = requests.get(download_url)
+                if file_res.status_code == 200:
+                    file_path = os.path.join(downloads_path, name)
+                    with open(file_path, "wb") as f:
+                        f.write(file_res.content)
+                    downloaded_files.append(name)
+                else:
+                    print(f"❌ Failed to download {name}: {file_res.status_code}")
+        logger.info("testing 2222")
+
+        return {
+            "message": "✅ Download completed",
+            "files": downloaded_files
+        }
 
     @swagger_auto_schema(
         method='post',
