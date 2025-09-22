@@ -31,11 +31,11 @@ from elasticsearch.helpers import bulk
 import requests
 import msal
 import os
-AUTHORITY = f"https://login.microsoftonline.com/TENANT_ID"
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
