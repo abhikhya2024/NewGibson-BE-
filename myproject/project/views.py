@@ -280,6 +280,73 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         response = HttpResponse(buffer, content_type="application/zip")
         response["Content-Disposition"] = 'attachment; filename="transcripts.zip"'
         return response
+    
+    @action(detail=False, methods=["post"], url_path="upload-transcripts")
+    def upload_transcripts(self, request):
+        """
+        Upload one or more files to SharePoint TextFiles folder.
+        Expects files in request.FILES (multipart/form-data).
+        """
+        files = request.FILES.getlist("files")  # list of uploaded files
+        if not files:
+            return Response({"error": "No files uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # --- Authenticate with MSAL ---
+        app = msal.ConfidentialClientApplication(
+            CLIENT_ID,
+            authority=AUTHORITY,
+            client_credential=CLIENT_SECRET
+        )
+        result = app.acquire_token_silent(SCOPE, account=None)
+        if not result:
+            result = app.acquire_token_for_client(scopes=SCOPE)
+
+        if "access_token" not in result:
+            return Response({"error": "Could not obtain access token"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        access_token = result["access_token"]
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        # --- Settings ---
+        drive_name = "Documents"
+        folder = "TextFiles"
+
+        # Step 1: Get Site ID
+        site_res = requests.get(
+            "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
+            headers=headers
+        )
+        site_res.raise_for_status()
+        site_id = site_res.json()["id"]
+
+        # Step 2: Get Drive ID
+        drive_res = requests.get(
+            f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+            headers=headers
+        )
+        drive_res.raise_for_status()
+        drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
+        drive_id = drive["id"]
+
+        uploaded_files = []
+
+        # Step 3: Upload each file
+        for file_obj in files:
+            filename = file_obj.name
+            file_content = file_obj.read()
+            upload_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}/{filename}:/content"
+            upload_res = requests.put(upload_url, headers=headers, data=file_content)
+
+            if upload_res.status_code in (200, 201):
+                uploaded_files.append(filename)
+                logger.info(f"✅ Uploaded {filename} to SharePoint")
+            else:
+                logger.error(f"❌ Failed to upload {filename}: {upload_res.status_code} {upload_res.text}")
+
+        return Response(
+            {"message": "Upload completed", "files": uploaded_files},
+            status=status.HTTP_200_OK
+        )
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,
