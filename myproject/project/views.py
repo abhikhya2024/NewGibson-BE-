@@ -381,7 +381,14 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             items = list_res.json().get("value", [])
 
             # Return JSON with file info
-            files = [{"name": f["name"], "id": f["id"], "type": f["@odata.type"]} for f in items]
+            files = [
+                {
+                    "name": f.get("name"),
+                    "id": f.get("id"),
+                    "type": f.get("@odata.type", "unknown")  # default if missing
+                }
+                for f in items
+            ]            
             return Response({"files": files}, status=status.HTTP_200_OK)
 
         except Exception as e:
