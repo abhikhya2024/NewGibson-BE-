@@ -38,6 +38,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 import io
 import zipfile
+from django.http import HttpResponse
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
