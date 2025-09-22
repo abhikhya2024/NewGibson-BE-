@@ -260,18 +260,23 @@ class TranscriptViewSet(viewsets.ModelViewSet):
         list_res.raise_for_status()
         items = list_res.json().get("value", [])
 
-        # Step 4: Create a ZIP file in memory
+        # Step 4: Create an in-memory ZIP file
         buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w") as zf:
+        with zipfile.ZipFile(buffer, "w") as zip_file:
             for item in items:
                 name = item["name"]
                 if name.lower().endswith(".txt"):
                     download_url = item["@microsoft.graph.downloadUrl"]
                     file_res = requests.get(download_url)
                     if file_res.status_code == 200:
-                        zf.writestr(name, file_res.content)
+                        zip_file.writestr(name, file_res.content)
+                        logger.info(f"Added {name} to ZIP")
+                    else:
+                        logger.warning(f"❌ Failed to download {name}: {file_res.status_code}")
 
         buffer.seek(0)
+
+        # Step 5: Return ZIP as HTTP response
         response = HttpResponse(buffer, content_type="application/zip")
         response["Content-Disposition"] = 'attachment; filename="transcripts.zip"'
         return response
