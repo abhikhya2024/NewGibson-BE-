@@ -385,7 +385,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 {
                     "name": f.get("name"),
                     "id": f.get("id"),
-                    "type": f.get("@odata.type", "unknown")  # default if missing
+                    "webUrl": f.get("webUrl")  # This is the clickable link
                 }
                 for f in items
             ]            
