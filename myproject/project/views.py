@@ -36,6 +36,7 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
+SITE_NAME = "DocsGibsonDemo"
 import io
 import zipfile
 from django.http import HttpResponse
@@ -370,11 +371,11 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 headers={"Authorization": f"Bearer {access_token}"}
             )
             drive_res.raise_for_status()
-            drive = next(d for d in drive_res.json()["value"] if d["name"] == DRIVE_NAME)
+            drive = next(d for d in drive_res.json()["value"] if d["name"] == "Documets")
             drive_id = drive["id"]
 
             # Step 3: List all files in folder
-            list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER_NAME}:/children"
+            list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/TextFiles:/children"
             list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
             list_res.raise_for_status()
             items = list_res.json().get("value", [])
