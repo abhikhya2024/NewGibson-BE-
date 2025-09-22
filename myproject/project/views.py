@@ -353,7 +353,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
 
     @action(detail=False, methods=["get"], url_path="list-sharepoint-files")
-    def list_sharepoint_files(request):
+    def list_sharepoint_files(self, request):
         try:
             access_token = get_token()
 
