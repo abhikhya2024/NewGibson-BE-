@@ -36,6 +36,8 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
+import tempfile
+from django.http import FileResponse
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -270,18 +272,12 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 download_url = item["@microsoft.graph.downloadUrl"]
                 file_res = requests.get(download_url)
                 if file_res.status_code == 200:
-                    file_path = os.path.join(downloads_path, name)
-                    with open(file_path, "wb") as f:
+                    tmp_path = os.path.join(tempfile.gettempdir(), name)
+                    with open(tmp_path, "wb") as f:
                         f.write(file_res.content)
-                    downloaded_files.append(name)
-                else:
-                    print(f"❌ Failed to download {name}: {file_res.status_code}")
-        logger.info("testing 2222")
+                    return FileResponse(open(tmp_path, "rb"), as_attachment=True, filename=name)
 
-        return {
-            "message": "✅ Download completed",
-            "files": downloaded_files
-        }
+        return Response({"message": "❌ No files found"}, status=404)
 
     @swagger_auto_schema(
         method='post',
