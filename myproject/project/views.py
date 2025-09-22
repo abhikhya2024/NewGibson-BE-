@@ -371,7 +371,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 headers={"Authorization": f"Bearer {access_token}"}
             )
             drive_res.raise_for_status()
-            drive = next(d for d in drive_res.json()["value"] if d["name"] == "Documets")
+            drive = next(d for d in drive_res.json()["value"] if d["name"] == "Documents")
             drive_id = drive["id"]
 
             # Step 3: List all files in folder
