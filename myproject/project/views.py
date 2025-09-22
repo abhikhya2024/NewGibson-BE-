@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -347,6 +347,46 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             {"message": "Upload completed", "files": uploaded_files},
             status=status.HTTP_200_OK
         )
+    
+
+
+
+    @action(detail=False, methods=["get"], url_path="list-sharepoint-files")
+    def list_sharepoint_files(request):
+        try:
+            access_token = get_access_token()
+
+            # Step 1: Get Site ID
+            site_res = requests.get(
+                f"https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/{SITE_NAME}",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            site_res.raise_for_status()
+            site_id = site_res.json()["id"]
+
+            # Step 2: Get Drive ID
+            drive_res = requests.get(
+                f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            drive_res.raise_for_status()
+            drive = next(d for d in drive_res.json()["value"] if d["name"] == DRIVE_NAME)
+            drive_id = drive["id"]
+
+            # Step 3: List all files in folder
+            list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER_NAME}:/children"
+            list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
+            list_res.raise_for_status()
+            items = list_res.json().get("value", [])
+
+            # Return JSON with file info
+            files = [{"name": f["name"], "id": f["id"], "type": f["@odata.type"]} for f in items]
+            return Response({"files": files}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.exception("Failed to list SharePoint files")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,

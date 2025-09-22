@@ -42,6 +42,21 @@ def extract_state(text: str) -> str | None:
             return ent.text
     return None
 
+def get_token():
+    """Get Microsoft Graph access token using client credentials"""
+    app = msal.ConfidentialClientApplication(
+        CLIENT_ID,
+        authority=AUTHORITY,
+        client_credential=CLIENT_SECRET
+    )
+    result = app.acquire_token_silent(SCOPE, account=None)
+    if not result:
+        result = app.acquire_token_for_client(scopes=SCOPE)
+
+    if "access_token" not in result:
+        raise Exception("Could not obtain token", result.get("error_description"))
+
+    return result["access_token"]
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     data = {
