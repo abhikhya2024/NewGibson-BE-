@@ -355,7 +355,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="list-sharepoint-files")
     def list_sharepoint_files(request):
         try:
-            access_token = get_access_token()
+            access_token = get_token()
 
             # Step 1: Get Site ID
             site_res = requests.get(
