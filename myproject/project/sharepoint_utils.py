@@ -30,6 +30,7 @@ SITE_PATH4 = "/sites/DocsSHBPMCummings"
 DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
 AUTHORITY = f"https://login.microsoftonline.com/TENANT_ID"
 SCOPE = ["https://graph.microsoft.com/.default"]
+AUTHORITY2 = f"https://login.microsoftonline.com/{TENANT_ID}"
 
 import logging
 logger = logging.getLogger("logging_handler")  # same as views.py
@@ -46,7 +47,7 @@ def get_token():
     """Get Microsoft Graph access token using client credentials"""
     app = msal.ConfidentialClientApplication(
         CLIENT_ID,
-        authority=AUTHORITY,
+        authority=AUTHORITY2,
         client_credential=CLIENT_SECRET
     )
     result = app.acquire_token_silent(SCOPE, account=None)
