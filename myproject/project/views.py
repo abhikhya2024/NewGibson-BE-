@@ -385,10 +385,11 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                 {
                     "name": f.get("name"),
                     "id": f.get("id"),
-                    "webUrl": f.get("webUrl")  # This is the clickable link
+                    "webUrl": f.get("webUrl")  # clickable link
                 }
                 for f in items
-            ]            
+                if f.get("name", "").lower().endswith(".txt")
+            ]        
             return Response({"files": files}, status=status.HTTP_200_OK)
 
         except Exception as e:
