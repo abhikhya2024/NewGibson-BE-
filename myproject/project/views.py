@@ -379,17 +379,25 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
             list_res.raise_for_status()
             items = list_res.json().get("value", [])
+            # Return JSON with file info and update DB
+            files = []
+            for f in items:
+                if f.get("name", "").lower().endswith(".txt"):
+                    file_name = f.get("name")
+                    web_url = f.get("webUrl")
 
-            # Return JSON with file info
-            files = [
-                {
-                    "name": f.get("name"),
-                    "id": f.get("id"),
-                    "webUrl": f.get("webUrl")  # clickable link
-                }
-                for f in items
-                if f.get("name", "").lower().endswith(".txt")
-            ]        
+                    # Try to find Transcript with the same name
+                    transcript = Transcript.objects.filter(name=file_name).first()
+                    if transcript:
+                        transcript.web_url = web_url
+                        transcript.save(update_fields=["web_url"])
+
+                    files.append({
+                        "name": file_name,
+                        "id": f.get("id"),
+                        "webUrl": web_url,
+                    })
+
             return Response({"files": files}, status=status.HTTP_200_OK)
 
         except Exception as e:
