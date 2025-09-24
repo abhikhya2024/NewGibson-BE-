@@ -156,6 +156,44 @@ class CombinedSearchInputSerializer(serializers.Serializer):
     offset = serializers.IntegerField(required=False, default=0, min_value=0)
     limit = serializers.IntegerField(required=False, default=100, min_value=1, max_value=1000)
 
+class CombinedTranscriptSearchSerializer(serializers.Serializer):
+    q1 = serializers.CharField(required=False, allow_blank=True)
+    mode1 = serializers.ChoiceField(
+        choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
+    )
+    q2 = serializers.CharField(required=False, allow_blank=True)
+    mode2 = serializers.ChoiceField(
+        choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
+    )
+    q3 = serializers.CharField(required=False, allow_blank=True)
+    mode3 = serializers.ChoiceField(
+        choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
+    )
+    witness_names = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),  # ✅ explicitly allow blank
+        required=False,
+        allow_empty=True,
+    )
+
+    transcript_names = serializers.ListField(
+        child=serializers.CharField(allow_blank=True),  # ✅ explicitly allow blank
+        required=False,
+        allow_empty=True,
+    )
+    witness_types = serializers.ListField(
+        child=serializers.CharField(), required=False, allow_empty=True
+    )
+
+    witness_alignments = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=True
+    )
+
+    # ✅ Pagination support
+    offset = serializers.IntegerField(required=False, default=0, min_value=0)
+    limit = serializers.IntegerField(required=False, default=100, min_value=1, max_value=1000)
+
 class HighlightsSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True)
     testimony_id = serializers.IntegerField(source="testimony.id", read_only=True)

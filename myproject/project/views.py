@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from .models import Project, Comment, Jurisdiction, ExpertType, Attorney,Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
-from .serializers import ProjectSerializer,CommentSerializer, ExpertTypeSerializer, JurisdictionSerializer, AttorneySerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
+from .serializers import ProjectSerializer,CommentSerializer, CombinedTranscriptSearchSerializer,ExpertTypeSerializer, JurisdictionSerializer, AttorneySerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -1169,6 +1169,167 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=["post"], url_path="combined-transcript-search")
+    def combined_transcript_search(self, request):
+        serializer = CombinedTranscriptSearchSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        q1 = validated.get("q1", "").strip()
+        mode1 = validated.get("mode1", "exact").lower()
+        q2 = validated.get("q2", "").strip()
+        mode2 = validated.get("mode2", "exact").lower()
+        q3 = validated.get("q3", "").strip()
+        mode3 = validated.get("mode3", "exact").lower()
+
+        witness_names = validated.get("witness_names", [])
+        transcript_names = validated.get("transcript_names", [])
+        witness_types = validated.get("witness_types", [])
+        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
+
+        bool_query = {
+            "must": [],
+            "must_not": [],
+            "filter": []
+        }
+
+        fields = ["name", "transcript_date", "case_name"]
+        witness_fields = ["witness_name"]
+        transcript_fields = ["transcript_name"]
+
+        def build_query_block(query, mode, target_fields):
+            musts = []
+            if not query:
+                return musts
+
+            if mode == "fuzzy":
+                for word in query.split():
+                    musts.append({
+                        "multi_match": {
+                            "query": word,
+                            "fields": target_fields,
+                            "fuzziness": "AUTO"
+                        }
+                    })
+            elif mode == "boolean":
+                if "/s" in query:
+                    parts = [part.strip() for part in query.split("/s")]
+                    if len(parts) == 2:
+                        term1, term2 = parts
+                        for field in target_fields:
+                            musts.append({
+                                "match_phrase": {
+                                    field: {
+                                        "query": f"{term1} {term2}",
+                                        "slop": 5
+                                    }
+                                }
+                            })
+                else:
+                    not_pattern = r"\bNOT\s+(\w+)"
+                    not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
+                    cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
+
+                    if cleaned_query:
+                        musts.append({
+                            "query_string": {
+                                "query": cleaned_query,
+                                "fields": target_fields,
+                                "default_operator": "AND"
+                            }
+                        })
+
+                    for term in not_terms:
+                        bool_query["must_not"].append({
+                            "multi_match": {
+                                "query": term,
+                                "fields": target_fields
+                            }
+                        })
+            else:
+                musts.append({
+                    "simple_query_string": {
+                        "query": f'"{query}"',
+                        "fields": target_fields,
+                        "default_operator": "and"
+                    }
+                })
+
+            return musts
+
+        # === Filters ===
+        if witness_names:
+            bool_query["filter"].append({
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"witness_name": name}} for name in witness_names
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
+
+        if transcript_names:
+            bool_query["filter"].append({
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"transcript_name": name}} for name in transcript_names
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
+
+        if witness_types:
+            bool_query["filter"].append({
+                "bool": {
+                    "should": [
+                        {"match_phrase": {"type": wt}} for wt in witness_types
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
+
+        # ✅ Filter by database source
+        if isinstance(sources, list) and sources:
+            bool_query["filter"].append({
+                "bool": {
+                    "should": [
+                        {"term": {"source": s}} for s in sources
+                    ],
+                    "minimum_should_match": 1
+                }
+            })
+
+        # === q1, q2, q3 search ===
+        bool_query["must"].extend(build_query_block(q1, mode1, fields))
+        bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
+        bool_query["must"].extend(build_query_block(q3, mode3, transcript_fields))
+
+        es_query = {
+            "query": {
+                "bool": bool_query
+            },
+            "sort": [
+            {"created_at": "asc"}  # or "desc"
+        ]
+        }
+
+        try:
+            response = es.search(index="testimonies", body=es_query, size=10000, )
+            results = [hit["_source"] for hit in response["hits"]["hits"]]
+            return Response({
+                "query1": q1,
+                "query2": q2,
+                "query3": q3,
+                "mode1": mode1,
+                "mode2": mode2,
+                "mode3": mode3,
+                "sources": sources,
+                "count": len(results),
+                "results": results
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class WitnessViewSet(viewsets.ViewSet):
     def list(self, request):
         # Serialize all witnesses
@@ -1294,18 +1455,74 @@ class WitnessViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
-@action(detail=False, methods=["post"], url_path="save-witnesses")
-def save_witnesses(self, request):
-    logger.warning("🚀 Entered save_witnesses view")
-    print("🚀 DEBUG: inside save_witnesses")  # Gunicorn always captures print
+    @action(detail=False, methods=["post"], url_path="save-witnesses")
+    def save_witnesses(self, request):
+            results = fetch_witness_names_and_transcripts()
+            # Fetch defaults
+            witness_type = WitnessType.objects.first()
 
-    results = fetch_witness_names_and_transcripts()
-    logger.warning(f"🚀 Results fetched: {results}")
+            alignment = WitnessAlignment.objects.first()
 
-    return Response({
-        "status": "success",
-        "results": results
-    })
+            default_user = User.objects.first()
+            default_project = Project.objects.first()
+            # print("resultssssss",results)
+            created_t = 0
+            created_w = 0
+            for item in results:
+                fullname = item.get("witness_name")
+                transcript_name = item.get("transcript_name")
+                transcript_date = item.get("transcript_date")
+                case_name = item.get("case_name")
+                # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
+                transcript_date_obj = parse_date(transcript_date).date()
+
+
+                if not (fullname and transcript_name and transcript_date):
+                    print("not found", transcript_name)
+                    continue
+                if not Transcript.objects.filter(
+                    name=transcript_name,
+                    transcript_date=transcript_date_obj,
+                    created_by=default_user,
+                    project=default_project,
+                    case_name=case_name
+                ).exists():
+                    Transcript.objects.create(
+                        name=transcript_name,
+                        transcript_date=transcript_date_obj,
+                        created_by=default_user,
+                        project=default_project,
+                        case_name=case_name
+                    )
+                    created_t += 1
+                transcript = Transcript.objects.filter(name=transcript_name).first()
+                if not transcript:
+                    print("Transcript not found for:", transcript_name)
+
+                # # Avoid duplicates
+                if not Witness.objects.filter(
+                            file=transcript,
+                            fullname=fullname,
+                            alignment=alignment,
+                            type=witness_type
+                        ).exists():
+                            Witness.objects.create(
+                                file=transcript,
+                                fullname=fullname,
+                                alignment=alignment,
+                                type=witness_type
+                            )
+                created_w += 1
+                                # Avoid duplicates
+
+
+
+            return Response({
+                "status": "success",
+                "inserted_transcripts": created_t,
+                "inserted_witnesses": created_w,
+                "total_fetched": len(results)
+            })
 
 
 

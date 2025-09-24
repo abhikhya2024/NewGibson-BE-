@@ -161,7 +161,9 @@ def transcript_index_from_db(db_alias, source_label, index_name, batch_size=500)
         try:
             # transcript = Transcript.objects.using(db_alias).filter(id=transcript.file_id).first()
             # witness = Witness.objects.using(db_alias).filter(file_id=transcript.file_id).first()
-
+            witness = Witness.objects.filter(
+                file__name=transcript.name
+            ).first
             doc = {
                 "_index": index_name,
                 "_id": f"{source_label}_{transcript.id}",
@@ -169,7 +171,7 @@ def transcript_index_from_db(db_alias, source_label, index_name, batch_size=500)
                     "id": transcript.id,
                     "transcript_name": transcript.name if transcript else "",
                     "case_name": transcript.case_name if transcript else "",
-                    # "witness_name": witness.fullname if witness else "",
+                    "witness_name": witness.fullname if witness else "",
                     "source": source_label,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "transcript_date": transcript.transcript_date,
