@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
-from .tasks import save_testimony_task, index_task, download_transcripts_task
+from .tasks import save_testimony_task, index_task, index_transcript_task
 import logging
 from elasticsearch.helpers import bulk
 import requests
@@ -199,6 +199,51 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
             # Step 3: Trigger background task
             task = index_task.delay(INDEX_NAME)
+
+            return Response(
+                {
+                    "status": "processing",
+                    "task_id": task.id,
+                    "message": f"Indexing started for '{INDEX_NAME}' in background.",
+                },
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        except Exception as e:
+            logger.error(f"❌ Error in create_index: {str(e)}")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="create-transcript-index")
+    def create_transcript_index(self, request):
+        INDEX_NAME="transcriptData"
+        try:
+            # Step 1: Delete old index if exists
+            if es.indices.exists(index=INDEX_NAME):
+                es.indices.delete(index=INDEX_NAME)
+                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
+
+            # Step 2: Create new index
+            mapping = {
+                "mappings": {
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "transcript_name": {"type": "text"},
+                        "case_name": {"type": "text"},
+                        # "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "source": {"type": "keyword"},
+                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
+                                                
+                        "transcript_date": {
+                            "type": "date",
+                        },
+                    }
+                }
+            }
+            es.indices.create(index=INDEX_NAME, body=mapping)
+            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
+
+            # Step 3: Trigger background task
+            task = index_transcript_task.delay(INDEX_NAME)
 
             return Response(
                 {
@@ -404,6 +449,62 @@ class TranscriptViewSet(viewsets.ModelViewSet):
             logger.exception("Failed to list SharePoint files")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+
+    @action(detail=False, methods=["get"], url_path="send-email")
+    def send_download_transcript_email(self, request):
+        try:
+                # ---------------- AUTH with MSAL ----------------
+                app = msal.ConfidentialClientApplication(
+                    CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
+                )
+                result = app.acquire_token_silent(SCOPE, account=None)
+                if not result:
+                    result = app.acquire_token_for_client(scopes=SCOPE)
+
+                if "access_token" not in result:
+                    logger.error("Failed to get token")
+                    return Response(
+                        {"error": "Could not acquire access token"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
+
+                access_token = result["access_token"]
+
+                # ---------------- EMAIL PAYLOAD ----------------
+                email = {
+                    "message": {
+                        "subject": "Transcript Download Link",
+                        "body": {
+                            "contentType": "HTML",
+                            "content": "<p>Your transcript download is ready.</p><p><a href='https://example.com/download'>Click here</a> to download.</p>",
+                        },
+                        "toRecipients": [
+                            {"emailAddress": {"address": "recipient@example.com"}}
+                        ],
+                    },
+                    "saveToSentItems": "true",
+                }
+
+                # ---------------- SEND EMAIL ----------------
+                graph_url = "https://graph.microsoft.com/v1.0/users/YOUR_SENDER_EMAIL/sendMail"
+                res = requests.post(
+                    graph_url,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    json=email,
+                )
+
+                if res.status_code in (200, 202):
+                    return Response({"message": "✅ Email sent successfully"})
+                else:
+                    logger.error(f"Graph API error: {res.text}")
+                    return Response(
+                        {"error": res.json()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+
+        except Exception as e:
+            logger.exception("Error sending email")
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @swagger_auto_schema(
         method='post',
         request_body=TranscriptFuzzySerializer,

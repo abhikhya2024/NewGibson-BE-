@@ -144,6 +144,57 @@ def index_from_db(db_alias, source_label, index_name, batch_size=500):
     logger.info(f"🎯 Finished indexing {total_indexed} testimonies from {source_label}")
     return total_indexed
 
+def transcript_index_from_db(db_alias, source_label, index_name, batch_size=500):
+    """
+    Stream transcript from the database and bulk index into Elasticsearch.
+    """
+    transcripts = (
+        Transcript.objects.using(db_alias)
+        .iterator(chunk_size=batch_size)
+    )
+
+    total_indexed = 0
+    actions = []
+
+    for transcript in transcripts:
+        try:
+            transcript = Transcript.objects.using(db_alias).filter(id=transcript.file_id).first()
+            # witness = Witness.objects.using(db_alias).filter(file_id=transcript.file_id).first()
+
+            doc = {
+                "_index": index_name,
+                "_id": f"{source_label}_{transcript.id}",
+                "_source": {
+                    "id": transcript.id,
+                    "transcript_name": transcript.name if transcript else "",
+                    "case_name": transcript.case_name if transcript else "",
+                    # "witness_name": witness.fullname if witness else "",
+                    "source": source_label,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "transcript_date": transcript.transcript_date,
+                },
+            }
+            actions.append(doc)
+
+            # Flush in batches
+            if len(actions) >= batch_size:
+                success, _ = safe_bulk(es, actions, source_label)
+                total_indexed += success
+                actions.clear()
+
+        except Exception as e:
+            logger.error(f"❌ Error indexing {source_label} transcript ID {transcript.id}: {str(e)}")
+
+    # Final flush
+    if actions:
+        success, _ = safe_bulk(es, actions, source_label)
+        total_indexed += success
+
+    if total_indexed == 0:
+        logger.warning(f"⚠️ No testimonies found in DB alias '{db_alias}'")
+
+    logger.info(f"🎯 Finished indexing {total_indexed} testimonies from {source_label}")
+    return total_indexed
 
 @shared_task
 def index_task(index_name):
@@ -165,7 +216,28 @@ def index_task(index_name):
     except Exception as e:
         logger.error(f"❌ Indexing task failed: {str(e)}")
         return {"status": "error", "message": str(e)}
-    
+
+@shared_task
+def index_transcript_task(index_name):
+    """
+    Celery task to run Elasticsearch indexing in background.
+    """
+    try:
+        logger.info(f"📂 Starting indexing task for index '{index_name}'")
+
+        total = 0
+        total += transcript_index_from_db("default", "docsgibsondemo", index_name)
+        # total += index_from_db("cummings", "cummings", index_name)
+        # total += index_from_db("prochaska", "prochaska", index_name)
+        # total += index_from_db("proctor", "proctor", index_name)
+
+        logger.info(f"🎉 Indexing task completed successfully, total indexed: {total}")
+        return {"status": "success", "indexed": total}
+
+    except Exception as e:
+        logger.error(f"❌ Indexing task failed: {str(e)}")
+        return {"status": "error", "message": str(e)}
+  
 @shared_task
 def download_transcripts_task():
     """Background task to download all SharePoint transcripts"""
