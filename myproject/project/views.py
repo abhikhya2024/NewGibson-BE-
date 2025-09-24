@@ -1193,7 +1193,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "filter": []
         }
 
-        fields = ["name", "transcript_date", "case_name"]
+        fields = ["name", "case_name"]
         witness_fields = ["witness_name"]
         transcript_fields = ["transcript_name"]
 
