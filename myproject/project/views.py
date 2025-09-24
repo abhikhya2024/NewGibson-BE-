@@ -1185,7 +1185,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
-        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
+        sources = validated.get("sources", "all")  # 'all' or list
 
         bool_query = {
             "must": [],
@@ -1193,9 +1193,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             "filter": []
         }
 
-        fields = ["name", "case_name"]
-        witness_fields = ["witness_name"]
-        transcript_fields = ["transcript_name"]
+        # ✅ Use only text fields for queries
+        q1_fields = ["transcript_name", "case_name"]  # q1 search
+        q2_fields = ["witness_name"]                 # q2 search
+        q3_fields = ["transcript_name"]              # q3 search
 
         def build_query_block(query, mode, target_fields):
             musts = []
@@ -1212,24 +1213,22 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                         }
                     })
             elif mode == "boolean":
+                # Handle /s for proximity
                 if "/s" in query:
-                    parts = [part.strip() for part in query.split("/s")]
+                    parts = [p.strip() for p in query.split("/s")]
                     if len(parts) == 2:
                         term1, term2 = parts
                         for field in target_fields:
                             musts.append({
                                 "match_phrase": {
-                                    field: {
-                                        "query": f"{term1} {term2}",
-                                        "slop": 5
-                                    }
+                                    field: {"query": f"{term1} {term2}", "slop": 5}
                                 }
                             })
                 else:
+                    # Handle NOT terms
                     not_pattern = r"\bNOT\s+(\w+)"
                     not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
                     cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
-
                     if cleaned_query:
                         musts.append({
                             "query_string": {
@@ -1238,13 +1237,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                                 "default_operator": "AND"
                             }
                         })
-
                     for term in not_terms:
                         bool_query["must_not"].append({
-                            "multi_match": {
-                                "query": term,
-                                "fields": target_fields
-                            }
+                            "multi_match": {"query": term, "fields": target_fields}
                         })
             else:
                 musts.append({
@@ -1260,61 +1255,37 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         # === Filters ===
         if witness_names:
             bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"witness_name": name}} for name in witness_names
-                    ],
-                    "minimum_should_match": 1
-                }
+                "bool": {"should": [{"match_phrase": {"witness_name": n}} for n in witness_names],
+                        "minimum_should_match": 1}
             })
 
         if transcript_names:
             bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"transcript_name": name}} for name in transcript_names
-                    ],
-                    "minimum_should_match": 1
-                }
+                "bool": {"should": [{"match_phrase": {"transcript_name": n}} for n in transcript_names],
+                        "minimum_should_match": 1}
             })
 
         if witness_types:
             bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"type": wt}} for wt in witness_types
-                    ],
-                    "minimum_should_match": 1
-                }
+                "bool": {"should": [{"match_phrase": {"type": t}} for t in witness_types],
+                        "minimum_should_match": 1}
             })
 
-        # ✅ Filter by database source
         if isinstance(sources, list) and sources:
             bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"term": {"source": s}} for s in sources
-                    ],
-                    "minimum_should_match": 1
-                }
+                "bool": {"should": [{"term": {"source": s}} for s in sources],
+                        "minimum_should_match": 1}
             })
 
-        # === q1, q2, q3 search ===
-        bool_query["must"].extend(build_query_block(q1, mode1, fields))
-        bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
-        bool_query["must"].extend(build_query_block(q3, mode3, transcript_fields))
+        # === Build queries for q1/q2/q3 ===
+        bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
+        bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
+        bool_query["must"].extend(build_query_block(q3, mode3, q3_fields))
 
-        es_query = {
-            "query": {
-                "bool": bool_query
-            },
-            "sort": [
-            {"created_at": "asc"}  # or "desc"
-        ]
-        }
+        es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
         try:
-            response = es.search(index="transcriptdata", body=es_query, size=10000, )
+            response = es.search(index="transcriptdata", body=es_query, size=10000)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
@@ -1329,6 +1300,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class WitnessViewSet(viewsets.ViewSet):
     def list(self, request):
