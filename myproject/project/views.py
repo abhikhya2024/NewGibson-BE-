@@ -229,7 +229,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                         "id": {"type": "integer"},
                         "transcript_name": {"type": "text"},
                         "case_name": {"type": "text"},
-                        # "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                        "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
                         "source": {"type": "keyword"},
                         "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
                                                 

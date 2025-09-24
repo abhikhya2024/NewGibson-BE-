@@ -163,7 +163,7 @@ def transcript_index_from_db(db_alias, source_label, index_name, batch_size=500)
             # witness = Witness.objects.using(db_alias).filter(file_id=transcript.file_id).first()
             witness = Witness.objects.filter(
                 file__name=transcript.name
-            ).first
+            ).first()
             doc = {
                 "_index": index_name,
                 "_id": f"{source_label}_{transcript.id}",
