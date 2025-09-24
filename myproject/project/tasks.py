@@ -144,6 +144,7 @@ def index_from_db(db_alias, source_label, index_name, batch_size=500):
     logger.info(f"🎯 Finished indexing {total_indexed} testimonies from {source_label}")
     return total_indexed
 
+
 def transcript_index_from_db(db_alias, source_label, index_name, batch_size=500):
     """
     Stream transcript from the database and bulk index into Elasticsearch.
