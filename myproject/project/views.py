@@ -215,7 +215,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="create-transcript-index")
     def create_transcript_index(self, request):
-        INDEX_NAME="transcriptData"
+        INDEX_NAME="transcriptdata"
         try:
             # Step 1: Delete old index if exists
             if es.indices.exists(index=INDEX_NAME):
