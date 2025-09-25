@@ -1194,7 +1194,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         }
 
         # ✅ Use only text fields for queries
-        q1_fields = ["transcript_name", "case_name"]  # q1 search
+        q1_fields = ["case_name"]  # q1 search
         q2_fields = ["witness_name"]                 # q2 search
         q3_fields = ["transcript_name"]              # q3 search
 
