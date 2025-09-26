@@ -1175,13 +1175,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
 
-        # ✅ Preserve original values
-        q1 = validated.get("q1", "")
+        # Get search queries
+        q1 = validated.get("q1", "").strip()
         mode1 = validated.get("mode1", "exact").lower()
-        q2 = validated.get("q2", "")
+        q2 = validated.get("q2", "").strip()
         mode2 = validated.get("mode2", "exact").lower()
-        q3 = validated.get("q3")  # start date ISO string
-        q4 = validated.get("q4")  # end date ISO string
+
+        # Dates (do NOT strip, they may be datetime objects)
+        q3 = validated.get("q3")  # start date
+        q4 = validated.get("q4")  # end date
 
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
@@ -1190,7 +1192,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         bool_query = {"must": [], "must_not": [], "filter": []}
 
-        # Fields for text search
+        # Fields for text searches
         q1_fields = ["case_name"]
         q2_fields = ["witness_name"]
 
@@ -1202,86 +1204,101 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             if mode == "fuzzy":
                 for word in query.split():
                     musts.append({
-                        "multi_match": {"query": word, "fields": target_fields, "fuzziness": "AUTO"}
+                        "multi_match": {
+                            "query": word,
+                            "fields": target_fields,
+                            "fuzziness": "AUTO"
+                        }
                     })
             elif mode == "boolean":
-                # Proximity search
                 if "/s" in query:
                     parts = [p.strip() for p in query.split("/s")]
                     if len(parts) == 2:
                         term1, term2 = parts
                         for field in target_fields:
-                            musts.append({"match_phrase": {field: {"query": f"{term1} {term2}", "slop": 5}}})
+                            musts.append({
+                                "match_phrase": {
+                                    field: {"query": f"{term1} {term2}", "slop": 5}
+                                }
+                            })
                 else:
-                    # Handle NOT terms
                     not_pattern = r"\bNOT\s+(\w+)"
                     not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
                     cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
                     if cleaned_query:
                         musts.append({
-                            "query_string": {"query": cleaned_query, "fields": target_fields, "default_operator": "AND"}
+                            "query_string": {
+                                "query": cleaned_query,
+                                "fields": target_fields,
+                                "default_operator": "AND"
+                            }
                         })
                     for term in not_terms:
-                        bool_query["must_not"].append({"multi_match": {"query": term, "fields": target_fields}})
+                        bool_query["must_not"].append({
+                            "multi_match": {"query": term, "fields": target_fields}
+                        })
             else:
                 musts.append({
-                    "simple_query_string": {"query": f'"{query}"', "fields": target_fields, "default_operator": "and"}
+                    "simple_query_string": {
+                        "query": f'"{query}"',
+                        "fields": target_fields,
+                        "default_operator": "and"
+                    }
                 })
-
             return musts
 
-        # === Filters ===
+        # Filters
         if witness_names:
             bool_query["filter"].append({
-                "bool": {"should": [{"match_phrase": {"witness_name": n}} for n in witness_names],
-                        "minimum_should_match": 1}
+                "bool": {
+                    "should": [{"match_phrase": {"witness_name": n}} for n in witness_names],
+                    "minimum_should_match": 1
+                }
             })
-
         if transcript_names:
             bool_query["filter"].append({
-                "bool": {"should": [{"match_phrase": {"transcript_name": n}} for n in transcript_names],
-                        "minimum_should_match": 1}
+                "bool": {
+                    "should": [{"match_phrase": {"transcript_name": n}} for n in transcript_names],
+                    "minimum_should_match": 1
+                }
             })
-
         if witness_types:
             bool_query["filter"].append({
-                "bool": {"should": [{"match_phrase": {"type": t}} for t in witness_types],
-                        "minimum_should_match": 1}
+                "bool": {
+                    "should": [{"match_phrase": {"type": t}} for t in witness_types],
+                    "minimum_should_match": 1
+                }
             })
-
         if isinstance(sources, list) and sources:
             bool_query["filter"].append({
-                "bool": {"should": [{"term": {"source": s}} for s in sources],
-                        "minimum_should_match": 1}
+                "bool": {
+                    "should": [{"term": {"source": s}} for s in sources],
+                    "minimum_should_match": 1
+                }
             })
 
-        # === Text search for q1/q2 ===
+        # Build queries for q1 and q2
         bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
         bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
 
-# Handle date range q3/q4
+        # Handle date range q3/q4
         if q3 or q4:
             date_filter = {}
             if q3:
-                try:
-                    start_date_obj = datetime.fromisoformat(q3.replace("Z", "+00:00"))
-                    date_filter["gte"] = start_date_obj.strftime("%Y-%m-%d")
-                except ValueError:
+                if isinstance(q3, (datetime, date)):
+                    date_filter["gte"] = q3.strftime("%Y-%m-%d")
+                else:
                     date_filter["gte"] = q3
             if q4:
-                try:
-                    end_date_obj = datetime.fromisoformat(q4.replace("Z", "+00:00"))
-                    date_filter["lte"] = end_date_obj.strftime("%Y-%m-%d")
-                except ValueError:
+                if isinstance(q4, (datetime, date)):
+                    date_filter["lte"] = q4.strftime("%Y-%m-%d")
+                else:
                     date_filter["lte"] = q4
 
-            # Append the date range filter
             bool_query["filter"].append({
-                "range": {
-                    "transcript_date": date_filter
-                }
+                "range": {"transcript_date": date_filter}
             })
-        # === Elasticsearch query ===
+
         es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
         try:
@@ -1290,8 +1307,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             return Response({
                 "query1": q1,
                 "query2": q2,
-                "query3": q3,  # preserved start date
-                "query4": q4,  # preserved end date
+                "query3": q3,
+                "query4": q4,
                 "mode1": mode1,
                 "mode2": mode2,
                 "sources": sources,
