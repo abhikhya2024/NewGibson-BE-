@@ -1180,7 +1180,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         q2 = validated.get("q2", "").strip()
         mode2 = validated.get("mode2", "exact").lower()
         q3 = validated.get("q3", "").strip()
-        mode3 = validated.get("mode3", "exact").lower()
+        q4 = validated.get("q4", "").strip()
 
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
@@ -1196,7 +1196,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         # ✅ Use only text fields for queries
         q1_fields = ["case_name"]  # q1 search
         q2_fields = ["witness_name"]                 # q2 search
-        q3_fields = ["transcript_name"]              # q3 search
+        # q3_fields = ["start_date"]              # q3 search
+        # q4_fields = ["end_date"]              # q3 search
+
 
         def build_query_block(query, mode, target_fields):
             musts = []
@@ -1280,7 +1282,18 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         # === Build queries for q1/q2/q3 ===
         bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
         bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
-        bool_query["must"].extend(build_query_block(q3, mode3, q3_fields))
+        if q3 or q4:
+            date_filter = {}
+            if q3:  # start date
+                date_filter["gte"] = q3
+            if q4:  # end date
+                date_filter["lte"] = q4
+
+            bool_query["filter"].append({
+                "range": {
+                    "transcript_date": date_filter
+                }
+            })
 
         es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
@@ -1291,9 +1304,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "query1": q1,
                 "query2": q2,
                 "query3": q3,
+                "query4": q4,
                 "mode1": mode1,
                 "mode2": mode2,
-                "mode3": mode3,
                 "sources": sources,
                 "count": len(results),
                 "results": results
