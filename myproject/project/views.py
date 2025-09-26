@@ -1259,25 +1259,28 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
         bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
 
-        # === Date range filter ===
+# Handle date range q3/q4
         if q3 or q4:
             date_filter = {}
-            try:
-                if q3:
+            if q3:
+                try:
                     start_date_obj = datetime.fromisoformat(q3.replace("Z", "+00:00"))
                     date_filter["gte"] = start_date_obj.strftime("%Y-%m-%d")
-                if q4:
+                except ValueError:
+                    date_filter["gte"] = q3
+            if q4:
+                try:
                     end_date_obj = datetime.fromisoformat(q4.replace("Z", "+00:00"))
                     date_filter["lte"] = end_date_obj.strftime("%Y-%m-%d")
-            except ValueError:
-                # fallback: use as-is
-                if q3:
-                    date_filter["gte"] = q3
-                if q4:
+                except ValueError:
                     date_filter["lte"] = q4
 
-            bool_query["filter"].append({"range": {"transcript_date": date_filter}})
-
+            # Append the date range filter
+            bool_query["filter"].append({
+                "range": {
+                    "transcript_date": date_filter
+                }
+            })
         # === Elasticsearch query ===
         es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
