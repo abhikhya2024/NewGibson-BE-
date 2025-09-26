@@ -1282,12 +1282,24 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         # === Build queries for q1/q2/q3 ===
         bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
         bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
+        # === Handle date range q3/q4 ===
         if q3 or q4:
             date_filter = {}
-            if q3:  # start date
-                date_filter["gte"] = q3
-            if q4:  # end date
-                date_filter["lte"] = q4
+
+            # Convert ISO datetime string to date string (YYYY-MM-DD)
+            if q3:
+                try:
+                    start_date_obj = datetime.fromisoformat(q3.replace("Z", "+00:00"))
+                    date_filter["gte"] = start_date_obj.strftime("%Y-%m-%d")
+                except ValueError:
+                    date_filter["gte"] = q3  # fallback, if already in correct format
+
+            if q4:
+                try:
+                    end_date_obj = datetime.fromisoformat(q4.replace("Z", "+00:00"))
+                    date_filter["lte"] = end_date_obj.strftime("%Y-%m-%d")
+                except ValueError:
+                    date_filter["lte"] = q4
 
             bool_query["filter"].append({
                 "range": {
