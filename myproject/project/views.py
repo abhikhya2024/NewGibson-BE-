@@ -21,7 +21,7 @@ p = inflect.engine()
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 from rest_framework.parsers import JSONParser
 from dateutil.parser import parse as parse_date
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
