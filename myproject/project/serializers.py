@@ -166,6 +166,8 @@ class CombinedTranscriptSearchSerializer(serializers.Serializer):
         choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
     )
     q3 = serializers.CharField(required=False, allow_blank=True)
+    q4 = serializers.CharField(required=False, allow_blank=True)
+
     mode3 = serializers.ChoiceField(
         choices=["fuzzy", "boolean", "exact"], required=False, default="exact"
     )

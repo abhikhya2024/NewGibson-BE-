@@ -1185,6 +1185,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         q3 = validated.get("q3")  # start date
         q4 = validated.get("q4")  # end date
 
+        
+
         witness_names = validated.get("witness_names", [])
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
