@@ -132,30 +132,7 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     },
-    # 'cummings': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'cummings',
-    #     'USER': 'postgres',
-    #     'PASSWORD': '123456',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # },
-    #     'prochaska': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'prochaska',
-    #     'USER': 'postgres',
-    #     'PASSWORD': '123456',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # },
-    # 'proctor': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'proctor',
-    #     'USER': 'postgres',
-    #     'PASSWORD': '123456',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # },
+
 }
 
 DATABASE_ROUTERS = ['project.db_router.MyDatabaseRouter']  # adjust path based on your project
@@ -194,7 +171,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+# STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
