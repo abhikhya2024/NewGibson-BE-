@@ -1,3 +1,6 @@
 venv
 .env
 __pycache__
+
+
+mv /var/www/gibson-ipr-demo/NewGibson-BE- /var/www/gibson-ipr-demo/
