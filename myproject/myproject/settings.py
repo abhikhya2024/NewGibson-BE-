@@ -185,7 +185,7 @@ LOGGING = {
 "file": {
     "level": "INFO",
     "class": "logging.FileHandler",
-    "filename": "/var/www/gibson-ipr-demo/myproject/myenv/django_api.log",
+    "filename": os.path.join(BASE_DIR, "django_api.log"),
     "formatter": "verbose",
     "encoding": "utf-8",  # 👈 important for emojis
 },
