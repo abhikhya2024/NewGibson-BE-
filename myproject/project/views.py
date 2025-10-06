@@ -1183,7 +1183,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         try:
             # response = es.search(index="testimonies", body=es_query, size=10000, )
-            # Build the Elasticsearch query object
+                        # Build the Elasticsearch query object
             es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
             # Pagination
@@ -1191,9 +1191,13 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             page_size = int(request.query_params.get("page_size", 20))
             from_ = (page - 1) * page_size
 
-            # Add pagination to the query
-            es_query["from"] = from_
-            es_query["size"] = page_size
+            # ✅ If fuzzy search is active (especially for filename), fetch more results to include all matches
+            if mode1 == "fuzzy" or mode2 == "fuzzy" or mode3 == "fuzzy":
+                es_query["from"] = 0
+                es_query["size"] = 10000  # fetch more results to avoid missing fuzzy matches
+            else:
+                es_query["from"] = from_
+                es_query["size"] = page_size
 
             # Execute the search
             response = es.search(index="testimonies", body=es_query)
