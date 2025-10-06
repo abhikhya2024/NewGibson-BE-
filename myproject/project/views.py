@@ -1042,17 +1042,37 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 return musts
 
             if mode == "fuzzy":
+                # If the target field is filename-like, use wildcard on the keyword subfield (match substring)
+                # This matches any filename containing the query string (case_insensitive if supported)
                 for f in target_fields:
-                    if f == "transcript_name":
+                    if f in ["transcript_name", "witness_name", "cite"]:
+                        # Prefer wildcard on the keyword subfield (most reliable for full filename matching)
                         musts.append({
-                            "wildcard": {
-                                "transcript_name": {
-                                    "value": f"*{query}*",
-                                    "case_insensitive": True
-                                }
+                            "bool": {
+                                "should": [
+                                    # wildcard on keyword (matches substring in the stored filename)
+                                    {
+                                        "wildcard": {
+                                            f"{f}.keyword": {
+                                                "value": f"*{query}*",
+                                                "case_insensitive": True
+                                            }
+                                        }
+                                    },
+                                    # fallback to match_phrase on analyzed field (handles standard tokenized cases)
+                                    {
+                                        "match_phrase": {
+                                            f: {
+                                                "query": query
+                                            }
+                                        }
+                                    }
+                                ],
+                                "minimum_should_match": 1
                             }
                         })
                     else:
+                        # existing fuzzy logic for text fields (question/answer etc.)
                         for word in query.split():
                             musts.append({
                                 "multi_match": {
@@ -1061,6 +1081,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                                     "fuzziness": "AUTO"
                                 }
                             })
+                return musts
             elif mode == "boolean":
                 if "/s" in query:
                     parts = [part.strip() for part in query.split("/s")]
