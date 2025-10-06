@@ -1153,7 +1153,21 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         }
 
         try:
-            response = es.search(index="testimonies", body=es_query, size=10000, )
+            # response = es.search(index="testimonies", body=es_query, size=10000, )
+            # Build the Elasticsearch query object
+            es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
+
+            # ← INSERT PAGINATION HERE
+            page = int(request.query_params.get("page", 1))
+            page_size = int(request.query_params.get("page_size", 20))
+            from_ = (page - 1) * page_size
+
+            # Add pagination to the query
+            es_query["from"] = from_
+            es_query["size"] = page_size
+
+            # Execute the search
+            response = es.search(index="transcriptdata", body=es_query)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
