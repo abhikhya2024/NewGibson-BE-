@@ -1157,7 +1157,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             # Build the Elasticsearch query object
             es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
-            # ← INSERT PAGINATION HERE
+            # Pagination
             page = int(request.query_params.get("page", 1))
             page_size = int(request.query_params.get("page_size", 20))
             from_ = (page - 1) * page_size
@@ -1168,7 +1168,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
             # Execute the search
             response = es.search(index="testimonies", body=es_query)
+
             results = [hit["_source"] for hit in response["hits"]["hits"]]
+            total_hits = response["hits"]["total"]["value"]  # <-- total count of testimonies matching the query
+
             return Response({
                 "query1": q1,
                 "query2": q2,
@@ -1177,7 +1180,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "mode2": mode2,
                 "mode3": mode3,
                 "sources": sources,
-                "count": len(results),
+                "count": total_hits,      # <-- total testimonies in ES
                 "results": results
             })
         except Exception as e:
