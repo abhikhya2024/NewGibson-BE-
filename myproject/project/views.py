@@ -1167,7 +1167,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             es_query["size"] = page_size
 
             # Execute the search
-            response = es.search(index="transcriptdata", body=es_query)
+            response = es.search(index="testimonies", body=es_query)
             results = [hit["_source"] for hit in response["hits"]["hits"]]
             return Response({
                 "query1": q1,
