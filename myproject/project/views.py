@@ -1042,14 +1042,26 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 return musts
 
             if mode == "fuzzy":
-                for word in query.split():
+                # ✅ Special case for filenames or names — don't split
+                if any(f in ["transcript_name", "witness_name", "cite"] for f in target_fields):
                     musts.append({
-                        "multi_match": {
-                            "query": word,
-                            "fields": target_fields,
-                            "fuzziness": "AUTO"
+                        "match": {
+                            target_fields[0]: {
+                                "query": query,
+                                "fuzziness": "AUTO"
+                            }
                         }
                     })
+                else:
+                    # Keep existing logic for other fields
+                    for word in query.split():
+                        musts.append({
+                            "multi_match": {
+                                "query": word,
+                                "fields": target_fields,
+                                "fuzziness": "AUTO"
+                            }
+                        })
             elif mode == "boolean":
                 if "/s" in query:
                     parts = [part.strip() for part in query.split("/s")]
