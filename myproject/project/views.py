@@ -1074,7 +1074,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                             "multi_match": {
                                 "query": word,
                                 "fields": target_fields,
-                                "fuzziness": "AUTO"
+                                "fuzziness": 2
                             }
                         })
                 return musts
