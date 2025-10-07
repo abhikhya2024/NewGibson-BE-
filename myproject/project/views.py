@@ -1069,12 +1069,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     })
                 else:
                     # ✅ Fuzzy search for text fields like question/answer
-                    for word in query.split():
+                    for field in target_fields:
                         musts.append({
-                            "multi_match": {
-                                "query": word,
-                                "fields": target_fields,
-                                "fuzziness": 2
+                            "fuzzy": {
+                                field: {
+                                    "value": query,
+                                    "fuzziness": 2,
+                                    "prefix_length": 0,   # allow edits from first character
+                                    "max_expansions": 50  # increase if you have many matches
+                                }
                             }
                         })
                 return musts
