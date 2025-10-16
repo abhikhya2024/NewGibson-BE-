@@ -283,10 +283,8 @@ def fetch_attorney():
 
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
-    logger.info(token, "token")
     headers = {"Authorization": f"Bearer {token}"}
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
-    logger.info(drive_id, "drive_id")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
