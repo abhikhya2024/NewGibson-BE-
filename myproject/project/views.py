@@ -32,6 +32,7 @@ import requests
 import msal
 import os
 import io, re, os, shutil
+from django.views.decorators.csrf import csrf_exempt
 from contextlib import redirect_stdout
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
@@ -1344,6 +1345,7 @@ class WitnessViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
             
+    @csrf_exempt
     @action(detail=False, methods=["post"], url_path="save-witnesses")
     def save_witnesses(self, request):
             results = fetch_witness_names_and_transcripts()
