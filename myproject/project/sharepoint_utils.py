@@ -286,7 +286,7 @@ def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
-
+    
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
     response = requests.get(file_url, headers=headers)

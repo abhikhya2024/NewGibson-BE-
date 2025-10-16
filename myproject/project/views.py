@@ -12,6 +12,7 @@ from datetime import datetime
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 import inflect
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from elasticsearch import Elasticsearch
 from django.db.models import Q
 from django.db.models.functions import Lower
@@ -1221,8 +1222,13 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return  # bypass CSRF check
 @method_decorator(csrf_exempt, name='dispatch')
 class WitnessViewSet(viewsets.ViewSet):
+    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
+
     def list(self, request):
         # Serialize all witnesses
         witnesses = Witness.objects.all()
