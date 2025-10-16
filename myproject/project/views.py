@@ -1046,7 +1046,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         os.mkdir(INDEX_DIR)
         ix = configure_index(docs_list)
         try:
-
             with io.StringIO() as buf, redirect_stdout(buf):
                 search_documents(ix, q1, mode=mode1)
                 printed_output = buf.getvalue()
