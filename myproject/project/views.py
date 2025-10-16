@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token, configure_index, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -31,6 +31,8 @@ from elasticsearch.helpers import bulk
 import requests
 import msal
 import os
+import io, re, os, shutil
+from contextlib import redirect_stdout
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -1025,199 +1027,40 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
         sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
+ # === Step 1: Pull real data from DB ===
+        testimonies = Testimony.objects.select_related("file").all()
 
-        bool_query = {
-            "must": [],
-            "must_not": [],
-            "filter": []
-        }
-
-        fields = ["question", "answer", "cite", "transcript_name", "witness_name", "type"]
-        witness_fields = ["witness_name"]
-        transcript_fields = ["transcript_name"]
-
-        def build_query_block(query, mode, target_fields):
-            musts = []
-            if not query:
-                return musts
-
-            if mode == "fuzzy":
-    # ✅ Handle filename-like fields differently (use wildcard for substring match)
-                if any(f in ["transcript_name", "witness_name", "cite"] for f in target_fields):
-                    f = target_fields[0]  # we only need the first one, e.g. transcript_name
-                    musts.append({
-                        "bool": {
-                            "should": [
-                                {
-                                    "wildcard": {
-                                        f"{f}.keyword": {
-                                            "value": f"*{query}*",
-                                            "case_insensitive": True
-                                        }
-                                    }
-                                },
-                                {
-                                    "match_phrase": {
-                                        f: {
-                                            "query": query
-                                        }
-                                    }
-                                }
-                            ],
-                            "minimum_should_match": 1
-                        }
-                    })
-                else:
-                    # ✅ Fuzzy search for text fields like question/answer
-                    for field in target_fields:
-                        musts.append({
-                            "fuzzy": {
-                                field: {
-                                    "value": query,
-                                    "fuzziness": 2,
-                                    "prefix_length": 0,   # allow edits from first character
-                                    "max_expansions": 50  # increase if you have many matches
-                                }
-                            }
-                        })
-                return musts
-
-            elif mode == "boolean":
-                if "/s" in query:
-                    parts = [part.strip() for part in query.split("/s")]
-                    if len(parts) == 2:
-                        term1, term2 = parts
-                        for field in target_fields:
-                            musts.append({
-                                "match_phrase": {
-                                    field: {
-                                        "query": f"{term1} {term2}",
-                                        "slop": 5
-                                    }
-                                }
-                            })
-                else:
-                    not_pattern = r"\bNOT\s+(\w+)"
-                    not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
-                    cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
-
-                    if cleaned_query:
-                        musts.append({
-                            "query_string": {
-                                "query": cleaned_query,
-                                "fields": target_fields,
-                                "default_operator": "AND"
-                            }
-                        })
-
-                    for term in not_terms:
-                        bool_query["must_not"].append({
-                            "multi_match": {
-                                "query": term,
-                                "fields": target_fields
-                            }
-                        })
-            else:
-                musts.append({
-                    "simple_query_string": {
-                        "query": f'"{query}"',
-                        "fields": target_fields,
-                        "default_operator": "and"
-                    }
-                })
-
-            return musts
-
-        # === Filters ===
-        if witness_names:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"witness_name": name}} for name in witness_names
-                    ],
-                    "minimum_should_match": 1
-                }
+        docs_list = []
+        for t in testimonies:
+            filename = t.file.name if t.file else ""  # Transcript filename
+            docs_list.append({
+                "id": str(t.id),
+                "title": filename,  # this is the searchable filename
+                "content": f"{t.question} {t.answer}"
             })
 
-        if transcript_names:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"transcript_name": name}} for name in transcript_names
-                    ],
-                    "minimum_should_match": 1
-                }
-            })
+        # === Step 2: Build / open Whoosh index ===
+        INDEX_DIR = "indexdir"
+        if os.path.exists(INDEX_DIR):
+            shutil.rmtree(INDEX_DIR)
+        os.mkdir(INDEX_DIR)
+        ix = configure_index(docs_list)
 
-        if witness_types:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"match_phrase": {"type": wt}} for wt in witness_types
-                    ],
-                    "minimum_should_match": 1
-                }
-            })
-
-        # ✅ Filter by database source
-        if isinstance(sources, list) and sources:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [
-                        {"term": {"source": s}} for s in sources
-                    ],
-                    "minimum_should_match": 1
-                }
-            })
-
-        # === q1, q2, q3 search ===
-        bool_query["must"].extend(build_query_block(q1, mode1, fields))
-        bool_query["must"].extend(build_query_block(q2, mode2, witness_fields))
-        bool_query["must"].extend(build_query_block(q3, mode3, transcript_fields))
-
-        es_query = {
-            "query": {
-                "bool": bool_query
-            },
-            "sort": [
-            {"created_at": "asc"}  # or "desc"
-        ]
-        }
+    
 
         try:
-            # response = es.search(index="testimonies", body=es_query, size=10000, )
-                        # Build the Elasticsearch query object
-            es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
 
-            # Pagination
-            page = int(request.query_params.get("page", 1))
-            page_size = int(request.query_params.get("page_size", 20))
-            from_ = (page - 1) * page_size
+            with io.StringIO() as buf, redirect_stdout(buf):
+                search_documents(ix, q1, mode=mode1)
+                printed_output = buf.getvalue()
 
-            # ✅ If fuzzy search is active (especially for filename), fetch more results to include all matches
-            if mode1 == "fuzzy" or mode2 == "fuzzy" or mode3 == "fuzzy":
-                es_query["from"] = 0
-                es_query["size"] = 10000  # fetch more results to avoid missing fuzzy matches
-            else:
-                es_query["from"] = from_
-                es_query["size"] = page_size
-
-            # Execute the search
-            response = es.search(index="testimonies", body=es_query)
-
-            results = [hit["_source"] for hit in response["hits"]["hits"]]
-            total_hits = response["hits"]["total"]["value"]  # <-- total count of testimonies matching the query
+            # OR modify search_documents() to return structured results
+            # results = search_documents(ix, q1, mode=mode1)
 
             return Response({
-                "query1": q1,
-                "query2": q2,
-                "query3": q3,
-                "mode1": mode1,
-                "mode2": mode2,
-                "mode3": mode3,
-                "sources": sources,
-                "count": total_hits,      # <-- total testimonies in ES
-                "results": results
+                "query": q1,
+                "mode": mode1,
+                "results": printed_output  # or structured results if you modify function
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
