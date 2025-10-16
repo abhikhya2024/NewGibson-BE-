@@ -68,6 +68,8 @@ def get_token():
     return result["access_token"]
 def get_access_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    logger.info("url!!!!!!", url)
+
     data = {
         "grant_type": "client_credentials",
         "client_id": CLIENT_ID,
@@ -288,6 +290,7 @@ def fetch_witness_names_and_transcripts():
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
     logger.info(drive_id, "drive_id")
     logger.info(token, "token")
+    
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
