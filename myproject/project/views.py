@@ -1045,9 +1045,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             shutil.rmtree(INDEX_DIR)
         os.mkdir(INDEX_DIR)
         ix = configure_index(docs_list)
-
-    
-
         try:
 
             with io.StringIO() as buf, redirect_stdout(buf):
