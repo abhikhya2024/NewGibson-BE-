@@ -13,6 +13,7 @@ nlp = spacy.load("en_core_web_sm")
 import msal
 from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT, ID
+from whoosh import index
 from whoosh.analysis import RegexTokenizer, LowercaseFilter
 from whoosh.qparser import MultifieldParser, OrGroup
 from whoosh.query import FuzzyTerm, Or as OrQuery, And as AndQuery, Prefix
@@ -526,28 +527,20 @@ def clean_token(t: str) -> str:
 # -----------------------------
 # CONFIGURATION FUNCTION
 # -----------------------------
-def configure_index(docs_list):
-    """Creates index, schema, analyzer, and writes sample docs."""
-    # Analyzer + schema
-    custom_analyzer = RegexTokenizer() | LowercaseFilter()
+def configure_index(docs_list, index_dir):
     schema = Schema(
-        id=ID(stored=True, unique=True),
-        title=TEXT(stored=True, analyzer=custom_analyzer),
-        content=TEXT(stored=True, analyzer=custom_analyzer)
+        id=ID(stored=True),
+        title=TEXT(stored=True),
+        content=TEXT(stored=True)
     )
+    if not os.path.exists(index_dir):
+        os.makedirs(index_dir)
+    ix = index.create_in(index_dir, schema)
 
-    # (Re)create index directory
-    if os.path.exists(INDEX_DIR):
-        shutil.rmtree(INDEX_DIR)
-    os.mkdir(INDEX_DIR)
-    ix = create_in(INDEX_DIR, schema)
-
-    # Add documents
     writer = ix.writer()
-    for d in docs_list:
-        writer.add_document(id=d["id"], title=d["title"], content=d["content"])
+    for doc in docs_list:
+        writer.add_document(id=doc["id"], title=doc["title"], content=doc["content"])
     writer.commit()
-
     return ix
 
 # -----------------------------
