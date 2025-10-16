@@ -17,7 +17,7 @@ class Transcript(TimestampedModel):
     """
     An abstract base class model that provides self-updating 'created_at' and 'updated_at' fields.
     """
-    name = models.CharField(max_length=500)
+    name = models.CharField(max_length=500, null=True)
     transcript_date = models.DateField()
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
