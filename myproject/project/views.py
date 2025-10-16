@@ -32,6 +32,7 @@ import requests
 import msal
 import os
 import io, re, os, shutil
+from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from contextlib import redirect_stdout
 SCOPE = ["https://graph.microsoft.com/.default"]
@@ -1220,6 +1221,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+@method_decorator(csrf_exempt, name='dispatch')
 class WitnessViewSet(viewsets.ViewSet):
     def list(self, request):
         # Serialize all witnesses
