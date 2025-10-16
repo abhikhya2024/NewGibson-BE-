@@ -296,7 +296,6 @@ def fetch_witness_names_and_transcripts():
     response.raise_for_status()
 
     data = response.json()
-
     # Extract witness name + transcript name pairs
     results = []
     for entry in data:
