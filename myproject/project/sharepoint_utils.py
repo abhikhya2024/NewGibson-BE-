@@ -288,8 +288,8 @@ def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
-    logger.info(drive_id, "drive_id")
-    logger.info(token, "token")
+    print(drive_id, "drive_id")
+    print(token, "token")
     
 
     # Download the JSON file content
@@ -302,6 +302,7 @@ def fetch_witness_names_and_transcripts():
     results = []
     for entry in data:
         witness_name = entry.get("witness_name")
+        print("witness_name", witness_name )
         logger.info(witness_name, "witness")
         transcript_name = entry.get("transcript_name")+".txt"
         transcript_date = entry.get("transcript_date")
