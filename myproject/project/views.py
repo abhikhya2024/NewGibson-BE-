@@ -1027,7 +1027,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
         sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
- # === Step 1: Pull real data from DB ===
+
+        # === Step 1: Pull real data from DB ===
         testimonies = Testimony.objects.select_related("file").all()
 
         docs_list = []
@@ -1039,30 +1040,35 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "content": f"{t.question} {t.answer}"
             })
 
-        # === Step 2: Build / open Whoosh index ===
+        # === Step 2: Build / open Whoosh index safely ===
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
         INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-        os.makedirs(INDEX_DIR, exist_ok=True)  # ensures directory exists
-        if os.path.exists(INDEX_DIR):
-            shutil.rmtree(INDEX_DIR)
-        os.mkdir(INDEX_DIR)
-        ix = configure_index(docs_list)
+
+        # Ensure directory exists and is writable
+        os.makedirs(INDEX_DIR, exist_ok=True)
+
+        # Clear only files inside the index directory (do not delete the folder itself)
+        for f in os.listdir(INDEX_DIR):
+            f_path = os.path.join(INDEX_DIR, f)
+            if os.path.isfile(f_path):
+                os.remove(f_path)
+
+        # Configure Whoosh index
+        ix = configure_index(docs_list, index_dir=INDEX_DIR)
+
+        # === Step 3: Perform search safely ===
         try:
             with io.StringIO() as buf, redirect_stdout(buf):
                 search_documents(ix, q1, mode=mode1)
                 printed_output = buf.getvalue()
 
-            # OR modify search_documents() to return structured results
-            # results = search_documents(ix, q1, mode=mode1)
-
             return Response({
                 "query": q1,
                 "mode": mode1,
-                "results": printed_output  # or structured results if you modify function
+                "results": printed_output  # or structured results if you modify search_documents
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
