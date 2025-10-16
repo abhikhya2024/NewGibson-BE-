@@ -281,8 +281,6 @@ def fetch_attorney():
 
     return results
 
-
-
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     logger.info(token, "token")
