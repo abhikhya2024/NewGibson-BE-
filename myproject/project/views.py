@@ -1040,7 +1040,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             })
 
         # === Step 2: Build / open Whoosh index ===
-        INDEX_DIR = "indexdir"
+        BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
+        INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
+        os.makedirs(INDEX_DIR, exist_ok=True)  # ensures directory exists
         if os.path.exists(INDEX_DIR):
             shutil.rmtree(INDEX_DIR)
         os.mkdir(INDEX_DIR)
