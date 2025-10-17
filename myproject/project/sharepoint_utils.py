@@ -288,34 +288,39 @@ def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
     drive_id = get_dive_id("/sites/DocsGibsonDemo")
-    print(drive_id, "drive_id")
-    print(token, "token")
+    
+    try:
+        # Download the JSON file content
+        file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+        response = requests.get(file_url, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        # Extract witness name + transcript name pairs
+        results = []
+        for entry in data:
+            witness_name = entry.get("witness_name")
+            logger.info(witness_name, "witness")
+            transcript_name = entry.get("transcript_name")+".txt"
+            transcript_date = entry.get("transcript_date")
+            case_name = entry.get("case_name")
+            if witness_name and transcript_name:
+                results.append({
+                    "witness_name": witness_name,
+                    "transcript_name": transcript_name,
+                    "transcript_date": transcript_date,
+                    "case_name": case_name
+                })
+        print("results***********************************************", results)
+        return results
+    
+    except Exception as e:
+        print("exception", e)
+
+        
     
 
-    # Download the JSON file content
-    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
-    response = requests.get(file_url, headers=headers)
-    response.raise_for_status()
-
-    data = response.json()
-    # Extract witness name + transcript name pairs
-    results = []
-    for entry in data:
-        witness_name = entry.get("witness_name")
-        print("witness_name", witness_name )
-        logger.info(witness_name, "witness")
-        transcript_name = entry.get("transcript_name")+".txt"
-        transcript_date = entry.get("transcript_date")
-        case_name = entry.get("case_name")
-        if witness_name and transcript_name:
-            results.append({
-                "witness_name": witness_name,
-                "transcript_name": transcript_name,
-                "transcript_date": transcript_date,
-                "case_name": case_name
-            })
-
-    return results
+    
 
 def fetch_from_sharepoint():
     token = get_access_token()
