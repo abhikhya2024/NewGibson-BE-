@@ -1052,10 +1052,14 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         os.makedirs(INDEX_DIR, exist_ok=True)
 
         # Clear existing index files
-        for f in os.listdir(INDEX_DIR):
-            f_path = os.path.join(INDEX_DIR, f)
-            if os.path.isfile(f_path):
-                os.remove(f_path)
+        if not os.path.exists(INDEX_DIR):
+            os.makedirs(INDEX_DIR)
+        else:
+            # Clear index safely before starting
+            for f in os.listdir(INDEX_DIR):
+                f_path = os.path.join(INDEX_DIR, f)
+                if os.path.isfile(f_path):
+                    os.remove(f_path)
 
         ix = configure_index(docs_list, index_dir=INDEX_DIR)
         print("idxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",ix)
