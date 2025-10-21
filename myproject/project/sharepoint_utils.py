@@ -539,44 +539,41 @@ def clean_token(t: str) -> str:
 # CONFIGURATION FUNCTION
 # -----------------------------
 def configure_index(docs_list, index_dir):
-    from whoosh import index
-    from whoosh.fields import Schema, TEXT, ID
-    import os
+    # 1. Ensure directory exists
+    if not os.path.exists(index_dir):
+        os.makedirs(index_dir)
 
+    # 2. Define schema
     schema = Schema(
         id=ID(stored=True),
         title=TEXT(stored=True),
         content=TEXT(stored=True)
     )
 
-    if not os.path.exists(index_dir):
-        os.makedirs(index_dir)
-
+    # 3. Create new index if it doesn't exist
     if not index.exists_in(index_dir):
         ix = index.create_in(index_dir, schema)
     else:
         ix = index.open_dir(index_dir)
 
-    valid_docs = []
-    for doc in docs_list:
-        # Ensure all fields are present and strings
-        if all(
-            k in doc and doc[k] is not None and str(doc[k]).strip() != ""
-            for k in ("id", "title", "content")
-        ):
-            valid_docs.append({
-                "id": str(doc["id"]).strip(),
-                "title": str(doc["title"]).strip(),
-                "content": str(doc["content"]).strip()
-            })
-    print("-----------------------------------------#####################", len(valid_docs))
-    if not valid_docs:
-        raise ValueError("No valid documents to index. docs_list may be empty or missing required fields.")
+    # 4. Filter valid documents
+    valid_docs = [
+        {
+            "id": str(doc["id"]).strip(),
+            "title": str(doc["title"]).strip(),
+            "content": str(doc["content"]).strip()
+        }
+        for doc in docs_list
+        if doc.get("id") and doc.get("title") and doc.get("content") and str(doc["content"]).strip() != ""
+    ]
 
-    # Write to index
+    if not valid_docs:
+        raise ValueError("No valid documents to index. Whoosh will fail if docs_list is empty.")
+
+    # 5. Write documents safely
     with ix.writer() as writer:
         for doc in valid_docs:
-            writer.add_document(id=doc["id"], title=doc["title"], content=doc["content"])
+            writer.add_document(**doc)
 
     return ix
 # -----------------------------
