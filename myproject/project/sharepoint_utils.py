@@ -569,7 +569,7 @@ def configure_index(docs_list, index_dir):
                 "title": str(doc["title"]).strip(),
                 "content": str(doc["content"]).strip()
             })
-
+    print(len(valid_docs))
     if not valid_docs:
         raise ValueError("No valid documents to index. docs_list may be empty or missing required fields.")
 
