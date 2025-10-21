@@ -1030,18 +1030,21 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         transcript_names = validated.get("transcript_names", [])
         witness_types = validated.get("witness_types", [])
         sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
+        # Get all transcript IDs from the Transcript table
+        valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
 
         # === Step 1: Pull real data from DB ===
-        testimonies = Testimony.objects.select_related("file").all()
+        testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
 
-        docs_list = ["Chen"]
+        docs_list = []
         for t in testimonies:
-            filename = t.file.name if t.file else ""  # Transcript filename
+            filename = t.file.name if t.file else ""  # transcript filename
             docs_list.append({
                 "id": str(t.id),
-                "title": filename,  # this is the searchable filename
-                "content": f"{t.question} {t.answer}"
+                "title": filename,  # searchable transcript name
+                "content": f"{t.question} {t.answer}"  # testimony text
             })
+   
 
         # === Step 2: Build / open Whoosh index safely ===
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
@@ -1050,13 +1053,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         # Ensure directory exists and is writable
         os.makedirs(INDEX_DIR, exist_ok=True)
 
-        # Clear only files inside the index directory (do not delete the folder itself)
+        # Clear existing index files
         for f in os.listdir(INDEX_DIR):
             f_path = os.path.join(INDEX_DIR, f)
             if os.path.isfile(f_path):
                 os.remove(f_path)
 
-        # Configure Whoosh index
         ix = configure_index(docs_list, index_dir=INDEX_DIR)
 
         # === Step 3: Perform search safely ===
