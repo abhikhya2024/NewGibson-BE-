@@ -585,111 +585,112 @@ def configure_index(docs_list, index_dir):
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND"):
     """Search documents in the given Whoosh index."""
     query_text = (query_text or "").strip()
+    print("query_text ", query_text)
     if not query_text:
         print("Empty query.")
         return
 
-    raw_terms = [t for t in re.split(r'\s+', query_text) if t]
-    clean_terms = [clean_token(t) for t in raw_terms if clean_token(t)]
+    # raw_terms = [t for t in re.split(r'\s+', query_text) if t]
+    # clean_terms = [clean_token(t) for t in raw_terms if clean_token(t)]
 
-    if not clean_terms:
-        print("No valid tokens.")
-        return
+    # if not clean_terms:
+    #     print("No valid tokens.")
+    #     return
 
-    with ix.searcher() as searcher:
-        parser = MultifieldParser(["title", "content"], schema=ix.schema, group=OrGroup)
-        results = []
+    # with ix.searcher() as searcher:
+    #     parser = MultifieldParser(["title", "content"], schema=ix.schema, group=OrGroup)
+    #     results = []
 
-        # ---------- FUZZY MODE ----------
-        if mode == "fuzzy":
-            queries = []
-            for term in clean_terms:
+    #     # ---------- FUZZY MODE ----------
+    #     if mode == "fuzzy":
+    #         queries = []
+    #         for term in clean_terms:
 
-                # ✅ 1. Wildcard / prefix search (*)
-                if term.endswith("*"):
-                    base = term.rstrip("*")
-                    if base:
-                        q_title = Prefix("title", base)
-                        q_content = Prefix("content", base)
-                        queries.append(OrQuery([q_title, q_content]))
-                    continue
+    #             # ✅ 1. Wildcard / prefix search (*)
+    #             if term.endswith("*"):
+    #                 base = term.rstrip("*")
+    #                 if base:
+    #                     q_title = Prefix("title", base)
+    #                     q_content = Prefix("content", base)
+    #                     queries.append(OrQuery([q_title, q_content]))
+    #                 continue
 
-                # ✅ 2. Numeric/ID search handled later
-                if re.search(r'\d', term):
-                    continue
+    #             # ✅ 2. Numeric/ID search handled later
+    #             if re.search(r'\d', term):
+    #                 continue
 
-                # ✅ 3. Fuzzy for regular words
-                edits = max_edits if len(term) >= 4 else min(1, max_edits)
-                q_title = FuzzyTerm("title", term, maxdist=edits)
-                q_content = FuzzyTerm("content", term, maxdist=edits)
-                queries.append(OrQuery([q_title, q_content]))
+    #             # ✅ 3. Fuzzy for regular words
+    #             edits = max_edits if len(term) >= 4 else min(1, max_edits)
+    #             q_title = FuzzyTerm("title", term, maxdist=edits)
+    #             q_content = FuzzyTerm("content", term, maxdist=edits)
+    #             queries.append(OrQuery([q_title, q_content]))
 
-            # Combine fuzzy + prefix results first
-            if queries:
-                final_query = AndQuery(queries)
-                whoosh_results = searcher.search(final_query, limit=None)
-            else:
-                whoosh_results = searcher.search(parser.parse(""), limit=None)
+    #         # Combine fuzzy + prefix results first
+    #         if queries:
+    #             final_query = AndQuery(queries)
+    #             whoosh_results = searcher.search(final_query, limit=None)
+    #         else:
+    #             whoosh_results = searcher.search(parser.parse(""), limit=None)
 
-            candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
+    #         candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
 
-            # ✅ 4. Numeric ID substring search
-            if any(re.search(r'\d', t) for t in clean_terms):
-                all_docs = list(searcher.documents())
-                for d in all_docs:
-                    title_l = d["title"].lower()
-                    if all(
-                        (t in title_l or t.replace("-", "") in title_l.replace("-", ""))
-                        for t in clean_terms if re.search(r'\d', t)
-                    ):
-                        candidate_hits.append(d)
+    #         # ✅ 4. Numeric ID substring search
+    #         if any(re.search(r'\d', t) for t in clean_terms):
+    #             all_docs = list(searcher.documents())
+    #             for d in all_docs:
+    #                 title_l = d["title"].lower()
+    #                 if all(
+    #                     (t in title_l or t.replace("-", "") in title_l.replace("-", ""))
+    #                     for t in clean_terms if re.search(r'\d', t)
+    #                 ):
+    #                     candidate_hits.append(d)
 
-            # ✅ 5. Strict AND filter for all tokens
-            seen = set()
-            results = []
-            for hit in candidate_hits:
-                combined = f"{hit['title'].lower()} {hit['content'].lower()}"
-                if all(
-                    (t.rstrip("*") in combined)
-                    or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))
-                    or (fuzz.partial_ratio(t.rstrip("*"), combined) >= 70)
-                    for t in clean_terms
-                ):
-                    if hit["id"] not in seen:
-                        seen.add(hit["id"])
-                        results.append(hit)
+    #         # ✅ 5. Strict AND filter for all tokens
+    #         seen = set()
+    #         results = []
+    #         for hit in candidate_hits:
+    #             combined = f"{hit['title'].lower()} {hit['content'].lower()}"
+    #             if all(
+    #                 (t.rstrip("*") in combined)
+    #                 or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))
+    #                 or (fuzz.partial_ratio(t.rstrip("*"), combined) >= 70)
+    #                 for t in clean_terms
+    #             ):
+    #                 if hit["id"] not in seen:
+    #                     seen.add(hit["id"])
+    #                     results.append(hit)
 
-        # ---------- BOOLEAN MODE ----------
-        elif mode == "boolean":
-            if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
-                tokens = re.split(r'([ \(\)])', query_text)
-                processed_tokens = []
-                for tok in tokens:
-                    if tok.upper() in ["AND", "OR", "NOT", "(", ")"] or tok.strip() == "":
-                        processed_tokens.append(tok)
-                    else:
-                        subtoks = re.split(r'[.\-_]', tok)
-                        subtoks = [s for s in subtoks if s]
-                        if len(subtoks) > 1:
-                            processed_tokens.append("(" + " OR ".join(subtoks) + ")")
-                        else:
-                            processed_tokens.append(tok)
-                qstring = "".join(processed_tokens)
-            else:
-                qstring = f" {join_with} ".join(clean_terms)
+    #     # ---------- BOOLEAN MODE ----------
+    #     elif mode == "boolean":
+    #         if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
+    #             tokens = re.split(r'([ \(\)])', query_text)
+    #             processed_tokens = []
+    #             for tok in tokens:
+    #                 if tok.upper() in ["AND", "OR", "NOT", "(", ")"] or tok.strip() == "":
+    #                     processed_tokens.append(tok)
+    #                 else:
+    #                     subtoks = re.split(r'[.\-_]', tok)
+    #                     subtoks = [s for s in subtoks if s]
+    #                     if len(subtoks) > 1:
+    #                         processed_tokens.append("(" + " OR ".join(subtoks) + ")")
+    #                     else:
+    #                         processed_tokens.append(tok)
+    #             qstring = "".join(processed_tokens)
+    #         else:
+    #             qstring = f" {join_with} ".join(clean_terms)
 
-            q = parser.parse(qstring)
-            results = searcher.search(q, limit=None)
+    #         q = parser.parse(qstring)
+    #         results = searcher.search(q, limit=None)
 
-        else:
-            raise ValueError("Invalid mode.")
+    #     else:
+    #         raise ValueError("Invalid mode.")
 
-        # ---------- OUTPUT ----------
-        if results:
-            print(f"\n✅ Results for: {query_text}")
-            print("-" * 60)
-            for hit in results:
-                print(f"ID: {hit['id']} | Title: {hit['title']}")
-            print("-" * 60)
-        else:
-            print(f"\n❌ No matches found for: {query_text}")
+    #     # ---------- OUTPUT ----------
+    #     if results:
+    #         print(f"\n✅ Results for: {query_text}")
+    #         print("-" * 60)
+    #         for hit in results:
+    #             print(f"ID: {hit['id']} | Title: {hit['title']}")
+    #         print("-" * 60)
+    #     else:
+    #         print(f"\n❌ No matches found for: {query_text}")

@@ -1058,13 +1058,14 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 os.remove(f_path)
 
         ix = configure_index(docs_list, index_dir=INDEX_DIR)
-
+        print("idxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",ix)
         # === Step 3: Perform search safely ===
         try:
 
 
             with io.StringIO() as buf, redirect_stdout(buf):
                 search_documents(ix, q1, mode=mode1)  # q1 = transcript name input
+
                 printed_output = buf.getvalue()
 
             return Response({
