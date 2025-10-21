@@ -1015,8 +1015,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
-        q1 = request.data.get("q1", "").strip()
-        mode1 = request.data.get("mode1", "fuzzy").lower()
+        q3 = request.data.get("q3", "").strip()
+        mode3 = request.data.get("mode3", "exact").lower()
 
         # Step 1: Get valid transcript IDs
         valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
@@ -1044,15 +1044,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
             # Step 5: Perform search
             with io.StringIO() as buf, redirect_stdout(buf):
-                results = search_documents(ix, q1, mode=mode1)
+                results = search_documents(ix, q3, mode=mode3)
                 # Print results for debugging
                 for hit in results:
                     print(f"ID: {hit['id']} | Title: {hit['title']}")
                 printed_output = buf.getvalue()
 
             return Response({
-                "query": q1,
-                "mode": mode1,
+                "query": q3,
+                "mode": mode3,
                 "results": printed_output
             })
 
