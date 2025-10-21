@@ -1035,7 +1035,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         # === Step 1: Pull real data from DB ===
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
-        print("testtttttttttttttttttt",len( testimonies))
         docs_list = []
         for t in testimonies:
             filename = t.file.name if t.file else ""  # transcript filename
@@ -1045,7 +1044,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "content": f"{t.question} {t.answer}"  # testimony text
             })
    
-        print("testtttttttttttttttttt",docs_list)
 
         # === Step 2: Build / open Whoosh index safely ===
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
