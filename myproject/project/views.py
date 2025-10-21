@@ -1035,7 +1035,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         # === Step 1: Pull real data from DB ===
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
-
+        print(len(testimonies))
         docs_list = []
         for t in testimonies:
             filename = t.file.name if t.file else ""  # transcript filename
