@@ -539,21 +539,46 @@ def clean_token(t: str) -> str:
 # CONFIGURATION FUNCTION
 # -----------------------------
 def configure_index(docs_list, index_dir):
+    from whoosh import index
+    from whoosh.fields import Schema, TEXT, ID
+    import os
+
     schema = Schema(
         id=ID(stored=True),
         title=TEXT(stored=True),
         content=TEXT(stored=True)
     )
+
     if not os.path.exists(index_dir):
         os.makedirs(index_dir)
-    ix = index.create_in(index_dir, schema)
 
-    writer = ix.writer()
+    if not index.exists_in(index_dir):
+        ix = index.create_in(index_dir, schema)
+    else:
+        ix = index.open_dir(index_dir)
+
+    valid_docs = []
     for doc in docs_list:
-        writer.add_document(id=doc["id"], title=doc["title"], content=doc["content"])
-    writer.commit()
-    return ix
+        # Ensure all fields are present and strings
+        if all(
+            k in doc and doc[k] is not None and str(doc[k]).strip() != ""
+            for k in ("id", "title", "content")
+        ):
+            valid_docs.append({
+                "id": str(doc["id"]).strip(),
+                "title": str(doc["title"]).strip(),
+                "content": str(doc["content"]).strip()
+            })
 
+    if not valid_docs:
+        raise ValueError("No valid documents to index. docs_list may be empty or missing required fields.")
+
+    # Write to index
+    with ix.writer() as writer:
+        for doc in valid_docs:
+            writer.add_document(id=doc["id"], title=doc["title"], content=doc["content"])
+
+    return ix
 # -----------------------------
 # SEARCH FUNCTION
 # -----------------------------
