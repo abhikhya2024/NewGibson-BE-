@@ -1015,71 +1015,49 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
-        serializer = CombinedSearchInputSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
+        q1 = request.data.get("q1", "").strip()
+        mode1 = request.data.get("mode1", "fuzzy").lower()
 
-        q1 = validated.get("q1", "").strip()
-        mode1 = validated.get("mode1", "exact").lower()
-        q2 = validated.get("q2", "").strip()
-        mode2 = validated.get("mode2", "exact").lower()
-        q3 = validated.get("q3", "").strip()
-        mode3 = validated.get("mode3", "exact").lower()
-
-        witness_names = validated.get("witness_names", [])
-        transcript_names = validated.get("transcript_names", [])
-        witness_types = validated.get("witness_types", [])
-        sources = validated.get("sources", "all")  # Can be 'all' or a list like ['default', 'cummings']
-        # Get all transcript IDs from the Transcript table
+        # Step 1: Get valid transcript IDs
         valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
 
-        # === Step 1: Pull real data from DB ===
+        # Step 2: Fetch testimonies
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
         docs_list = []
         for t in testimonies:
-            filename = t.file.name if t.file else ""  # transcript filename
-            docs_list.append({
-                "id": str(t.id),
-                "title": filename,  # searchable transcript name
-                "content": f"{t.question} {t.answer}"  # testimony text
-            })
+            filename = t.file.name if t.file else ""
+            content = f"{t.question or ''} {t.answer or ''}".strip()
+            if content:  # skip empty documents
+                docs_list.append({
+                    "id": str(t.id),
+                    "title": filename,
+                    "content": content
+                })
 
-        # === Step 2: Build / open Whoosh index safely ===
+        # Step 3: Index directory
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
         INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
 
-        # Ensure directory exists and is writable
-        os.makedirs(INDEX_DIR, exist_ok=True)
-
-        # Clear existing index files
-        if not os.path.exists(INDEX_DIR):
-            os.makedirs(INDEX_DIR)
-        else:
-            # Clear index safely before starting
-            for f in os.listdir(INDEX_DIR):
-                f_path = os.path.join(INDEX_DIR, f)
-                if os.path.isfile(f_path):
-                    os.remove(f_path)
-
-        ix = configure_index(docs_list, index_dir=INDEX_DIR)
-        print("idxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",ix)
-        # === Step 3: Perform search safely ===
         try:
+            # Step 4: Configure index
+            ix = configure_index(docs_list, INDEX_DIR)
 
-
+            # Step 5: Perform search
             with io.StringIO() as buf, redirect_stdout(buf):
-                search_documents(ix, q1, mode=mode1)  # q1 = transcript name input
-
+                results = search_documents(ix, q1, mode=mode1)
+                # Print results for debugging
+                for hit in results:
+                    print(f"ID: {hit['id']} | Title: {hit['title']}")
                 printed_output = buf.getvalue()
 
             return Response({
                 "query": q1,
                 "mode": mode1,
-                "results": printed_output  # or structured results if you modify search_documents
+                "results": printed_output
             })
+
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

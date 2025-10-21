@@ -539,24 +539,26 @@ def clean_token(t: str) -> str:
 # CONFIGURATION FUNCTION
 # -----------------------------
 def configure_index(docs_list, index_dir):
-    # 1. Ensure directory exists
-    if not os.path.exists(index_dir):
-        os.makedirs(index_dir)
+    # Ensure directory exists
+    os.makedirs(index_dir, exist_ok=True)
 
-    # 2. Define schema
+    # Define schema
     schema = Schema(
         id=ID(stored=True),
         title=TEXT(stored=True),
         content=TEXT(stored=True)
     )
 
-    # 3. Create new index if it doesn't exist
-    if not index.exists_in(index_dir):
-        ix = index.create_in(index_dir, schema)
-    else:
-        ix = index.open_dir(index_dir)
+    # Clear old index files before creating new index
+    for f in os.listdir(index_dir):
+        f_path = os.path.join(index_dir, f)
+        if os.path.isfile(f_path):
+            os.remove(f_path)
 
-    # 4. Filter valid documents
+    # Create index
+    ix = index.create_in(index_dir, schema)
+
+    # Filter valid documents
     valid_docs = [
         {
             "id": str(doc["id"]).strip(),
@@ -568,126 +570,105 @@ def configure_index(docs_list, index_dir):
     ]
 
     if not valid_docs:
-        raise ValueError("No valid documents to index. Whoosh will fail if docs_list is empty.")
+        raise ValueError("No valid documents to index. docs_list may be empty or invalid.")
 
-    # 5. Write documents safely
+    # Write documents safely
     with ix.writer() as writer:
         for doc in valid_docs:
             writer.add_document(**doc)
 
     return ix
-# -----------------------------
-# SEARCH FUNCTION
-# -----------------------------
+
+# -------------------------------
+# Search function
+# -------------------------------
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND"):
-    """Search documents in the given Whoosh index."""
     query_text = (query_text or "").strip()
-    print("query_text ", query_text)
     if not query_text:
         print("Empty query.")
-        return
+        return []
 
-    # raw_terms = [t for t in re.split(r'\s+', query_text) if t]
-    # clean_terms = [clean_token(t) for t in raw_terms if clean_token(t)]
+    raw_terms = [t for t in re.split(r'\s+', query_text) if t]
+    clean_terms = [t for t in raw_terms if t]
 
-    # if not clean_terms:
-    #     print("No valid tokens.")
-    #     return
+    results = []
+    with ix.searcher() as searcher:
+        parser = MultifieldParser(["title", "content"], schema=ix.schema, group=OrGroup)
 
-    # with ix.searcher() as searcher:
-    #     parser = MultifieldParser(["title", "content"], schema=ix.schema, group=OrGroup)
-    #     results = []
+        # ---------------- FUZZY MODE ----------------
+        if mode == "fuzzy":
+            queries = []
+            for term in clean_terms:
+                if term.endswith("*"):
+                    base = term.rstrip("*")
+                    if base:
+                        q_title = Prefix("title", base)
+                        q_content = Prefix("content", base)
+                        queries.append(OrQuery([q_title, q_content]))
+                    continue
+                if re.search(r'\d', term):
+                    continue
+                edits = max_edits if len(term) >= 4 else min(1, max_edits)
+                q_title = FuzzyTerm("title", term, maxdist=edits)
+                q_content = FuzzyTerm("content", term, maxdist=edits)
+                queries.append(OrQuery([q_title, q_content]))
 
-    #     # ---------- FUZZY MODE ----------
-    #     if mode == "fuzzy":
-    #         queries = []
-    #         for term in clean_terms:
+            if queries:
+                final_query = AndQuery(queries)
+                whoosh_results = searcher.search(final_query, limit=None)
+            else:
+                whoosh_results = searcher.search(parser.parse(""), limit=None)
 
-    #             # ✅ 1. Wildcard / prefix search (*)
-    #             if term.endswith("*"):
-    #                 base = term.rstrip("*")
-    #                 if base:
-    #                     q_title = Prefix("title", base)
-    #                     q_content = Prefix("content", base)
-    #                     queries.append(OrQuery([q_title, q_content]))
-    #                 continue
+            candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
 
-    #             # ✅ 2. Numeric/ID search handled later
-    #             if re.search(r'\d', term):
-    #                 continue
+            # Numeric ID substring search
+            if any(re.search(r'\d', t) for t in clean_terms):
+                all_docs = list(searcher.documents())
+                for d in all_docs:
+                    title_l = d["title"].lower()
+                    if all(
+                        (t in title_l or t.replace("-", "") in title_l.replace("-", ""))
+                        for t in clean_terms if re.search(r'\d', t)
+                    ):
+                        candidate_hits.append(d)
 
-    #             # ✅ 3. Fuzzy for regular words
-    #             edits = max_edits if len(term) >= 4 else min(1, max_edits)
-    #             q_title = FuzzyTerm("title", term, maxdist=edits)
-    #             q_content = FuzzyTerm("content", term, maxdist=edits)
-    #             queries.append(OrQuery([q_title, q_content]))
+            # Strict AND filter
+            seen = set()
+            for hit in candidate_hits:
+                combined = f"{hit['title'].lower()} {hit['content'].lower()}"
+                if all(
+                    (t.rstrip("*") in combined)
+                    or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))
+                    or (fuzz.partial_ratio(t.rstrip("*"), combined) >= 70)
+                    for t in clean_terms
+                ):
+                    if hit["id"] not in seen:
+                        seen.add(hit["id"])
+                        results.append(hit)
 
-    #         # Combine fuzzy + prefix results first
-    #         if queries:
-    #             final_query = AndQuery(queries)
-    #             whoosh_results = searcher.search(final_query, limit=None)
-    #         else:
-    #             whoosh_results = searcher.search(parser.parse(""), limit=None)
+        # ---------------- BOOLEAN MODE ----------------
+        elif mode == "boolean":
+            if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
+                tokens = re.split(r'([ \(\)])', query_text)
+                processed_tokens = []
+                for tok in tokens:
+                    if tok.upper() in ["AND", "OR", "NOT", "(", ")"] or tok.strip() == "":
+                        processed_tokens.append(tok)
+                    else:
+                        subtoks = re.split(r'[.\-_]', tok)
+                        subtoks = [s for s in subtoks if s]
+                        if len(subtoks) > 1:
+                            processed_tokens.append("(" + " OR ".join(subtoks) + ")")
+                        else:
+                            processed_tokens.append(tok)
+                qstring = "".join(processed_tokens)
+            else:
+                qstring = f" {join_with} ".join(clean_terms)
 
-    #         candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
+            q = parser.parse(qstring)
+            results = searcher.search(q, limit=None)
 
-    #         # ✅ 4. Numeric ID substring search
-    #         if any(re.search(r'\d', t) for t in clean_terms):
-    #             all_docs = list(searcher.documents())
-    #             for d in all_docs:
-    #                 title_l = d["title"].lower()
-    #                 if all(
-    #                     (t in title_l or t.replace("-", "") in title_l.replace("-", ""))
-    #                     for t in clean_terms if re.search(r'\d', t)
-    #                 ):
-    #                     candidate_hits.append(d)
+        else:
+            raise ValueError("Invalid search mode.")
 
-    #         # ✅ 5. Strict AND filter for all tokens
-    #         seen = set()
-    #         results = []
-    #         for hit in candidate_hits:
-    #             combined = f"{hit['title'].lower()} {hit['content'].lower()}"
-    #             if all(
-    #                 (t.rstrip("*") in combined)
-    #                 or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))
-    #                 or (fuzz.partial_ratio(t.rstrip("*"), combined) >= 70)
-    #                 for t in clean_terms
-    #             ):
-    #                 if hit["id"] not in seen:
-    #                     seen.add(hit["id"])
-    #                     results.append(hit)
-
-    #     # ---------- BOOLEAN MODE ----------
-    #     elif mode == "boolean":
-    #         if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
-    #             tokens = re.split(r'([ \(\)])', query_text)
-    #             processed_tokens = []
-    #             for tok in tokens:
-    #                 if tok.upper() in ["AND", "OR", "NOT", "(", ")"] or tok.strip() == "":
-    #                     processed_tokens.append(tok)
-    #                 else:
-    #                     subtoks = re.split(r'[.\-_]', tok)
-    #                     subtoks = [s for s in subtoks if s]
-    #                     if len(subtoks) > 1:
-    #                         processed_tokens.append("(" + " OR ".join(subtoks) + ")")
-    #                     else:
-    #                         processed_tokens.append(tok)
-    #             qstring = "".join(processed_tokens)
-    #         else:
-    #             qstring = f" {join_with} ".join(clean_terms)
-
-    #         q = parser.parse(qstring)
-    #         results = searcher.search(q, limit=None)
-
-    #     else:
-    #         raise ValueError("Invalid mode.")
-
-    #     # ---------- OUTPUT ----------
-    #     if results:
-    #         print(f"\n✅ Results for: {query_text}")
-    #         print("-" * 60)
-    #         for hit in results:
-    #             print(f"ID: {hit['id']} | Title: {hit['title']}")
-    #         print("-" * 60)
-    #     else:
-    #         print(f"\n❌ No matches found for: {query_text}")
+    return results
