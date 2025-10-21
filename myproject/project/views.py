@@ -1035,7 +1035,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         # === Step 1: Pull real data from DB ===
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
-        print(len(testimonies))
+        print(len("testtttttttttttttttttt", testimonies))
         docs_list = []
         for t in testimonies:
             filename = t.file.name if t.file else ""  # transcript filename
@@ -1063,8 +1063,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         # === Step 3: Perform search safely ===
         try:
+
+
             with io.StringIO() as buf, redirect_stdout(buf):
-                search_documents(ix, q1, mode=mode1)
+                search_documents(ix, q1, mode=mode1)  # q1 = transcript name input
                 printed_output = buf.getvalue()
 
             return Response({
