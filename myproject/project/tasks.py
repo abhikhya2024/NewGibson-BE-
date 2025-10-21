@@ -10,7 +10,7 @@ import logging
 from elasticsearch.helpers import bulk
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
-DB_NAMES = ['default', 'cummings', 'prochaska', 'proctor', 'ruckd']  # 5 databases
+DB_NAMES = ['default']  # 5 databases
 INDEX_NAME = "testimonies"
 
 @shared_task
