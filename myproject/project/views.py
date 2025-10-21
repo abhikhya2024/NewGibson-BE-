@@ -1043,7 +1043,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "title": filename,  # searchable transcript name
                 "content": f"{t.question} {t.answer}"  # testimony text
             })
-   
+        print("nkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", docs_list)
 
         # === Step 2: Build / open Whoosh index safely ===
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
