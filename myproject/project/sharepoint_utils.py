@@ -540,60 +540,54 @@ def clean_token(t: str) -> str:
 # -----------------------------
 # CONFIGURATION FUNCTION
 # -----------------------------
-STALE_LOCK_SECONDS = 300    # 5 minutes - adjust if you expect long writes
-LOCK_RETRY_TIMEOUT = 10     # seconds to wait for whoosh writer to acquire lock
+# tune these as needed
+FILELOCK_POLL_INTERVAL = 0.2   # seconds between attempts to acquire lock
+FILELOCK_TIMEOUT = 30          # overall seconds to wait for the lock
 
-def _remove_stale_locks(index_dir, stale_after=STALE_LOCK_SECONDS):
-    """Remove .lock files older than `stale_after` seconds and return list of removed files."""
-    now = time.time()
-    removed = []
-    for fname in os.listdir(index_dir):
-        if not fname.endswith(".lock"):
-            continue
-        fpath = os.path.join(index_dir, fname)
+def _acquire_file_lock(lock_path, timeout=FILELOCK_TIMEOUT, poll_interval=FILELOCK_POLL_INTERVAL):
+    """Open lock file and acquire exclusive flock. Returns open file handle (must be closed to release)."""
+    start = time.time()
+    fh = open(lock_path, "a+")  # keep file descriptor open, create file if missing
+    while True:
         try:
-            mtime = os.path.getmtime(fpath)
-        except OSError:
-            continue
-        age = now - mtime
-        if age > stale_after:
-            try:
-                os.remove(fpath)
-                removed.append(fname)
-            except OSError:
-                pass
-    return removed
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # acquired
+            return fh
+        except BlockingIOError:
+            if (time.time() - start) >= timeout:
+                fh.close()
+                raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
+            time.sleep(poll_interval)
+        except Exception:
+            fh.close()
+            raise
 
-def configure_index(docs_list, index_dir):
+def _release_file_lock(fh):
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+    try:
+        fh.close()
+    except Exception:
+        pass
+
+def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
     """
-    Create/open Whoosh index and add docs_list.
-    - Tries ix.writer(timeout=LOCK_RETRY_TIMEOUT) first.
-    - On LockError: removes stale .lock files older than STALE_LOCK_SECONDS and retries once.
+    Create/open Whoosh index and add docs_list while holding an OS-level file lock
+    so only one process at a time writes the index.
     """
-    # Ensure directory exists and owned/writable by the app user (do outside Python if possible)
     os.makedirs(index_dir, exist_ok=True)
+    lock_path = os.path.join(index_dir, lock_filename)
 
-    # Define schema
+    # Prepare schema
     schema = Schema(
         id=ID(stored=True, unique=True),
         title=TEXT(stored=True),
         content=TEXT(stored=True)
     )
 
-    # Create or open index safely
-    try:
-        if not index.exists_in(index_dir):
-            print("⚙️ Creating new Whoosh index...")
-            ix = index.create_in(index_dir, schema)
-        else:
-            print("📂 Opening existing Whoosh index...")
-            ix = index.open_dir(index_dir)
-    except Exception:
-        print("❌ Error creating/opening index:")
-        traceback.print_exc()
-        raise
-
-    # Validate docs_list and prepare valid_docs
+    # Validate/normalize docs_list
     valid_docs = []
     for doc in docs_list:
         try:
@@ -602,47 +596,45 @@ def configure_index(docs_list, index_dir):
             _content = str(doc.get("content", "")).strip()
         except Exception:
             continue
-        if _id and _content:   # title can be empty but content and id are required
+        if _id and _content:
             valid_docs.append({"id": _id, "title": _title, "content": _content})
 
     if not valid_docs:
         raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
 
-    # Attempt to get writer, handle LockError by removing stale locks and retrying once
-    attempt = 0
-    max_attempts = 2
-    while attempt < max_attempts:
-        attempt += 1
-        try:
-            print(f"Attempt {attempt}: acquiring whoosh writer with timeout={LOCK_RETRY_TIMEOUT}s...")
-            # ask Whoosh to wait up to LOCK_RETRY_TIMEOUT seconds for the lock
-            with ix.writer(timeout=LOCK_RETRY_TIMEOUT) as writer:
-                for doc in valid_docs:
-                    writer.update_document(id=doc["id"], title=doc["title"], content=doc["content"])
-            print("✅ Indexing committed successfully.")
-            return ix
-        except LockError:
-            print(f"⚠️ LockError on attempt {attempt}. Checking for stale .lock files...")
-            removed = _remove_stale_locks(index_dir)
-            if removed:
-                print(f"Removed stale lock files: {removed}")
-            else:
-                print("No stale lock files found (or none old enough).")
-            # If this was the second attempt, give up and raise
-            if attempt >= max_attempts:
-                print("❌ Failed to acquire lock after retries. Raising LockError.")
-                traceback.print_exc()
-                raise
-            else:
-                # small backoff before retrying
-                time.sleep(1)
-        except Exception:
-            print("❌ Unexpected error while writing index:")
-            traceback.print_exc()
-            raise
+    # Acquire host-level file lock so only one process builds/updates index at a time.
+    fh = None
+    try:
+        fh = _acquire_file_lock(lock_path)   # may raise TimeoutError
+        # At this point we hold the lock.
+        # Create/open index safely (now only one process is here)
+        if not index.exists_in(index_dir):
+            print("⚙️ Creating new Whoosh index...")
+            ix = index.create_in(index_dir, schema)
+        else:
+            ix = index.open_dir(index_dir)
 
-    # If we exit the loop without returning, raise an error
-    raise RuntimeError("Failed to write Whoosh index after retries.")
+        # Write documents (use ix.writer() which still uses its own Whoosh locking)
+        with ix.writer() as writer:
+            for doc in valid_docs:
+                writer.update_document(id=doc["id"], title=doc["title"], content=doc["content"])
+
+        # done - release lock in finally
+        return ix
+
+    except TimeoutError as te:
+        # Could not acquire file lock in time
+        print("❌ Timeout acquiring index file lock:", str(te))
+        traceback.print_exc()
+        raise
+    except Exception:
+        print("❌ Unexpected error in configure_index:")
+        traceback.print_exc()
+        raise
+    finally:
+        if fh:
+            _release_file_lock(fh)
+
 # -------------------------------
 # Search function
 # -------------------------------
