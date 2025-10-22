@@ -539,46 +539,41 @@ def clean_token(t: str) -> str:
 # CONFIGURATION FUNCTION
 # -----------------------------
 def configure_index(docs_list, index_dir):
+    """
+    Create or open a Whoosh index, and add docs_list to it.
+    """
     # Ensure directory exists
     os.makedirs(index_dir, exist_ok=True)
 
     # Define schema
     schema = Schema(
-        id=ID(stored=True),
+        id=ID(stored=True, unique=True),
         title=TEXT(stored=True),
         content=TEXT(stored=True)
     )
 
-    # Clear old index files before creating new index
-    for f in os.listdir(index_dir):
-        f_path = os.path.join(index_dir, f)
-        if os.path.isfile(f_path):
-            os.remove(f_path)
+    # Check if index exists, otherwise create it
+    if not index.exists_in(index_dir):
+        print("⚙️ Creating new Whoosh index...")
+        ix = index.create_in(index_dir, schema)
+    else:
+        print("📂 Opening existing Whoosh index...")
+        ix = index.open_dir(index_dir)
 
-    # Create index
-    ix = index.create_in(index_dir, schema)
-
-    # Filter valid documents
-    valid_docs = [
-        {
-            "id": str(doc["id"]).strip(),
-            "title": str(doc["title"]).strip(),
-            "content": str(doc["content"]).strip()
-        }
-        for doc in docs_list
-        if doc.get("id") and doc.get("title") and doc.get("content") and str(doc["content"]).strip() != ""
-    ]
-
-    if not valid_docs:
-        raise ValueError("No valid documents to index. docs_list may be empty or invalid.")
-
-    # Write documents safely
-    with ix.writer() as writer:
-        for doc in valid_docs:
-            writer.add_document(**doc)
+    # Write docs into index
+    writer = ix.writer()
+    for doc in docs_list:
+        try:
+            writer.update_document(
+                id=str(doc.get("id", "")),
+                title=doc.get("title", ""),
+                content=doc.get("content", "")
+            )
+        except Exception as e:
+            print(f"⚠️ Error adding doc {doc}: {e}")
+    writer.commit()
 
     return ix
-
 # -------------------------------
 # Search function
 # -------------------------------
