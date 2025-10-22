@@ -5,7 +5,7 @@ import chardet
 from .openai import GibsonMetadataInference
 import re
 import json
-import os
+import os, traceback
 from dotenv import load_dotenv
 from project.models import Transcript
 import spacy
@@ -539,41 +539,37 @@ def clean_token(t: str) -> str:
 # CONFIGURATION FUNCTION
 # -----------------------------
 def configure_index(docs_list, index_dir):
-    """
-    Create or open a Whoosh index, and add docs_list to it.
-    """
-    # Ensure directory exists
-    os.makedirs(index_dir, exist_ok=True)
+    try:
+        os.makedirs(index_dir, exist_ok=True)
 
-    # Define schema
-    schema = Schema(
-        id=ID(stored=True, unique=True),
-        title=TEXT(stored=True),
-        content=TEXT(stored=True)
-    )
+        schema = Schema(
+            id=ID(stored=True, unique=True),
+            title=TEXT(stored=True),
+            content=TEXT(stored=True)
+        )
 
-    # Check if index exists, otherwise create it
-    if not index.exists_in(index_dir):
-        print("⚙️ Creating new Whoosh index...")
-        ix = index.create_in(index_dir, schema)
-    else:
-        print("📂 Opening existing Whoosh index...")
-        ix = index.open_dir(index_dir)
+        if not index.exists_in(index_dir):
+            print("⚙️ Creating new Whoosh index...")
+            ix = index.create_in(index_dir, schema)
+        else:
+            print("📂 Opening existing Whoosh index...")
+            ix = index.open_dir(index_dir)
 
-    # Write docs into index
-    writer = ix.writer()
-    for doc in docs_list:
-        try:
+        writer = ix.writer()
+        for doc in docs_list:
             writer.update_document(
                 id=str(doc.get("id", "")),
                 title=doc.get("title", ""),
                 content=doc.get("content", "")
             )
-        except Exception as e:
-            print(f"⚠️ Error adding doc {doc}: {e}")
-    writer.commit()
+        writer.commit()
 
-    return ix
+        return ix
+
+    except Exception as e:
+        print("❌ ERROR in configure_index:")
+        traceback.print_exc()  # ✅ prints full stack trace in logs
+        raise e  # re-raise to propagate the error
 # -------------------------------
 # Search function
 # -------------------------------
