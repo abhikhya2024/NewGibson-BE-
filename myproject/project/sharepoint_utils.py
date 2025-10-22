@@ -20,6 +20,7 @@ from whoosh.query import FuzzyTerm, Or as OrQuery, And as AndQuery, Prefix
 from rapidfuzz import fuzz
 import shutil
 import time
+from whoosh.index import LockError
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
