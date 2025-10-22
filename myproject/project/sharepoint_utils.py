@@ -21,6 +21,8 @@ from rapidfuzz import fuzz
 import shutil
 import time
 from whoosh.index import LockError
+import fcntl
+from whoosh.fields import Schema, TEXT, ID
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
