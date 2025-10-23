@@ -622,6 +622,11 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
             "witness_name": _witness_name,
         })
 
+    # ✅ Add your debug prints here
+    print(f"📦 Indexing {len(valid_docs)} documents...")
+    for d in valid_docs[:5]:
+        print("   →", d)
+        
     if not valid_docs:
         raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
 
