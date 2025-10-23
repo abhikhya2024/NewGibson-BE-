@@ -1053,14 +1053,22 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             with io.StringIO() as buf, redirect_stdout(buf):
                 results = search_documents(ix, q3, mode=mode3)
                 # Print results for debugging
+                results_json = []
+
                 for hit in results:
-                    print(f"ID: {hit['id']} | Transcript: {hit.get('transcript_name', '')} | Witness: {hit.get('witness_name', '')}")
-                printed_output = buf.getvalue()
+                     results_json.append({
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                    })
 
             return Response({
                 "query": q3,
                 "mode": mode3,
-                "results": printed_output
+                "results": results_json
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
