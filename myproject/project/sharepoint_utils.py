@@ -624,6 +624,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 
     # ✅ Add your debug prints here
     print(f"📦 Indexing {len(valid_docs)} documents...")
+    logger.info(f"📦 Indexing {len(valid_docs)} documents...//////////////////////////////////////////////////")
+
     for d in valid_docs[:5]:
         print("   →", d)
         
