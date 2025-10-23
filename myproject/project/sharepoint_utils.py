@@ -683,7 +683,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 # -------------------------------
 # Search function
 # -------------------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=100):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=None, sortedby="id"):
     """
     Search Whoosh index efficiently with fuzzy, boolean, and exact modes.
     
