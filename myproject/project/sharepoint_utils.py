@@ -585,8 +585,11 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
     # Prepare schema
     schema = Schema(
         id=ID(stored=True, unique=True),
-        title=TEXT(stored=True),
-        content=TEXT(stored=True)
+        question=TEXT(stored=True),
+        answer=TEXT(stored=True),
+        cite=TEXT(stored=True),
+        transcript_name=TEXT(stored=True),
+        witness_name=TEXT(stored=True),
     )
 
     # Validate/normalize docs_list
@@ -594,12 +597,33 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
     for doc in docs_list:
         try:
             _id = str(doc.get("id", "")).strip()
-            _title = str(doc.get("title", "")).strip()
-            _content = str(doc.get("content", "")).strip()
+            _question = str(doc.get("question", "")).strip()
+            _answer = str(doc.get("answer", "")).strip()
+            _cite = str(doc.get("cite", "")).strip()
+            _transcript_name = str(doc.get("transcript_name", "")).strip()
+            _witness_name = str(doc.get("witness_name", "")).strip()
         except Exception:
             continue
-        if _id and _content:
-            valid_docs.append({"id": _id, "title": _title, "content": _content})
+
+        # Require an id and at least one non-empty searchable field
+        if not _id:
+            continue
+
+        if not (_question or _answer or _cite or _transcript_name or _witness_name):
+            # skip documents that have no useful content to index
+            continue
+
+        valid_docs.append({
+            "id": _id,
+            "question": _question,
+            "answer": _answer,
+            "cite": _cite,
+            "transcript_name": _transcript_name,
+            "witness_name": _witness_name,
+        })
+
+    if not valid_docs:
+        raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
 
     if not valid_docs:
         raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
@@ -619,8 +643,14 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
         # Write documents (use ix.writer() which still uses its own Whoosh locking)
         with ix.writer() as writer:
             for doc in valid_docs:
-                writer.update_document(id=doc["id"], title=doc["title"], content=doc["content"])
-
+                writer.update_document(
+                    id=doc["id"],
+                    question=doc.get("question", ""),
+                    answer=doc.get("answer", ""),
+                    cite=doc.get("cite", ""),
+                    transcript_name=doc.get("transcript_name", ""),
+                    witness_name=doc.get("witness_name", ""),
+                )
         # done - release lock in finally
         return ix
 
@@ -651,7 +681,11 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
 
     results = []
     with ix.searcher() as searcher:
-        parser = MultifieldParser(["title", "content"], schema=ix.schema, group=OrGroup)
+        parser = MultifieldParser(
+            ["question", "answer", "cite", "transcript_name", "witness_name"],
+            schema=ix.schema,
+            group=OrGroup,
+        )
 
         # ---------------- FUZZY MODE ----------------
         if mode == "fuzzy":
@@ -660,16 +694,24 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
                 if term.endswith("*"):
                     base = term.rstrip("*")
                     if base:
-                        q_title = Prefix("title", base)
-                        q_content = Prefix("content", base)
-                        queries.append(OrQuery([q_title, q_content]))
+                        queries.append(OrQuery([
+                            Prefix("question", base),
+                            Prefix("answer", base),
+                            Prefix("cite", base),
+                            Prefix("transcript_name", base),
+                            Prefix("witness_name", base),
+                        ]))
                     continue
                 if re.search(r'\d', term):
                     continue
                 edits = max_edits if len(term) >= 4 else min(1, max_edits)
-                q_title = FuzzyTerm("title", term, maxdist=edits)
-                q_content = FuzzyTerm("content", term, maxdist=edits)
-                queries.append(OrQuery([q_title, q_content]))
+                queries.append(OrQuery([
+                    FuzzyTerm("question", term, maxdist=edits),
+                    FuzzyTerm("answer", term, maxdist=edits),
+                    FuzzyTerm("cite", term, maxdist=edits),
+                    FuzzyTerm("transcript_name", term, maxdist=edits),
+                    FuzzyTerm("witness_name", term, maxdist=edits),
+                ]))
 
             if queries:
                 final_query = AndQuery(queries)
@@ -679,13 +721,20 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
 
             candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
 
-            # Numeric ID substring search
+           # Numeric ID substring search across all fields
             if any(re.search(r'\d', t) for t in clean_terms):
                 all_docs = list(searcher.documents())
                 for d in all_docs:
-                    title_l = d["title"].lower()
+                    combined_fields = " ".join([
+                        d.get("question", "").lower(),
+                        d.get("answer", "").lower(),
+                        d.get("cite", "").lower(),
+                        d.get("transcript_name", "").lower(),
+                        d.get("witness_name", "").lower(),
+                    ])
+
                     if all(
-                        (t in title_l or t.replace("-", "") in title_l.replace("-", ""))
+                        (t in combined_fields or t.replace("-", "") in combined_fields.replace("-", ""))
                         for t in clean_terms if re.search(r'\d', t)
                     ):
                         candidate_hits.append(d)
@@ -693,7 +742,13 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
             # Strict AND filter
             seen = set()
             for hit in candidate_hits:
-                combined = f"{hit['title'].lower()} {hit['content'].lower()}"
+                combined = " ".join([
+                    hit.get("question", "").lower(),
+                    hit.get("answer", "").lower(),
+                    hit.get("cite", "").lower(),
+                    hit.get("transcript_name", "").lower(),
+                    hit.get("witness_name", "").lower(),
+                ])                
                 if all(
                     (t.rstrip("*") in combined)
                     or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))

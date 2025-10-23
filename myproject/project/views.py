@@ -1025,13 +1025,20 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
         docs_list = []
         for t in testimonies:
-            filename = t.file.name if t.file else ""
-            content = f"{t.question or ''} {t.answer or ''}".strip()
-            if content:  # skip empty documents
+            transcript_name = t.file.name if t.file else ""
+            witness_name = getattr(t.file, "witness_name", "") or ""
+            question = t.question or ""
+            answer = t.answer or ""
+            cite = t.cite or ""
+
+            if question.strip() or answer.strip():
                 docs_list.append({
                     "id": str(t.id),
-                    "title": filename,
-                    "content": content
+                    "question": question.strip(),
+                    "answer": answer.strip(),
+                    "cite": cite.strip(),
+                    "transcript_name": transcript_name.strip(),
+                    "witness_name": witness_name.strip(),
                 })
 
         # Step 3: Index directory
@@ -1047,7 +1054,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 results = search_documents(ix, q3, mode=mode3)
                 # Print results for debugging
                 for hit in results:
-                    print(f"ID: {hit['id']} | Title: {hit['title']}")
+                    print(f"ID: {hit['id']} | Transcript: {hit.get('transcript_name', '')} | Witness: {hit.get('witness_name', '')}")
                 printed_output = buf.getvalue()
 
             return Response({
