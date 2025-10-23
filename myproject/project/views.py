@@ -1015,7 +1015,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
-        q3 = request.data.get("q3", "").strip()
+        q3 = request.data.get("q3", "").strip().lower()
         mode3 = request.data.get("mode3", "exact").lower()
 
         # Step 1: Get valid transcript IDs
