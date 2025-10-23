@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint,search_documents_batches,  get_token, get_access_token, configure_index, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token, configure_index, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -1019,9 +1019,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         mode3 = request.data.get("mode3", "exact").lower()
         page = int(request.data.get("page", 1))
         page_size = int(request.data.get("page_size", 50))
-
-        # Step 1: Fetch testimonies
+        start = (page - 1) * page_size
+        end = start + page_size
+        # Step 1: Get valid transcript IDs
         valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
+
+        # Step 2: Fetch testimonies
         testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
         docs_list = []
         for t in testimonies:
@@ -1030,6 +1033,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             question = t.question or ""
             answer = t.answer or ""
             cite = t.cite or ""
+
             if question.strip() or answer.strip():
                 docs_list.append({
                     "id": str(t.id),
@@ -1040,29 +1044,34 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "witness_name": witness_name.strip(),
                 })
 
-        # Step 2: Configure Whoosh index
+        # Step 3: Index directory
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
         INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-        ix = configure_index(docs_list, INDEX_DIR)
 
         try:
-            # Step 3: Stream results
-            batch_generator = search_documents_batches(ix, q3, mode=mode3, batch_size=500)
-            all_results = list(batch_generator)  # generator fetches results efficiently
+            # Step 4: Configure index
+            ix = configure_index(docs_list, INDEX_DIR)
 
-            # Step 4: Paginate
-            total_results = len(all_results)
-            start = (page - 1) * page_size
-            end = start + page_size
-            paged_results = all_results[start:end]
+            # Step 5: Perform search
+            with io.StringIO() as buf, redirect_stdout(buf):
+                results = search_documents(ix, q3, mode=mode3)
+                # Print results for debugging
+                results_json = []
+
+                for hit in results:
+                     results_json.append({
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                    })
 
             return Response({
                 "query": q3,
                 "mode": mode3,
-                "page": page,
-                "page_size": page_size,
-                "total_results": total_results,
-                "results": paged_results
+                "results": results_json
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
