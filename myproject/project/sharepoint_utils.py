@@ -628,6 +628,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 
     for d in valid_docs[:5]:
         print("   →", d)
+        logger.info(f"📦 Indexing {d} documents...//////////////////////////////////////////////////")
+
         
     if not valid_docs:
         raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
@@ -642,7 +644,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
         # At this point we hold the lock.
         # Create/open index safely (now only one process is here)
         if not index.exists_in(index_dir):
-            print("⚙️ Creating new Whoosh index...")
+            logger.info("⚙️ Creating new Whoosh index...")
             ix = index.create_in(index_dir, schema)
         else:
             ix = index.open_dir(index_dir)
@@ -658,6 +660,9 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
                     transcript_name=doc.get("transcript_name", ""),
                     witness_name=doc.get("witness_name", ""),
                 )
+
+        logger.info(f"📦{ix} documents...//////////////////////////////////////////////////")
+
         # done - release lock in finally
         return ix
 
