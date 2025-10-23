@@ -682,103 +682,113 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 # -------------------------------
 # Search function
 # -------------------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND"):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=100):
+    """
+    Search Whoosh index efficiently with fuzzy, boolean, and exact modes.
+    
+    Args:
+        ix: Whoosh index object
+        query_text: string query
+        mode: 'fuzzy', 'boolean', or 'exact'
+        max_edits: max distance for fuzzy search
+        join_with: default join operator for exact search
+        limit: max number of results to fetch
+
+    Returns:
+        List of dicts with search results
+    """
     query_text = (query_text or "").strip()
     if not query_text:
-        print("Empty query.")
+        logger.info("Empty query.")
         return []
 
     raw_terms = [t for t in re.split(r'\s+', query_text) if t]
     clean_terms = [t for t in raw_terms if t]
-    logger.info(f"Clean terms {raw_terms} and {clean_terms}")
+    logger.info(f"Clean terms: {clean_terms}")
+
     results = []
+
     with ix.searcher() as searcher:
         parser = MultifieldParser(
             ["question", "answer", "cite", "transcript_name", "witness_name"],
             schema=ix.schema,
-            group=OrGroup,
+            group=OrGroup
         )
 
         # ---------------- FUZZY MODE ----------------
-        if mode == "fuzzy":
+        if mode.lower() == "fuzzy":
             queries = []
-            logger.info(f"Inside fuzzy")
-
             for term in clean_terms:
-                if term.endswith("*"):
-                    base = term.rstrip("*")
+                term_lower = term.lower()
+                # Prefix search for wildcard
+                if term_lower.endswith("*"):
+                    base = term_lower.rstrip("*")
                     if base:
-                        queries.append(OrQuery([
+                        queries.append(Or([
                             Prefix("question", base),
                             Prefix("answer", base),
                             Prefix("cite", base),
                             Prefix("transcript_name", base),
-                            Prefix("witness_name", base),
+                            Prefix("witness_name", base)
                         ]))
                     continue
-                if re.search(r'\d', term):
+                # Skip numeric terms for fuzzy
+                if re.search(r'\d', term_lower):
                     continue
-                edits = max_edits if len(term) >= 4 else min(1, max_edits)
-                queries.append(OrQuery([
-                    FuzzyTerm("question", term, maxdist=edits),
-                    FuzzyTerm("answer", term, maxdist=edits),
-                    FuzzyTerm("cite", term, maxdist=edits),
-                    FuzzyTerm("transcript_name", term, maxdist=edits),
-                    FuzzyTerm("witness_name", term, maxdist=edits),
+                edits = max_edits if len(term_lower) >= 4 else min(1, max_edits)
+                queries.append(Or([
+                    FuzzyTerm("question", term_lower, maxdist=edits),
+                    FuzzyTerm("answer", term_lower, maxdist=edits),
+                    FuzzyTerm("cite", term_lower, maxdist=edits),
+                    FuzzyTerm("transcript_name", term_lower, maxdist=edits),
+                    FuzzyTerm("witness_name", term_lower, maxdist=edits)
                 ]))
 
             if queries:
-
-                final_query = AndQuery(queries)
-                logger.info(f"final_query {final_query} and {queries}")
-
-                whoosh_results = searcher.search(final_query, limit=None)
-                logger.info(f"whoosh_results {whoosh_results}")
-
+                final_query = And(queries)
+                whoosh_results = searcher.search(final_query, limit=limit)
             else:
-                whoosh_results = searcher.search(parser.parse(""), limit=None)
-                logger.info(f"whoosh_results {whoosh_results}")
+                whoosh_results = searcher.search(parser.parse(""), limit=limit)
 
-            candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
-            logger.info(f"candidate_hits {candidate_hits}")
+            # Numeric terms search
+            numeric_terms = [t for t in clean_terms if re.search(r'\d', t)]
+            if numeric_terms:
+                numeric_queries = []
+                for t in numeric_terms:
+                    t_lower = t.lower()
+                    numeric_queries.append(Or([
+                        Term("question", t_lower),
+                        Term("answer", t_lower),
+                        Term("cite", t_lower),
+                        Term("transcript_name", t_lower),
+                        Term("witness_name", t_lower)
+                    ]))
+                if numeric_queries:
+                    num_query = And(numeric_queries)
+                    numeric_results = searcher.search(num_query, limit=limit)
+                    # Merge numeric results
+                    whoosh_results = list(set(whoosh_results) | set(numeric_results))
 
-           # Numeric ID substring search across all fields
-            if any(re.search(r'\d', t) for t in clean_terms):
-                all_docs = list(searcher.documents())
-                for d in all_docs:
-                    combined_fields = " ".join([
-                        d.get("question", "").lower(),
-                        d.get("answer", "").lower(),
-                        d.get("cite", "").lower(),
-                        d.get("transcript_name", "").lower(),
-                        d.get("witness_name", "").lower(),
-                    ])
-
-                    if all(
-                        (t in combined_fields or t.replace("-", "") in combined_fields.replace("-", ""))
-                        for t in clean_terms if re.search(r'\d', t)
-                    ):
-                        candidate_hits.append(d)
-            logger.info(f"candidate_hits {candidate_hits}")
-            # Strict AND filter
+            # Post-filter for strict AND + partial ratio
             seen = set()
-            for hit in candidate_hits:
+            for hit in whoosh_results:
                 combined = " ".join([
                     hit.get("question", "").lower(),
                     hit.get("answer", "").lower(),
                     hit.get("cite", "").lower(),
                     hit.get("transcript_name", "").lower(),
-                    hit.get("witness_name", "").lower(),
-                ])                
+                    hit.get("witness_name", "").lower()
+                ])
                 if all(
-                    (t.rstrip("*") in combined)
-                    or (t.replace("-", "").rstrip("*") in combined.replace("-", ""))
-                    or (fuzz.partial_ratio(t.rstrip("*"), combined) >= 70)
+                    (t.rstrip("*").lower() in combined) or
+                    (t.replace("-", "").rstrip("*").lower() in combined.replace("-", "")) or
+                    (fuzz.partial_ratio(t.rstrip("*").lower(), combined) >= 70)
                     for t in clean_terms
                 ):
                     if hit["id"] not in seen:
                         seen.add(hit["id"])
                         results.append(hit)
+
 
         # ---------------- BOOLEAN MODE ----------------
         elif mode == "boolean":
