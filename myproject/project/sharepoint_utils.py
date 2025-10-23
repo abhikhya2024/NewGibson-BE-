@@ -23,6 +23,7 @@ import time
 from whoosh.index import LockError
 import fcntl
 from whoosh.fields import Schema, TEXT, ID
+from whoosh.query import Or
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
