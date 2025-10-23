@@ -690,7 +690,7 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
 
     raw_terms = [t for t in re.split(r'\s+', query_text) if t]
     clean_terms = [t for t in raw_terms if t]
-
+    logger.info(f"Clean terms {raw_terms} and {clean_terms}")
     results = []
     with ix.searcher() as searcher:
         parser = MultifieldParser(
@@ -702,6 +702,8 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
         # ---------------- FUZZY MODE ----------------
         if mode == "fuzzy":
             queries = []
+            logger.info(f"Inside fuzzy")
+
             for term in clean_terms:
                 if term.endswith("*"):
                     base = term.rstrip("*")
