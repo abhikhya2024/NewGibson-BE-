@@ -728,12 +728,19 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
                 ]))
 
             if queries:
+
                 final_query = AndQuery(queries)
+                logger.info(f"final_query {final_query} and {queries}")
+
                 whoosh_results = searcher.search(final_query, limit=None)
+                logger.info(f"whoosh_results {whoosh_results}")
+
             else:
                 whoosh_results = searcher.search(parser.parse(""), limit=None)
+                logger.info(f"whoosh_results {whoosh_results}")
 
             candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
+            logger.info(f"candidate_hits {candidate_hits}")
 
            # Numeric ID substring search across all fields
             if any(re.search(r'\d', t) for t in clean_terms):
@@ -752,7 +759,7 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
                         for t in clean_terms if re.search(r'\d', t)
                     ):
                         candidate_hits.append(d)
-
+            logger.info(f"candidate_hits {candidate_hits}")
             # Strict AND filter
             seen = set()
             for hit in candidate_hits:
@@ -794,8 +801,9 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
 
             q = parser.parse(qstring)
             results = searcher.search(q, limit=None)
+            logger.info(f"results {results}")
+
 
         else:
             raise ValueError("Invalid search mode.")
-
     return results
