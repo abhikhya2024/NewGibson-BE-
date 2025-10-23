@@ -782,25 +782,39 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND")
 
         # ---------------- BOOLEAN MODE ----------------
         elif mode == "boolean":
+            # If the query contains AND, OR, NOT, let Whoosh parse it directly
             if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
-                tokens = re.split(r'([ \(\)])', query_text)
-                processed_tokens = []
-                for tok in tokens:
-                    if tok.upper() in ["AND", "OR", "NOT", "(", ")"] or tok.strip() == "":
-                        processed_tokens.append(tok)
-                    else:
-                        subtoks = re.split(r'[.\-_]', tok)
-                        subtoks = [s for s in subtoks if s]
-                        if len(subtoks) > 1:
-                            processed_tokens.append("(" + " OR ".join(subtoks) + ")")
-                        else:
-                            processed_tokens.append(tok)
-                qstring = "".join(processed_tokens)
+                qstring = query_text  # Keep original boolean operators
             else:
+                # If no explicit boolean operators, join terms with the default
                 qstring = f" {join_with} ".join(clean_terms)
 
+            # Parse with Whoosh
             q = parser.parse(qstring)
-            results = searcher.search(q, limit=None)
+            whoosh_results = searcher.search(q, limit=None)
+
+            candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
+
+            # Strict post-filter (optional, keep fuzzy-like matching)
+            results = []
+            seen = set()
+            for hit in candidate_hits:
+                combined = " ".join([
+                    hit.get("question", "").lower(),
+                    hit.get("answer", "").lower(),
+                    hit.get("cite", "").lower(),
+                    hit.get("transcript_name", "").lower(),
+                    hit.get("witness_name", "").lower(),
+                ])
+                if all(
+                    (t.rstrip("*").lower() in combined)
+                    or (t.replace("-", "").rstrip("*").lower() in combined.replace("-", ""))
+                    for t in clean_terms
+                ):
+                    if hit["id"] not in seen:
+                        seen.add(hit["id"])
+                        results.append(hit)
+
             logger.info(f"results {results}")
 
 
