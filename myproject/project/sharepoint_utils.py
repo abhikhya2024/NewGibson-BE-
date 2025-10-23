@@ -683,7 +683,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 # -------------------------------
 # Search function
 # -------------------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=None, sortedby="id"):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=None, sortedby="id",  batch_size=500):
     """
     Search Whoosh index efficiently with fuzzy, boolean, and exact modes.
     
@@ -747,6 +747,21 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
 
             if queries:
                 final_query = And(queries)
+                offset = 0
+                while True:
+                    batch = searcher.search(final_query, limit=batch_size, offset=offset)
+                    if not batch:
+                        break
+                    for hit in batch:
+                        yield {
+                            "id": hit.get("id"),
+                            "transcript_name": hit.get("transcript_name", ""),
+                            "witness_name": hit.get("witness_name", ""),
+                            "question": hit.get("question", ""),
+                            "answer": hit.get("answer", ""),
+                            "cite": hit.get("cite", ""),
+                        }
+                    offset += batch_size
                 whoosh_results = searcher.search(final_query, limit=limit)
             else:
                 whoosh_results = searcher.search(parser.parse(""), limit=limit)
@@ -832,3 +847,70 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
         else:
             raise ValueError("Invalid search mode.")
     return results
+
+def search_documents_batches(ix, query_text, mode="fuzzy", batch_size=500):
+    """
+    Generator to yield search results in batches from Whoosh index.
+    """
+    query_text = (query_text or "").strip()
+    if not query_text:
+        return
+
+    raw_terms = [t for t in re.split(r'\s+', query_text) if t]
+    clean_terms = [t for t in raw_terms if t]
+
+    with ix.searcher() as searcher:
+        parser = MultifieldParser(
+            ["question", "answer", "cite", "transcript_name", "witness_name"],
+            schema=ix.schema,
+            group=OrGroup
+        )
+
+        # Build Whoosh query based on mode
+        if mode == "fuzzy":
+            queries = []
+            for term in clean_terms:
+                term_lower = term.lower()
+                if term_lower.endswith("*"):
+                    base = term_lower.rstrip("*")
+                    if base:
+                        queries.append(Or([
+                            Prefix("question", base),
+                            Prefix("answer", base),
+                            Prefix("cite", base),
+                            Prefix("transcript_name", base),
+                            Prefix("witness_name", base)
+                        ]))
+                    continue
+                if re.search(r'\d', term_lower):
+                    continue
+                edits = 2 if len(term_lower) >= 4 else 1
+                queries.append(Or([
+                    FuzzyTerm("question", term_lower, maxdist=edits),
+                    FuzzyTerm("answer", term_lower, maxdist=edits),
+                    FuzzyTerm("cite", term_lower, maxdist=edits),
+                    FuzzyTerm("transcript_name", term_lower, maxdist=edits),
+                    FuzzyTerm("witness_name", term_lower, maxdist=edits)
+                ]))
+            final_query = And(queries) if queries else parser.parse("")
+        elif mode == "boolean":
+            final_query = parser.parse(query_text)
+        else:  # exact
+            final_query = parser.parse(" ".join(clean_terms))
+
+        # Stream results in batches
+        offset = 0
+        while True:
+            batch = searcher.search(final_query, limit=batch_size, offset=offset)
+            if not batch:
+                break
+            for hit in batch:
+                yield {
+                    "id": hit.get("id"),
+                    "transcript_name": hit.get("transcript_name", ""),
+                    "witness_name": hit.get("witness_name", ""),
+                    "question": hit.get("question", ""),
+                    "answer": hit.get("answer", ""),
+                    "cite": hit.get("cite", ""),
+                }
+            offset += batch_size
