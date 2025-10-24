@@ -15,7 +15,7 @@ from whoosh.index import create_in
 from whoosh.fields import Schema, TEXT, ID
 from whoosh import index
 from whoosh.analysis import RegexTokenizer, LowercaseFilter
-from whoosh.qparser import MultifieldParser, OrGroup
+from whoosh.qparser import MultifieldParser, OrGroup, AndGroup
 from whoosh.query import FuzzyTerm, Or as OrQuery, And as AndQuery, Prefix
 from rapidfuzz import fuzz
 import shutil
