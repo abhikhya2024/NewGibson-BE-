@@ -27,6 +27,9 @@ from whoosh.query import Or, And, Term
 from whoosh.qparser import QueryParser
 from whoosh.query import FuzzyTerm, Or, And, Prefix
 import re
+import fcntl, time, os
+from whoosh import index
+from whoosh.query import Every
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -580,88 +583,31 @@ def _release_file_lock(fh):
 
 
 # --------------------- INDEX CREATION ---------------------
-def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fields=None):
-    """
-    Create/open Whoosh index and add docs_list while holding an OS-level file lock.
-    Supports specifying which fields to index for faster performance.
-    """
-    import fcntl, time, os
-    from whoosh.fields import Schema, TEXT, ID
-    from whoosh import index
+def get_or_create_index(index_dir):
+    schema = Schema(
+        id=ID(stored=True, unique=True),
+        question=TEXT(stored=True),
+        answer=TEXT(stored=True),
+        transcript_name=TEXT(stored=True),
+        witness_name=TEXT(stored=True),
+        cite=TEXT(stored=True),
+    )
 
-    os.makedirs(index_dir, exist_ok=True)
-    lock_path = os.path.join(index_dir, lock_filename)
+    if not os.path.exists(index_dir):
+        os.makedirs(index_dir)
 
-    # ✅ Only index transcript_name and id by default
-    fields = fields or ["id", "question", "answer"]
+    # ✅ Create only if index doesn’t exist
+    if not index.exists_in(index_dir):
+        ix = index.create_in(index_dir, schema)
+        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
+    else:
+        ix = index.open_dir(index_dir)
+        logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
 
-    # ✅ Build schema dynamically based on fields
-    schema_fields = {}
-    for field in fields:
-        if field == "id":
-            schema_fields["id"] = ID(stored=True, unique=True)
-        else:
-            schema_fields[field] = TEXT(stored=True)
-    schema = Schema(**schema_fields)
-
-    # ✅ Filter valid documents
-    valid_docs = []
-    for doc in docs_list:
-        _id = str(doc.get("id", "")).strip()
-        if not _id:
-            continue
-        entry = {"id": _id}
-        has_value = False
-        for field in fields:
-            if field == "id":
-                continue
-            val = str(doc.get(field, "")).strip()
-            entry[field] = val
-            if val:
-                has_value = True
-        if has_value:
-            valid_docs.append(entry)
-
-    if not valid_docs:
-        raise ValueError("No valid documents to index.")
-
-    # ✅ Acquire file lock
-    start = time.time()
-    fh = open(lock_path, "a+")
-    while True:
-        try:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            if (time.time() - start) > 30:
-                fh.close()
-                raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
-            time.sleep(0.2)
-
-    try:
-        # ✅ Create or open index
-        if not index.exists_in(index_dir):
-            ix = index.create_in(index_dir, schema)
-        else:
-            ix = index.open_dir(index_dir)
-
-        # ✅ Write all documents
-        with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
-            for doc in valid_docs:
-                writer.update_document(**doc)
-
-        return ix
-
-    finally:
-        try:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-            fh.close()
-        except Exception:
-            pass
+    return ix
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-from whoosh.query import Every
 
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                      page=1, page_size=200, search_fields=None):
@@ -671,7 +617,6 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
     - Supports 'fuzzy', 'boolean', and 'exact' search modes.
     - Returns results for the requested page (batch).
     """
-    from whoosh.query import Every
 
     query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
