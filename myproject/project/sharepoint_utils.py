@@ -547,14 +547,13 @@ def clean_token(t: str) -> str:
 FILELOCK_POLL_INTERVAL = 0.2   # seconds between attempts to acquire lock
 FILELOCK_TIMEOUT = 30          # overall seconds to wait for the lock
 
+# --------------------- FILE LOCK HELPERS ---------------------
 def _acquire_file_lock(lock_path, timeout=FILELOCK_TIMEOUT, poll_interval=FILELOCK_POLL_INTERVAL):
-    """Open lock file and acquire exclusive flock. Returns open file handle (must be closed to release)."""
     start = time.time()
-    fh = open(lock_path, "a+")  # keep file descriptor open, create file if missing
+    fh = open(lock_path, "a+")
     while True:
         try:
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            # acquired
             return fh
         except BlockingIOError:
             if (time.time() - start) >= timeout:
@@ -564,6 +563,7 @@ def _acquire_file_lock(lock_path, timeout=FILELOCK_TIMEOUT, poll_interval=FILELO
         except Exception:
             fh.close()
             raise
+
 
 def _release_file_lock(fh):
     try:
@@ -575,15 +575,16 @@ def _release_file_lock(fh):
     except Exception:
         pass
 
+
+# --------------------- INDEX CREATION ---------------------
 def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
     """
-    Create/open Whoosh index and add docs_list while holding an OS-level file lock
-    so only one process at a time writes the index.
+    Create/open Whoosh index and add docs_list while holding an OS-level file lock.
+    Called rarely — not on every search.
     """
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
 
-    # Prepare schema
     schema = Schema(
         id=ID(stored=True, unique=True),
         question=TEXT(stored=True),
@@ -593,120 +594,62 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
         witness_name=TEXT(stored=True),
     )
 
-    # Validate/normalize docs_list
     valid_docs = []
     for doc in docs_list:
-        try:
-            _id = str(doc.get("id", "")).strip()
-            _question = str(doc.get("question", "")).strip()
-            _answer = str(doc.get("answer", "")).strip()
-            _cite = str(doc.get("cite", "")).strip()
-            _transcript_name = str(doc.get("transcript_name", "")).strip()
-            _witness_name = str(doc.get("witness_name", "")).strip()
-        except Exception:
-            continue
-
-        # Require an id and at least one non-empty searchable field
+        _id = str(doc.get("id", "")).strip()
         if not _id:
             continue
 
-        if not (_question or _answer or _cite or _transcript_name or _witness_name):
-            # skip documents that have no useful content to index
+        fields = {k: str(doc.get(k, "")).strip() for k in ["question", "answer", "cite", "transcript_name", "witness_name"]}
+        if not any(fields.values()):
             continue
 
-        valid_docs.append({
-            "id": _id,
-            "question": _question,
-            "answer": _answer,
-            "cite": _cite,
-            "transcript_name": _transcript_name,
-            "witness_name": _witness_name,
-        })
-
-    # ✅ Add your debug prints here
-    print(f"📦 Indexing {len(valid_docs)} documents...")
-    logger.info(f"📦 Indexing {len(valid_docs)} documents...//////////////////////////////////////////////////")
-
-    for d in valid_docs[:5]:
-        print("   →", d)
-        logger.info(f"📦 Indexing {d} documents...//////////////////////////////////////////////////")
-
-        
-    if not valid_docs:
-        raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
+        valid_docs.append({"id": _id, **fields})
 
     if not valid_docs:
-        raise ValueError("No valid documents to index. Aborting to avoid Whoosh errors.")
+        raise ValueError("No valid documents to index.")
 
-    # Acquire host-level file lock so only one process builds/updates index at a time.
+    logger.info(f"📦 Indexing {len(valid_docs)} documents...")
+
     fh = None
     try:
-        fh = _acquire_file_lock(lock_path)   # may raise TimeoutError
-        # At this point we hold the lock.
-        # Create/open index safely (now only one process is here)
+        fh = _acquire_file_lock(lock_path)
         if not index.exists_in(index_dir):
-            logger.info("⚙️ Creating new Whoosh index...")
             ix = index.create_in(index_dir, schema)
         else:
             ix = index.open_dir(index_dir)
 
-        # Write documents (use ix.writer() which still uses its own Whoosh locking)
-        with ix.writer() as writer:
-            for doc in valid_docs:
-                writer.update_document(
-                    id=doc["id"],
-                    question=doc.get("question", ""),
-                    answer=doc.get("answer", ""),
-                    cite=doc.get("cite", ""),
-                    transcript_name=doc.get("transcript_name", ""),
-                    witness_name=doc.get("witness_name", ""),
-                )
-
-        logger.info(f"📦{ix} documents...//////////////////////////////////////////////////")
-
-        # done - release lock in finally
+        writer = ix.writer()
+        for doc in valid_docs:
+            writer.update_document(**doc)
+        writer.commit()
+        logger.info(f"✅ Indexed {len(valid_docs)} documents successfully.")
         return ix
-
     except TimeoutError as te:
-        # Could not acquire file lock in time
-        print("❌ Timeout acquiring index file lock:", str(te))
-        traceback.print_exc()
+        logger.error(f"❌ Timeout acquiring file lock: {te}")
         raise
-    except Exception:
-        print("❌ Unexpected error in configure_index:")
+    except Exception as e:
+        logger.error(f"❌ Error during configure_index: {e}")
         traceback.print_exc()
         raise
     finally:
         if fh:
             _release_file_lock(fh)
 
-# -------------------------------
-# Search function
-# -------------------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", limit=None, sortedby="id",  batch_size=500):
-    """
-    Search Whoosh index efficiently with fuzzy, boolean, and exact modes.
-    
-    Args:
-        ix: Whoosh index object
-        query_text: string query
-        mode: 'fuzzy', 'boolean', or 'exact'
-        max_edits: max distance for fuzzy search
-        join_with: default join operator for exact search
-        limit: max number of results to fetch
 
-    Returns:
-        List of dicts with search results
+# --------------------- SEARCH FUNCTIONS ---------------------
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=500):
+    """
+    Efficient Whoosh search function — yields results in batches.
+    Supports 'fuzzy', 'boolean', and 'exact' search modes.
     """
     query_text = (query_text or "").strip()
     if not query_text:
         logger.info("Empty query.")
         return []
 
-    raw_terms = [t for t in re.split(r'\s+', query_text) if t]
-    clean_terms = [t for t in raw_terms if t]
+    clean_terms = [t for t in re.split(r'\s+', query_text) if t]
     logger.info(f"Clean terms: {clean_terms}")
-
     results = []
 
     with ix.searcher() as searcher:
@@ -716,14 +659,13 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             group=OrGroup
         )
 
-        # ---------------- FUZZY MODE ----------------
+        # -------- FUZZY SEARCH --------
         if mode.lower() == "fuzzy":
             queries = []
             for term in clean_terms:
-                term_lower = term.lower()
-                # Prefix search for wildcard
-                if term_lower.endswith("*"):
-                    base = term_lower.rstrip("*")
+                t = term.lower()
+                if t.endswith("*"):
+                    base = t.rstrip("*")
                     if base:
                         queries.append(Or([
                             Prefix("question", base),
@@ -733,131 +675,87 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                             Prefix("witness_name", base)
                         ]))
                     continue
-                # Skip numeric terms for fuzzy
-                if re.search(r'\d', term_lower):
+                if re.search(r'\d', t):
                     continue
-                edits = max_edits if len(term_lower) >= 4 else min(1, max_edits)
+                edits = max_edits if len(t) >= 4 else 1
                 queries.append(Or([
-                    FuzzyTerm("question", term_lower, maxdist=edits),
-                    FuzzyTerm("answer", term_lower, maxdist=edits),
-                    FuzzyTerm("cite", term_lower, maxdist=edits),
-                    FuzzyTerm("transcript_name", term_lower, maxdist=edits),
-                    FuzzyTerm("witness_name", term_lower, maxdist=edits)
+                    FuzzyTerm("question", t, maxdist=edits),
+                    FuzzyTerm("answer", t, maxdist=edits),
+                    FuzzyTerm("cite", t, maxdist=edits),
+                    FuzzyTerm("transcript_name", t, maxdist=edits),
+                    FuzzyTerm("witness_name", t, maxdist=edits),
                 ]))
 
-            if queries:
-                final_query = And(queries)
-                offset = 0
-                while True:
-                    batch = searcher.search(final_query, limit=batch_size, offset=offset)
-                    if not batch:
-                        break
-                    for hit in batch:
-                        yield {
-                            "id": hit.get("id"),
-                            "transcript_name": hit.get("transcript_name", ""),
-                            "witness_name": hit.get("witness_name", ""),
-                            "question": hit.get("question", ""),
-                            "answer": hit.get("answer", ""),
-                            "cite": hit.get("cite", ""),
-                        }
-                    offset += batch_size
-                whoosh_results = searcher.search(final_query, limit=limit)
-            else:
-                whoosh_results = searcher.search(parser.parse(""), limit=limit)
+            final_query = And(queries) if queries else parser.parse("")
+            offset = 0
+            while True:
+                batch = searcher.search(final_query, limit=batch_size, offset=offset)
+                if not batch:
+                    break
+                for hit in batch:
+                    results.append({
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                    })
+                offset += batch_size
 
-            # Numeric terms search
-            numeric_terms = [t for t in clean_terms if re.search(r'\d', t)]
-            if numeric_terms:
-                numeric_queries = []
-                for t in numeric_terms:
-                    t_lower = t.lower()
-                    numeric_queries.append(Or([
-                        Term("question", t_lower),
-                        Term("answer", t_lower),
-                        Term("cite", t_lower),
-                        Term("transcript_name", t_lower),
-                        Term("witness_name", t_lower)
-                    ]))
-                if numeric_queries:
-                    num_query = And(numeric_queries)
-                    numeric_results = searcher.search(num_query, limit=limit)
-                    # Merge numeric results
-                    whoosh_results = list(set(whoosh_results) | set(numeric_results))
-
-            # Post-filter for strict AND + partial ratio
-            seen = set()
-            for hit in whoosh_results:
-                combined = " ".join([
-                    hit.get("question", "").lower(),
-                    hit.get("answer", "").lower(),
-                    hit.get("cite", "").lower(),
-                    hit.get("transcript_name", "").lower(),
-                    hit.get("witness_name", "").lower()
-                ])
-                if all(
-                    (t.rstrip("*").lower() in combined) or
-                    (t.replace("-", "").rstrip("*").lower() in combined.replace("-", "")) or
-                    (fuzz.partial_ratio(t.rstrip("*").lower(), combined) >= 70)
-                    for t in clean_terms
-                ):
-                    if hit["id"] not in seen:
-                        seen.add(hit["id"])
-                        results.append(hit)
-
-
-        # ---------------- BOOLEAN MODE ----------------
-        elif mode == "boolean":
-            # If the query contains AND, OR, NOT, let Whoosh parse it directly
+        # -------- BOOLEAN SEARCH --------
+        elif mode.lower() == "boolean":
             if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
-                qstring = query_text  # Keep original boolean operators
+                qstring = query_text
             else:
-                # If no explicit boolean operators, join terms with the default
                 qstring = f" {join_with} ".join(clean_terms)
 
-            # Parse with Whoosh
             q = parser.parse(qstring)
-            whoosh_results = searcher.search(q, limit=None)
+            offset = 0
+            while True:
+                batch = searcher.search(q, limit=batch_size, offset=offset)
+                if not batch:
+                    break
+                for hit in batch:
+                    results.append({
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                    })
+                offset += batch_size
 
-            candidate_hits = [hit for hit in whoosh_results] if whoosh_results else []
-
-            # Strict post-filter (optional, keep fuzzy-like matching)
-            results = []
-            seen = set()
-            for hit in candidate_hits:
-                combined = " ".join([
-                    hit.get("question", "").lower(),
-                    hit.get("answer", "").lower(),
-                    hit.get("cite", "").lower(),
-                    hit.get("transcript_name", "").lower(),
-                    hit.get("witness_name", "").lower(),
-                ])
-                if all(
-                    (t.rstrip("*").lower() in combined)
-                    or (t.replace("-", "").rstrip("*").lower() in combined.replace("-", ""))
-                    for t in clean_terms
-                ):
-                    if hit["id"] not in seen:
-                        seen.add(hit["id"])
-                        results.append(hit)
-
-            logger.info(f"results {results}")
-
-
+        # -------- EXACT SEARCH --------
         else:
-            raise ValueError("Invalid search mode.")
+            q = parser.parse(" ".join(clean_terms))
+            offset = 0
+            while True:
+                batch = searcher.search(q, limit=batch_size, offset=offset)
+                if not batch:
+                    break
+                for hit in batch:
+                    results.append({
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                    })
+                offset += batch_size
+
     return results
 
+
 def search_documents_batches(ix, query_text, mode="fuzzy", batch_size=500):
-    """
-    Generator to yield search results in batches from Whoosh index.
-    """
+    """Generator to stream search results in batches for large datasets."""
     query_text = (query_text or "").strip()
     if not query_text:
         return
 
-    raw_terms = [t for t in re.split(r'\s+', query_text) if t]
-    clean_terms = [t for t in raw_terms if t]
+    clean_terms = [t for t in re.split(r'\s+', query_text) if t]
 
     with ix.searcher() as searcher:
         parser = MultifieldParser(
@@ -866,46 +764,31 @@ def search_documents_batches(ix, query_text, mode="fuzzy", batch_size=500):
             group=OrGroup
         )
 
-        # Build Whoosh query based on mode
-        if mode == "fuzzy":
+        if mode.lower() == "boolean":
+            q = parser.parse(query_text)
+        elif mode.lower() == "fuzzy":
             queries = []
             for term in clean_terms:
-                term_lower = term.lower()
-                if term_lower.endswith("*"):
-                    base = term_lower.rstrip("*")
-                    if base:
-                        queries.append(Or([
-                            Prefix("question", base),
-                            Prefix("answer", base),
-                            Prefix("cite", base),
-                            Prefix("transcript_name", base),
-                            Prefix("witness_name", base)
-                        ]))
-                    continue
-                if re.search(r'\d', term_lower):
-                    continue
-                edits = 2 if len(term_lower) >= 4 else 1
+                t = term.lower()
+                edits = 2 if len(t) >= 4 else 1
                 queries.append(Or([
-                    FuzzyTerm("question", term_lower, maxdist=edits),
-                    FuzzyTerm("answer", term_lower, maxdist=edits),
-                    FuzzyTerm("cite", term_lower, maxdist=edits),
-                    FuzzyTerm("transcript_name", term_lower, maxdist=edits),
-                    FuzzyTerm("witness_name", term_lower, maxdist=edits)
+                    FuzzyTerm("question", t, maxdist=edits),
+                    FuzzyTerm("answer", t, maxdist=edits),
+                    FuzzyTerm("cite", t, maxdist=edits),
+                    FuzzyTerm("transcript_name", t, maxdist=edits),
+                    FuzzyTerm("witness_name", t, maxdist=edits)
                 ]))
-            final_query = And(queries) if queries else parser.parse("")
-        elif mode == "boolean":
-            final_query = parser.parse(query_text)
-        else:  # exact
-            final_query = parser.parse(" ".join(clean_terms))
+            q = And(queries)
+        else:
+            q = parser.parse(" ".join(clean_terms))
 
-        # Stream results in batches
         offset = 0
         while True:
-            batch = searcher.search(final_query, limit=batch_size, offset=offset)
+            batch = searcher.search(q, limit=batch_size, offset=offset)
             if not batch:
                 break
-            for hit in batch:
-                yield {
+            yield [
+                {
                     "id": hit.get("id"),
                     "transcript_name": hit.get("transcript_name", ""),
                     "witness_name": hit.get("witness_name", ""),
@@ -913,4 +796,6 @@ def search_documents_batches(ix, query_text, mode="fuzzy", batch_size=500):
                     "answer": hit.get("answer", ""),
                     "cite": hit.get("cite", ""),
                 }
+                for hit in batch
+            ]
             offset += batch_size
