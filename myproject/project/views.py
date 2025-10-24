@@ -1020,7 +1020,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
     def combined_search(self, request):
         """
         Paginated Whoosh-based search on question + answer fields.
-        Fetches results batch-by-batch by incrementing page number.
+        AND logic applied: results must match all provided query fields.
         """
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
@@ -1064,26 +1064,25 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
 
-            # Step 3: Search in batches (incrementing page)
+            # Step 3: Prepare query map (list of tuples)
+            q_text_field_map = []
+            if q1:
+                q_text_field_map.append((q1, ["question", "answer"]))
+            if q3:
+                q_text_field_map.append((q3, ["transcript_name"]))
+
+            logger.info(f"📌 q_text_field_map = {q_text_field_map}")
+
+            # Step 4: Search in batches
             all_results = []
             total_results = 0
             current_page = 1
 
             while True:
-                q_text_field_map = []
-                if q1.strip():
-                    q_text_field_map.append((q1.strip(), ["question", "answer"]))
-                if q3.strip():
-                    q_text_field_map.append((q3.strip(), ["transcript_name"]))
-                # ✅ Optional: remove duplicate fields (just to be safe)
-                for key in q_text_field_map:
-                    q_text_field_map[key] = list(set(q_text_field_map[key]))
-                logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | q_text_field_map={q_text_field_map}")
-                # Fetch this page of results using AND across fields
                 batch_results, batch_total = search_documents(
                     ix,
                     q_text_field_map,
-                    mode=mode1,           # You can adjust mode per field if needed
+                    mode=mode1,           # using mode1 for simplicity; you can extend per-field if needed
                     page=current_page,
                     page_size=page_size
                 )
@@ -1091,19 +1090,17 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 if not batch_results:
                     break  # no more results
 
-                # Extend all_results
                 all_results.extend(batch_results)
                 total_results = batch_total
 
                 logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
 
-                # Stop when all data fetched or limit reached
                 if len(batch_results) < page_size or current_page >= max_pages:
                     break
 
                 current_page += 1
 
-            # Step 4: Format response
+            # Step 5: Format response
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1126,13 +1123,13 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "results": results_json,
             })
 
-
         except TimeoutError as e:
             return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
             import traceback
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
