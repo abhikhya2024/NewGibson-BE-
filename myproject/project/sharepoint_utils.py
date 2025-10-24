@@ -633,27 +633,9 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
-                     page=1, page_size=200):
-    """
-    q_text_field_map: list of (query_text, [fields]) tuples.
-      Example:
-        [
-          ("joey", ["question", "answer"]),
-          ("joey", ["transcript_name"])
-        ]
-
-    Logic:
-      OR inside each field group
-      AND across all query groups
-      → ((question:joey OR answer:joey) AND (transcript_name:joey))
-    """
-
+def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, page_size=200):
     results = []
     total_results = 0
-
-    if not q_text_field_map:
-        q_text_field_map = [("", ["question", "answer"])]
 
     with ix.searcher() as searcher:
 
@@ -661,49 +643,28 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
             return {
                 "id": hit.get("id"),
                 "transcript_name": hit.get("transcript_name", ""),
-                "witness_name": hit.get("witness_name", ""),
                 "question": hit.get("question", ""),
                 "answer": hit.get("answer", ""),
-                "cite": hit.get("cite", ""),
             }
 
         def make_query(text, fields):
             clean_terms = [t for t in re.split(r'\s+', text.strip()) if t]
             if not clean_terms:
-                return Every()
+                return None
 
             term_queries = []
             for term in clean_terms:
-                t = term.lower()
-                # Handle wildcards like 'joe*'
-                if t.endswith("*"):
-                    base = t.rstrip("*")
-                    if base:
-                        term_queries.append(Or([Prefix(f, base) for f in fields]))
-                    continue
+                term = term.lower()
+                term_queries.append(Or([FuzzyTerm(f, term, maxdist=1) for f in fields]))
 
-                # Skip pure numeric tokens
-                if re.search(r'\d', t):
-                    continue
-
-                # Fuzzy search for each field (OR logic within the same group)
-                edits = max_edits if len(t) >= 4 else 1
-                term_queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
-
-            if not term_queries:
-                return None
-
-            # AND all words for this group (e.g., "joey tribbiani" → both must appear)
             return And(term_queries)
 
-        # ✅ Build queries per group
         field_queries = []
-        for text, fields in q_text_field_map:  # <- FIXED HERE
+        for text, fields in q_text_field_map:  # ✅ correct unpacking
             q = make_query(text, fields)
             if q:
                 field_queries.append(q)
 
-        # ✅ Combine all groups with AND
         if not field_queries:
             final_query = Every()
         else:
@@ -711,7 +672,6 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
 
         logger.info(f"✅ FINAL QUERY = {final_query}")
 
-        # -------- PAGINATED SEARCH --------
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
             for hit in whoosh_page:

@@ -1070,8 +1070,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             current_page = 1
 
             while True:
-                q_text_field_map = {}
-
                 q_text_field_map = []
                 if q1.strip():
                     q_text_field_map.append((q1.strip(), ["question", "answer"]))
