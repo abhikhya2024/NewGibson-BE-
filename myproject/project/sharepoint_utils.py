@@ -633,16 +633,20 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy", max_edits=2,
-                         page=1, page_size=200):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
+                     page=1, page_size=200, search_fields=None):
     """
-    Whoosh search with strict AND:
-    - q1 searches ["question","answer"]
-    - q3 searches ["transcript_name"]
-    - Both conditions must be satisfied.
+    Whoosh search function with pagination and sequential multi-field support.
+    - Supports fuzzy, boolean, and exact modes.
+    - If query_text is empty, returns all documents.
+    - If multiple search_fields are provided, runs sequential searches and combines results.
     """
+    query_text = (query_text or "").strip()
     results = []
     total_results = 0
+
+    if not search_fields:
+        search_fields = ["question", "answer"]
 
     with ix.searcher() as searcher:
 
@@ -656,55 +660,70 @@ def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy", max_edi
                 "cite": hit.get("cite", ""),
             }
 
-        subqueries = []
+        # Build parser dynamically
+        parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
 
-        # -------- Q1 on question/answer --------
-        if q1.strip():
-            clean_terms = [t for t in re.split(r'\s+', q1) if t]
-            q_terms = []
-            for term in clean_terms:
-                t = term.lower()
-                edits = max_edits if len(t) >= 4 else 1
-                if mode1.lower() == "fuzzy":
-                    q_terms.append(Or([
-                        FuzzyTerm("question", t, maxdist=edits),
-                        FuzzyTerm("answer", t, maxdist=edits)
+        # Prepare base query (shared logic)
+        def make_query(text, fields):
+            clean_terms = [t for t in re.split(r'\s+', text) if t]
+
+            # ✅ If query is empty → only then return Every()
+            if not clean_terms:
+                return Every()
+
+            # Fuzzy search mode
+            if mode.lower() == "fuzzy":
+                queries = []
+                for term in clean_terms:
+                    t = term.lower()
+                    # Prefix search
+                    if t.endswith("*"):
+                        base = t.rstrip("*")
+                        if base:
+                            queries.append(Or([Prefix(f, base) for f in fields]))
+                        continue
+                    # Skip numbers
+                    if re.search(r'\d', t):
+                        continue
+                    edits = max_edits if len(t) >= 4 else 1
+                    queries.append(Or([
+                        FuzzyTerm(f, t, maxdist=edits) for f in fields
                     ]))
-                else:
-                    q_terms.append(Or([
-                        Prefix("question", t),
-                        Prefix("answer", t)
-                    ]))
-            if q_terms:
-                subqueries.append(And(q_terms))
+                # ✅ Only build if we have real query terms
+                return And(queries) if queries else None
 
-        # -------- Q3 on transcript_name --------
-        if q3.strip():
-            clean_terms = [t for t in re.split(r'\s+', q3) if t]
-            t_terms = []
-            for term in clean_terms:
-                t = term.lower()
-                if mode3.lower() == "fuzzy":
-                    t_terms.append(FuzzyTerm("transcript_name", t, maxdist=max_edits))
-                else:
-                    t_terms.append(Prefix("transcript_name", t))
-            if t_terms:
-                subqueries.append(And(t_terms))
+            # Boolean mode
+            elif mode.lower() == "boolean":
+                qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
+                    else f" {join_with} ".join(clean_terms)
+                return parser.parse(qstring)
 
-        # -------- FINAL QUERY --------
-        if subqueries:
-            final_query = And(subqueries)
-        else:
-            final_query = Every()
+            # Exact match mode
+            else:
+                return parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # -------- PAGINATED SEARCH --------
-        try:
-            whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
-            for hit in whoosh_page:
-                results.append(build_hit(hit))
-            total_results = whoosh_page.total
-        except ValueError:
-            results = []
-            total_results = 0
+        combined_results = []
+        seen_ids = set()
 
+        for field_group in ([search_fields] if len(search_fields) <= 2 else [[f] for f in search_fields]):
+            q = make_query(query_text, field_group)
+
+            # 🚫 Skip invalid or empty queries (don’t return all)
+            if not q or isinstance(q, type(None)):
+                continue
+
+            try:
+                whoosh_page = searcher.search_page(q, page, pagelen=page_size)
+                for hit in whoosh_page:
+                    doc = build_hit(hit)
+                    if doc["id"] not in seen_ids:
+                        combined_results.append(doc)
+                        seen_ids.add(doc["id"])
+                total_results += whoosh_page.total
+            except ValueError:
+                continue
+
+        results = combined_results
+
+    logger.info(f"🔍 Search complete — page {page}, {len(results)} results, total (approx) {total_results}.")
     return results, total_results

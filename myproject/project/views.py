@@ -1,1704 +1,717 @@
-from rest_framework import viewsets
-from .models import Project, Comment, Jurisdiction, ExpertType, Attorney,Highlights, Testimony, Transcript, Witness, WitnessType, WitnessAlignment, WitnessFiles
-from .serializers import ProjectSerializer,CommentSerializer, CombinedTranscriptSearchSerializer,ExpertTypeSerializer, JurisdictionSerializer, AttorneySerializer, TranscriptFuzzySerializer, WitnessFuzzySerializer, HighlightsSerializer, TestimonySerializer, CombinedSearchInputSerializer, TranscriptSerializer,TranscriptNameListInputSerializer, WitnessNameListInputSerializer, WitnessSerializer, WitnessAlignmentSerializer, WitnessTypeSerializer
-from rest_framework.parsers import MultiPartParser
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token,get_or_create_index, index_documents,search_documents_and,  search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
-from user.models import User
-from datetime import datetime
-# from .paginators import CustomPageNumberPagination  # Import your pagination
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework.decorators import api_view
-import inflect
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from elasticsearch import Elasticsearch
-from django.db.models import Q
-from django.db.models.functions import Lower
-import re
-from user.serializers import UserSerializer
-p = inflect.engine()
-es = Elasticsearch("http://localhost:9200")  # Adjust if needed
-from rest_framework.parsers import JSONParser
-from dateutil.parser import parse as parse_date
-from datetime import datetime, timezone, date
-from django.db.models import Count
-import unicodedata
-from collections import defaultdict
-from .tasks import save_testimony_task, index_task, index_transcript_task
-import logging
-from elasticsearch.helpers import bulk
 import requests
+import urllib.parse
+from myapp.models import TranscriptEntry  # Update with your actual app name
+import chardet
+from .openai import GibsonMetadataInference
+import re
+import json
+import os, traceback
+from dotenv import load_dotenv
+from project.models import Transcript
+import spacy
+nlp = spacy.load("en_core_web_sm")
 import msal
-import os
-import io, re, os, shutil
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
-from contextlib import redirect_stdout
-import io
-import zipfile
-from django.http import HttpResponse
+from whoosh.index import create_in
+from whoosh.fields import Schema, TEXT, ID
 from whoosh import index
+from whoosh.analysis import RegexTokenizer, LowercaseFilter
+from whoosh.qparser import MultifieldParser, OrGroup
+from whoosh.query import FuzzyTerm, Or as OrQuery, And as AndQuery, Prefix
+from rapidfuzz import fuzz
+import shutil
+import time
+from whoosh.index import LockError
+import fcntl
+from whoosh.fields import Schema, TEXT, ID
+from whoosh.query import Or, And, Term
+from whoosh.qparser import QueryParser
+from whoosh.query import FuzzyTerm, Or, And, Prefix
+import re
+import fcntl, time, os
+from whoosh import index
+from whoosh.query import Every
 
-SCOPE = ["https://graph.microsoft.com/.default"]
+load_dotenv()
+# Configuration (move to settings or .env for production)
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-SITE_NAME = "DocsGibsonDemo"
+SHAREPOINT_HOST = os.getenv("SHAREPOINT_HOST")
+SITE_PATH1 = "/sites/DocsGibsonDemo"
+FOLDER = "FormattedQA"
+TEXTFILESFOLDER = "OriginalFiles"
+SITE_PATH2 = "/sites/DocsFarrarBallTireMFG"
+FILEMETADATAPATH = "Extras"
+SITE_PATH3 = "/sites/DocsSHB-PM-Proctor"
+JSON_FILENAME = "file_metadata_master.json"
+TAXONOMY_FILENAME = "witness_taxonomy.json"
+SITE_PATH4 = "/sites/DocsSHBPMCummings"
+DB_NAMES = ['default']  # 5 databases
+AUTHORITY = f"https://login.microsoftonline.com/TENANT_ID"
+SCOPE = ["https://graph.microsoft.com/.default"]
+AUTHORITY2 = f"https://login.microsoftonline.com/{TENANT_ID}"
+
+import logging
+logger = logging.getLogger("logging_handler")  # same as views.py
+logger.info("✅ Log from sharepoint_utils.py")
+
+def extract_state(text: str) -> str | None:
+    doc = nlp(text)
+    for ent in doc.ents:
+        if ent.label_ == "GPE":  # Geo-Political Entity
+            return ent.text
+    return None
+
+def get_token():
+    """Get Microsoft Graph access token using client credentials"""
+    app = msal.ConfidentialClientApplication(
+        CLIENT_ID,
+        authority=AUTHORITY2,
+        client_credential=CLIENT_SECRET
+    )
+    result = app.acquire_token_silent(SCOPE, account=None)
+    if not result:
+        result = app.acquire_token_for_client(scopes=SCOPE)
+
+    if "access_token" not in result:
+        raise Exception("Could not obtain token", result.get("error_description"))
+
+    return result["access_token"]
+def get_access_token():
+    url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    logger.info("url!!!!!!", url)
+
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "scope": "https://graph.microsoft.com/.default"
+    }
+
+    logger.info("Data!!!!!!", data)
+    res = requests.post(url, data=data)
+    res.raise_for_status()
+    return res.json()["access_token"]
+
+def get_dive_id(site):
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Step 1: Get site ID
+    site_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{SITE_PATH1}",
+        headers=headers
+    )
+    site_res.raise_for_status()
+    site_id = site_res.json()["id"]
+
+    # Step 2: Get drive ID
+    drive_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+        headers=headers
+    )
+    drive_res.raise_for_status()
+    drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
+    if not drive:
+        raise Exception("Documents drive not found")
+
+    drive_id = drive["id"]
+    return drive_id
+
+def get_dive_id(site):
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Step 1: Get site ID
+    site_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{SHAREPOINT_HOST}:{site}",
+        headers=headers
+    )
+    site_res.raise_for_status()
+    site_id = site_res.json()["id"]
+
+    # Step 2: Get drive ID
+    drive_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+        headers=headers
+    )
+    drive_res.raise_for_status()
+    drive = next((d for d in drive_res.json()["value"] if d["name"] == "Documents"), None)
+    if not drive:
+        raise Exception("Documents drive not found")
+
+    drive_id = drive["id"]
+    return drive_id
 
 
-logger = logging.getLogger("logging_handler")  # 👈 custom logger name
-
-def expand_word_forms(word):
-    forms = {word}
-    if p.singular_noun(word):
-        forms.add(p.singular_noun(word))  # plural to singular
+def convert_json_filename_to_txt(json_filename):
+    # Remove the _formatted.json suffix
+    if json_filename.endswith("_formatted.json"):
+        base_name = json_filename.replace("_formatted.json", "")
     else:
-        forms.add(p.plural(word))  # singular to plural
-    return list(forms)
+        base_name = json_filename.replace(".json", "")
+    
+    # Add .txt extension
+    txt_filename = f"{base_name}.txt"
+    return txt_filename
 
+def fetch_json_files_from_sharepoint():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    results = []
 
+    try:
+        logger.info("Fetching drive id…")
+        drive_id = get_dive_id("/sites/DocsGibsonDemo")
 
-class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
-
-class JurisdictionViewSet(viewsets.ModelViewSet):
-    queryset = Jurisdiction.objects.all()
-    serializer_class = JurisdictionSerializer
-    parser_classes = [MultiPartParser]  # 👈 required for form-data upload
-
-    def list(self, request, *args, **kwargs):
-        jurisdiction = self.get_queryset()
-
-        # Serialize full list
-        serializer = self.get_serializer(jurisdiction, many=True)
-
-        # Group by jurisdiction name/field and count
-        jurisdiction_counts = (
-            jurisdiction
-            .values("name")   # 👈 replace with the field that identifies jurisdiction
-            .annotate(count=Count("id"))
-            .order_by("-count")
+        files_res = requests.get(
+            f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
+            headers=headers
         )
+        files_res.raise_for_status()
+        files = files_res.json().get("value", [])
+    except Exception as e:
+        logger.error(f"⛔ error: {e}")
+        return []
 
-        return Response({
-            "count": jurisdiction.count(),
-            "jurisdiction": serializer.data,
-            "jurisdiction_counts": jurisdiction_counts
-        })
-    @swagger_auto_schema(
-        method='get',
-        responses={200: JurisdictionSerializer(many=True)}
-    )
-    @action(detail=False, methods=["get"], url_path="save-jurisdictions")
-    def save_jurisdictions(self, request):
-        logger.info("✅ Log test from views.py")
+    for file in files:
+        filename = file.get("name")
+        if not filename.endswith(".json"):
+            continue
+
+        txt_file_name = convert_json_filename_to_txt(filename)
+
+        # ✅ check in *all databases* for transcript
+        transcript_exists = any(
+            Transcript.objects.using(db).filter(name=txt_file_name).exists()
+            for db in DB_NAMES
+        )
+        if not transcript_exists:
+            logger.warning(f"❌ Skipping: No transcript found for {txt_file_name}")
+            continue
+
+        # Fetch file content
+        file_path = f"{FOLDER}/{filename}"
+        encoded_file_path = urllib.parse.quote(file_path)
+        file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{encoded_file_path}:/content"
 
         try:
-            # Annotate each transcript with testimony count
-            results = fetch_jurisdictions()
-            
-            created = 0
-            for item in results:
-                jurisdiction = item.get("jurisdiction")
+            file_res = requests.get(file_url, headers=headers)
+            file_res.raise_for_status()
+            data = file_res.json()
 
-                if not jurisdiction:
-                    continue
-
-                # Avoid duplicates
-                if not Jurisdiction.objects.filter(name=jurisdiction).exists():
-                    Jurisdiction.objects.create(name=jurisdiction)
-                    created += 1
-
-            return Response({
-                "status": "success",
-                "inserted": created,
-                "total_fetched": len(results)
-            })
-
+            for record in data:
+                results.append({
+                    "question": record.get("question"),
+                    "answer": record.get("answer"),
+                    "cite": record.get("cite"),
+                    "index": record.get("index"),
+                    "filename": txt_file_name
+                })
         except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            logger.error(f"⛔ Skipping file {filename} due to error: {e}")
+            continue
 
- 
+    print(f"\n✅ Total QA Pairs processed: {len(results)}")
+    return results
+
+def format_name(name):
+    pattern = r'^(Mr\.|Ms\.|Mrs\.|Dr\.|Hon\.|Prof\.)\s+'
+    cleaned = re.sub(pattern, '', name or '', flags=re.IGNORECASE).strip()
+    if not cleaned:
+        return ""
+    parts = cleaned.split()
+    if len(parts) >= 2:
+        first_name = ' '.join(parts[:-1]).title()
+        last_name = parts[-1].title()
+        return f"{last_name}, {first_name}"
+    return cleaned.title()
+
+def fetch_witness_from_sharepoint():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/site/DocsGibsonDemo")
+
+    files_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}:/children",
+        headers=headers
+    )
+
+    files_res.raise_for_status()
+    files = files_res.json().get("value", [])
+
+    results = []  # ✅ Your final output list
 
 
-from itertools import chain
-from django.db.models import Count
-from rest_framework.response import Response
+def fetch_jurisdictions():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
 
-class TranscriptViewSet(viewsets.ModelViewSet):
-    queryset = Transcript.objects.all()
-    serializer_class = TranscriptSerializer
-    parser_classes = [MultiPartParser]
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
 
-    def list(self, request, *args, **kwargs):
-        # ---- Step 1: Get site_id and drive_id
+    data = response.json()
+    results = []
+
+    for entry in data:
+        jurisdiction = entry.get("jurisdiction")
+        if jurisdiction:
+            
+            results.append({
+                "jurisdiction": extract_state(jurisdiction),
+            })
+    return results
+
+def fetch_attorney():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
+
+    data = response.json()   # <-- this is a list of dicts
+    results = []
+
+    for entry in data:
+        attorneys = {
+            "taking": entry.get("taking_attorney"),
+            "defending": entry.get("defending_attorney"),
+        }
+
+        for atty_type, atty_info in attorneys.items():
+            if atty_info and (atty_info.get("name") or atty_info.get("law_firm")):
+                results.append({
+                    "type": atty_type,
+                    "name": atty_info.get("name"),
+                    "law_firm": atty_info.get("law_firm"),
+                    "transcript_name": entry.get("transcript_name"),  # optional context
+                })
+
+    return results
+
+def fetch_witness_names_and_transcripts():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    
+    try:
+        # Download the JSON file content
+        file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
+        response = requests.get(file_url, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        # Extract witness name + transcript name pairs
+        results = []
+        for entry in data:
+            witness_name = entry.get("witness_name")
+            logger.info(witness_name, "witness")
+            transcript_name = entry.get("transcript_name")+".txt"
+            transcript_date = entry.get("transcript_date")
+            case_name = entry.get("case_name")
+            if witness_name and transcript_name:
+                results.append({
+                    "witness_name": witness_name,
+                    "transcript_name": transcript_name,
+                    "transcript_date": transcript_date,
+                    "case_name": case_name
+                })
+        print("results***********************************************", results)
+        return results
+    
+    except Exception as e:
+        print("exception", e)
 
         
-        # ---- Step 5: Fetch transcripts from default DB
-        transcripts_default = Transcript.objects.using('default').all()
-
-        # Serialize data
-        serializer = self.get_serializer(transcripts_default, many=True)
-
-        # Unique case count
-        unique_cases_default = Transcript.objects.using('default').values('case_name').distinct()
-        unique_case_count = len(unique_cases_default)
-
-        # Deposition count per case
-        case_counts_default = (
-            Transcript.objects.using('default')
-            .values("case_name")
-            .annotate(transcript_count=Count("id"))
-            .order_by("-transcript_count")
-        )
-        case_counts = list(case_counts_default)
-        # ---- Step 6: Return combined response
-        return Response({
-            "count": transcripts_default.count(),
-            "transcripts": serializer.data,
-            "unique_cases": unique_case_count,
-            "depo_per_case": case_counts,
-
-        })
-
-
-    @action(detail=False, methods=["post"], url_path="create-index")
-    def create_index(self, request):
-        INDEX_NAME="testimonies"
-        try:
-            # Step 1: Delete old index if exists
-            if es.indices.exists(index=INDEX_NAME):
-                es.indices.delete(index=INDEX_NAME)
-                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
-
-            # Step 2: Create new index
-            mapping = {
-                "mappings": {
-                    "properties": {
-                        "id": {"type": "integer"},
-                        "question": {"type": "text"},
-                        "answer": {"type": "text"},
-                        "cite": {"type": "text"},
-                        "transcript_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-                        "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-                        "type": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-                        "alignment": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-                        "source": {"type": "keyword"},
-                        "commenter_emails": {
-                            "type": "nested",
-                            "properties": {"name": {"type": "text"}, "email": {"type": "keyword"}},
-                        },
-                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
-                                                "transcript_date": {
-                            "type": "date",
-                        }
-                    }
-                }
-            }
-            es.indices.create(index=INDEX_NAME, body=mapping)
-            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
-
-            # Step 3: Trigger background task
-            task = index_task.delay(INDEX_NAME)
-
-            return Response(
-                {
-                    "status": "processing",
-                    "task_id": task.id,
-                    "message": f"Indexing started for '{INDEX_NAME}' in background.",
-                },
-                status=status.HTTP_202_ACCEPTED,
-            )
-
-        except Exception as e:
-            logger.error(f"❌ Error in create_index: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=["post"], url_path="create-transcript-index")
-    def create_transcript_index(self, request):
-        INDEX_NAME="transcriptdata"
-        try:
-            # Step 1: Delete old index if exists
-            if es.indices.exists(index=INDEX_NAME):
-                es.indices.delete(index=INDEX_NAME)
-                logger.info(f"🗑 Deleted old index: '{INDEX_NAME}'")
-
-            # Step 2: Create new index
-            mapping = {
-                "mappings": {
-                    "properties": {
-                        "id": {"type": "integer"},
-                        "transcript_name": {"type": "text"},
-                        "case_name": {"type": "text"},
-                        "witness_name": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
-                        "source": {"type": "keyword"},
-                        "created_at": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
-                                                
-                        "transcript_date": {
-                            "type": "date",
-                        },
-                    }
-                }
-            }
-            es.indices.create(index=INDEX_NAME, body=mapping)
-            logger.info(f"✅ Created new index: '{INDEX_NAME}'")
-
-            # Step 3: Trigger background task
-            task = index_transcript_task.delay(INDEX_NAME)
-
-            return Response(
-                {
-                    "status": "processing",
-                    "task_id": task.id,
-                    "message": f"Indexing started for '{INDEX_NAME}' in background.",
-                },
-                status=status.HTTP_202_ACCEPTED,
-            )
-
-        except Exception as e:
-            logger.error(f"❌ Error in create_index: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=["post"], url_path="download-all-transcripts")
-    def download_all_transcripts(self, request):
-        """Download all .txt transcripts from SharePoint TextFiles folder to user's Downloads."""
-        logger.info("Starting download of all transcripts")
-
-        # --- Authenticate with MSAL ---
-        app = msal.ConfidentialClientApplication(
-            CLIENT_ID,
-            authority=AUTHORITY,
-            client_credential=CLIENT_SECRET
-        )
-        result = app.acquire_token_silent(SCOPE, account=None)
-        if not result:
-            result = app.acquire_token_for_client(scopes=SCOPE)
-
-        if "access_token" not in result:
-            raise Exception("❌ Could not obtain token", result.get("error_description"))
-
-        access_token = result["access_token"]
-        logger.info("Fetched token")
-
-        # --- Settings ---
-        drive_name = "Documents"
-        folder = "TextFiles"
-
-        # Step 1: Get Site ID
-        site_res = requests.get(
-            "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        site_res.raise_for_status()
-        site_id = site_res.json()["id"]
-
-        # Step 2: Get Drive ID
-        drive_res = requests.get(
-            f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
-            headers={"Authorization": f"Bearer {access_token}"}
-        )
-        drive_res.raise_for_status()
-        drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
-        drive_id = drive["id"]
-
-        # Step 3: List all items in TextFiles folder
-        list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}:/children"
-        list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
-        list_res.raise_for_status()
-        items = list_res.json().get("value", [])
-
-        # Step 4: Create an in-memory ZIP file
-        buffer = io.BytesIO()
-        with zipfile.ZipFile(buffer, "w") as zip_file:
-            for item in items:
-                name = item["name"]
-                if name.lower().endswith(".txt"):
-                    download_url = item["@microsoft.graph.downloadUrl"]
-                    file_res = requests.get(download_url)
-                    if file_res.status_code == 200:
-                        zip_file.writestr(name, file_res.content)
-                        logger.info(f"Added {name} to ZIP")
-                    else:
-                        logger.warning(f"❌ Failed to download {name}: {file_res.status_code}")
-
-        buffer.seek(0)
-
-        # Step 5: Return ZIP as HTTP response
-        response = HttpResponse(buffer, content_type="application/zip")
-        response["Content-Disposition"] = 'attachment; filename="transcripts.zip"'
-        return response
-    
-    @action(detail=False, methods=["post"], url_path="upload-transcripts")
-    def upload_transcripts(self, request):
-        """
-        Upload one or more files to SharePoint TextFiles folder.
-        Expects files in request.FILES (multipart/form-data).
-        """
-        files = request.FILES.getlist("files")  # list of uploaded files
-        if not files:
-            return Response({"error": "No files uploaded"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # --- Authenticate with MSAL ---
-        app = msal.ConfidentialClientApplication(
-            CLIENT_ID,
-            authority=AUTHORITY,
-            client_credential=CLIENT_SECRET
-        )
-        result = app.acquire_token_silent(SCOPE, account=None)
-        if not result:
-            result = app.acquire_token_for_client(scopes=SCOPE)
-
-        if "access_token" not in result:
-            return Response({"error": "Could not obtain access token"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        access_token = result["access_token"]
-        headers = {"Authorization": f"Bearer {access_token}"}
-
-        # --- Settings ---
-        drive_name = "Documents"
-        folder = "TextFiles"
-
-        # Step 1: Get Site ID
-        site_res = requests.get(
-            "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
-            headers=headers
-        )
-        site_res.raise_for_status()
-        site_id = site_res.json()["id"]
-
-        # Step 2: Get Drive ID
-        drive_res = requests.get(
-            f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
-            headers=headers
-        )
-        drive_res.raise_for_status()
-        drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
-        drive_id = drive["id"]
-
-        uploaded_files = []
-
-        # Step 3: Upload each file
-        for file_obj in files:
-            filename = file_obj.name
-            file_content = file_obj.read()
-            upload_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}/{filename}:/content"
-            upload_res = requests.put(upload_url, headers=headers, data=file_content)
-
-            if upload_res.status_code in (200, 201):
-                uploaded_files.append(filename)
-                logger.info(f"✅ Uploaded {filename} to SharePoint")
-            else:
-                logger.error(f"❌ Failed to upload {filename}: {upload_res.status_code} {upload_res.text}")
-
-        return Response(
-            {"message": "Upload completed", "files": uploaded_files},
-            status=status.HTTP_200_OK
-        )
     
 
-
-
-    @action(detail=False, methods=["get"], url_path="list-sharepoint-files")
-    def list_sharepoint_files(self, request):
-        try:
-            access_token = get_token()
-
-            # Step 1: Get Site ID
-            site_res = requests.get(
-                f"https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/{SITE_NAME}",
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            site_res.raise_for_status()
-            site_id = site_res.json()["id"]
-
-            # Step 2: Get Drive ID
-            drive_res = requests.get(
-                f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
-                headers={"Authorization": f"Bearer {access_token}"}
-            )
-            drive_res.raise_for_status()
-            drive = next(d for d in drive_res.json()["value"] if d["name"] == "Documents")
-            drive_id = drive["id"]
-
-            # Step 3: List all files in folder
-            list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/TextFiles:/children"
-            list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
-            list_res.raise_for_status()
-            items = list_res.json().get("value", [])
-            # Return JSON with file info and update DB
-            files = []
-            for f in items:
-                if f.get("name", "").lower().endswith(".txt"):
-                    file_name = f.get("name")
-                    web_url = f.get("webUrl")
-
-                    # Try to find Transcript with the same name
-                    transcript = Transcript.objects.filter(name=file_name).first()
-                    if transcript:
-                        transcript.web_url = web_url
-                        transcript.save(update_fields=["web_url"])
-
-                    files.append({
-                        "name": file_name,
-                        "id": f.get("id"),
-                        "webUrl": web_url,
-                    })
-
-            return Response({"files": files}, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            logger.exception("Failed to list SharePoint files")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 
-    @action(detail=False, methods=["get"], url_path="send-email")
-    def send_download_transcript_email(self, request):
-        try:
-                # ---------------- AUTH with MSAL ----------------
-                app = msal.ConfidentialClientApplication(
-                    CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET
-                )
-                result = app.acquire_token_silent(SCOPE, account=None)
-                if not result:
-                    result = app.acquire_token_for_client(scopes=SCOPE)
+def fetch_from_sharepoint():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id(SITE_PATH1)
 
-                if "access_token" not in result:
-                    logger.error("Failed to get token")
-                    return Response(
-                        {"error": "Could not acquire access token"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-
-                access_token = result["access_token"]
-
-                # ---------------- EMAIL PAYLOAD ----------------
-                email = {
-                    "message": {
-                        "subject": "Transcript Download Link",
-                        "body": {
-                            "contentType": "HTML",
-                            "content": "<p>Your transcript download is ready.</p><p><a href='https://example.com/download'>Click here</a> to download.</p>",
-                        },
-                        "toRecipients": [
-                            {"emailAddress": {"address": "recipient@example.com"}}
-                        ],
-                    },
-                    "saveToSentItems": "true",
-                }
-
-                # ---------------- SEND EMAIL ----------------
-                graph_url = "https://graph.microsoft.com/v1.0/users/YOUR_SENDER_EMAIL/sendMail"
-                res = requests.post(
-                    graph_url,
-                    headers={"Authorization": f"Bearer {access_token}"},
-                    json=email,
-                )
-
-                if res.status_code in (200, 202):
-                    return Response({"message": "✅ Email sent successfully"})
-                else:
-                    logger.error(f"Graph API error: {res.text}")
-                    return Response(
-                        {"error": res.json()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
-
-        except Exception as e:
-            logger.exception("Error sending email")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @swagger_auto_schema(
-        method='post',
-        request_body=TranscriptFuzzySerializer,
-        responses={200: TestimonySerializer(many=True)}
+    files_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{TEXTFILESFOLDER}:/children",
+        headers=headers
     )
-    @action(detail=False, methods=["post"], url_path="get-transcripts",parser_classes=[JSONParser])
-    def get_transcripts(self, request):
-        search_term = request.data.get("transcript_name", "").strip()
+    files_res.raise_for_status()
+    files = files_res.json().get("value", [])
 
-        if not search_term:
-            return Response({"matching_transcripts": []}, status=status.HTTP_200_OK)
+    results = []  # ✅ Your final output list
 
-        # Fuzzy match query on transcript_name field
-        query = {
-            "query": {
-                "match": {
-                    "transcript_name": {
-                        "query": search_term,
-                        "fuzziness": "AUTO"
-                    }
-                }
-            },
-            "aggs": {
-                "unique_transcript_names": {
-                    "terms": {
-                        "field": "transcript_name.keyword",
-                        "size": 1000
-                    }
-                }
-            }
-        }
+    for file in files:
+        filename = file.get("name")
+        print("filename", filename)
+        is_file = "file" in file
 
-        try:
-            res = es.search(index="transcripts", body=query, size=1000)
-            matches = [bucket["key"] for bucket in res["aggregations"]["unique_transcript_names"]["buckets"]]
-            return Response({"matching_transcripts": matches}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    @swagger_auto_schema(
-        method='post',
-        request_body=WitnessFuzzySerializer,
-        responses={200: TestimonySerializer(many=True)}
-    )        
-    @action(detail=False, methods=["post"], url_path="get-witnesses",parser_classes=[JSONParser])
-    def get_witnesses(self, request):
-        search_term = request.data.get("witness_name", "").strip().lower()
+        if is_file and filename.lower().endswith(".txt"):
+            print(f"📄 Found .txt file: {filename}")
+            download_url = file.get("@microsoft.graph.downloadUrl") # direct file download link
+            if not download_url:
+                print(f"⚠️ No download URL for: {filename}")
+                continue
+            web_url = file.get("webUrl")  # SharePoint UI link to view in browser
 
-        if not search_term:
-            return Response({"matching_witnesses": []}, status=status.HTTP_200_OK)
+            download_res = requests.get(download_url)
+            if download_res.status_code != 200:
+                print(f"❌ Failed to download {filename}")
+                continue
 
-        # Fuzzy match query on transcript_name field
-        query = {
-            "query": {
-                "match": {
-                    "witness_name": {
-                        "query": search_term,
-                        "fuzziness": "AUTO"
-                    }
-                }
-            },
-            "aggs": {
-                "unique_witness_names": {
-                    "terms": {
-                        "field": "witness_name.keyword",
-                        "size": 1000
-                    }
-                }
-            }
-        }
 
-        try:
-            res = es.search(index="transcripts", body=query, size=1000)
-            matches = [bucket["key"] for bucket in res["aggregations"]["unique_witness_names"]["buckets"]]
-            return Response({"matching_witnesses": matches}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-      
-    # def create(self, request, *args, **kwargs):
-    #     files = request.FILES.getlist('files')  # Expecting 'files' key from FormData
-    #     print(files)
-        # for file in files:
-            # trns = Transcript.objects.create()
-            # witness = Witness.objects.create()
+            raw_data = download_res.content
+            encoding_info = chardet.detect(raw_data)
+            file_encoding = encoding_info['encoding'] or 'utf-8'
 
-        # Single object create (default behavior)
-        # return Response("Files Uploaded",status=201)
-    # ✅ GET /transcript/save-transcripts → get names from SharePoint only
-    @action(detail=False, methods=["get"], url_path="save-transcripts")   # Create post
-    def save_transcripts(self, request):
-        try:
-            results = fetch_from_sharepoint()
+            try:
+                input_text = raw_data.decode(file_encoding)
+            except Exception as e:
+                print(f"⚠️ Could not decode {filename}: {e}")
+                continue
 
-            # ⚠️ Set default user and project manually or fetch them dynamically
-            default_user = User.objects.first()  # Or filter by email etc.
-            default_project = Project.objects.first()  # Or filter appropriately
+            truncated_input_text = " ".join(input_text.split()[:5000])
 
-            if not default_user or not default_project:
-                return Response({"error": "User or Project not found."}, status=400)
+            try:
+                raw_response = GibsonMetadataInference(input_text=truncated_input_text).generate_structure()
 
-            created = 0
-            for item in results:
-                transcript_name = item.get("transcript_name")
-                transcript_date = item.get("transcript_date")
-                case_name = item.get("case_name")
-                transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
+                if isinstance(raw_response, str):
+                    cleaned = re.sub(r"^```json|```$", "", raw_response.strip(), flags=re.IGNORECASE).strip()
+                    extracted_data = json.loads(cleaned)
+                else:
+                    extracted_data = raw_response
 
-                if not (transcript_name and transcript_date):
+                raw_witness_name = extracted_data.get("witness_name", "").strip()
+                transcript_date = extracted_data.get("transcript_date", "").strip()
+                case_name = extracted_data.get("case_name", "").strip()
+                print("test", raw_witness_name, case_name)
+                # formatted_name = format_name(raw_witness_name)
+                # parts = formatted_name.strip().split()
+                # if not parts:
+                #     return "", ""  # empty string case
+                # first_name = parts[0]
+                # last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+                if not raw_witness_name:
                     continue
 
-                # Avoid duplicates
-                if not Transcript.objects.filter(
-                    name=transcript_name,
-                    transcript_date=transcript_date_obj,
-                    created_by=default_user,
-                    project=default_project,
-                    case_name=case_name
-                ).exists():
-                    Transcript.objects.create(
-                        name=transcript_name,
-                        transcript_date=transcript_date_obj,
-                        created_by=default_user,
-                        project=default_project,
-                        case_name=case_name
-                    )
-                    created += 1
+                # ✅ Append to results
+                results.append({
+                    "transcript_name": filename,
+                    "witness_name": raw_witness_name,
+                    "transcript_date": transcript_date,
+                    "sharepoint_url": web_url,  # ✅ Add the SharePoint UI link
+                    "case_name": case_name
 
-            return Response({
-                "status": "success",
-                "inserted": created,
-                "total_fetched": len(results)
+
+                })
+
+            except Exception as e:
+                print(f"⛔ Skipping file {filename} due to error: {e}")
+                continue
+
+    print(f"\n✅ Total .txt files processed: {len(results)}")
+    return results
+
+def fetch_taxonomy_from_sharepoint():
+    token = get_access_token()
+    headers = {"Authorization": f"Bearer {token}"}
+    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+
+    # Download the JSON file content
+    file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{TAXONOMY_FILENAME}:/content"
+    response = requests.get(file_url, headers=headers)
+    response.raise_for_status()
+
+    data = response.json()
+
+    # Extract witness alignments & types
+    results = []
+    alignments = set()
+    witness_types = set()
+
+    witnesses = data.get("Witness", [])
+    for entry in witnesses:
+        witness_name = entry.get("Name")
+        alignment = entry.get("Alignment")
+        types = entry.get("Types", [])
+
+        if alignment:
+            alignments.add(alignment)
+
+        for t in types:
+            transcript_name = t.get("TranscriptName")
+            witness_type = t.get("Type")
+            expert_type = t.get("ExpertType")
+            if witness_type:
+                witness_types.add(witness_type)
+            print("align", alignment)
+            results.append({
+                "witness_name": witness_name,
+                "alignment": alignment,
+                "transcript_name": transcript_name+".txt",
+                "witness_type": witness_type,
+                "expert_type": expert_type
             })
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # Return both
+    return results
 
+def download_all_transcripts():
+    """Download all .txt transcripts from SharePoint TextFiles folder to user's Downloads."""
+    logger.info("Starting download of all transcripts")
 
-# class TestimonyViewSet(viewsets.ModelViewSet):
-#     queryset = Testimony.objects.all().order_by("id")
-#     serializer_class = TestimonySerializer
-#     # pagination_class = CustomPageNumberPagination
-
-class AttorneyViewSet(viewsets.ModelViewSet):
-    queryset = Attorney.objects.all()
-    serializer_class = AttorneySerializer
-    parser_classes = [MultiPartParser]
-
-    def list(self, request, *args, **kwargs):
-        attorneys = self.get_queryset()
-        serializer = self.get_serializer(attorneys, many=True)
-
-        # Group by law_firm and count distinct files (Transcript instances)
-        law_firm_file_counts = (
-            attorneys
-            .values('law_firm')
-            .annotate(file_count=Count('file', distinct=True))
-            .order_by('law_firm')
-        )
-
-        return Response({
-            "count": attorneys.count(),
-            "attorneys": serializer.data,
-            "file_counts_by_law_firm": list(law_firm_file_counts),
-        })
-    @action(detail=False, methods=["get"], url_path="save-attorney")
-    def get(self, request):
-        results = fetch_attorney()
-        created = 0
-
-        for item in results:
-            if not item:  # skip None entries just in case
-                continue
-
-            atty_type = item.get("type")
-            name = item.get("name")
-            law_firm = item.get("law_firm")
-            transcript_name = item.get("transcript_name")
-
-            # Ensure transcript exists
-            transcript = Transcript.objects.filter(name__icontains=transcript_name).first()
-            if not transcript:
-                print("Transcript not found for:", transcript_name)
-                continue  # skip if transcript missing
-
-            # Ensure we have a valid name
-            if not name:
-                print("Attorney name missing for transcript:", transcript_name)
-                continue
-
-            # Avoid duplicates
-            if not Attorney.objects.filter(
-                name=name,
-                type=atty_type,
-                law_firm=law_firm,
-                file=transcript
-            ).exists():
-                Attorney.objects.create(
-                    name=name,
-                    type=atty_type,
-                    law_firm=law_firm,
-                    file=transcript
-                )
-                created += 1
-
-        return Response({
-            "status": "success",
-            "inserted": created,
-            "total_fetched": len([i for i in results if i])  # count only valid items
-        })
-
-
-class TestimonyViewSet(viewsets.ModelViewSet):
-    queryset = Testimony.objects.all().order_by("id")
-    serializer_class = TestimonySerializer
-
-    def list(self, request, *args, **kwargs):
-        # Get offset and limit from query parameters
-        try:
-            offset = int(request.GET.get("offset", 0))
-            limit = int(request.GET.get("limit", 100))  # default limit is 100
-        except ValueError:
-            return Response({"error": "Invalid offset or limit"}, status=400)
-
-        queryset = self.filter_queryset(self.get_queryset())
-
-        total_count = queryset.count()
-
-        # Apply slicing using offset and limit
-        paginated_queryset = queryset[offset:offset + limit]
-
-        serializer = self.get_serializer(paginated_queryset, many=True)
-
-        return Response({
-            "offset": offset,
-            "limit": limit,
-            "total": total_count,
-            "count": len(serializer.data),
-            "results": serializer.data
-        })
-
-    @swagger_auto_schema(
-        method='get',
-        operation_description="Get testimony count for each transcript",
-        responses={200: 'A list of transcripts with testimony count'}
+    # --- Authenticate with MSAL ---
+    app = msal.ConfidentialClientApplication(
+        CLIENT_ID,
+        authority=AUTHORITY,
+        client_credential=CLIENT_SECRET
     )
-    @action(detail=False, methods=["get"], url_path="testimony-cnt-by-transcripts")
-    def testimony_count_by_transcript(self, request):
-        data = (
-            Transcript.objects
-            .annotate(testimony_count=Count('testimony_data'))
-            .values('name', 'testimony_count')
+    result = app.acquire_token_silent(SCOPE, account=None)
+    if not result:
+        result = app.acquire_token_for_client(scopes=SCOPE)
+
+    if "access_token" not in result:
+        raise Exception("❌ Could not obtain token", result.get("error_description"))
+
+    access_token = result["access_token"]
+    logger.info("Fetched token")
+
+    # --- Settings ---
+    drive_name = "Documents"
+    folder = "TextFiles"
+
+    # Step 1: Get Site ID
+    site_res = requests.get(
+        "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    site_res.raise_for_status()
+    site_id = site_res.json()["id"]
+
+    # Step 2: Get Drive ID
+    drive_res = requests.get(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    drive_res.raise_for_status()
+    drive = next(d for d in drive_res.json()["value"] if d["name"] == drive_name)
+    drive_id = drive["id"]
+
+    # Step 3: List all items in TextFiles folder
+    list_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{folder}:/children"
+    list_res = requests.get(list_url, headers={"Authorization": f"Bearer {access_token}"})
+    list_res.raise_for_status()
+    items = list_res.json().get("value", [])
+
+    # Step 4: Download only .txt files
+    downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    os.makedirs(downloads_path, exist_ok=True)
+    logger.info("testing 1111")
+
+    downloaded_files = []
+
+    for item in items:
+        name = item["name"]
+        if name.lower().endswith(".txt"):
+            download_url = item["@microsoft.graph.downloadUrl"]
+            file_res = requests.get(download_url)
+            if file_res.status_code == 200:
+                file_path = os.path.join(downloads_path, name)
+                with open(file_path, "wb") as f:
+                    f.write(file_res.content)
+                downloaded_files.append(name)
+            else:
+                print(f"❌ Failed to download {name}: {file_res.status_code}")
+    logger.info("testing 2222")
+
+    return {
+        "message": "✅ Download completed",
+        "files": downloaded_files
+    }
+INDEX_DIR = "indexdir"
+
+# -----------------------------
+# helper: clean token
+# -----------------------------
+def clean_token(t: str) -> str:
+    """Normalize token: remove special chars except * and -"""
+    if not t:
+        return ""
+    return re.sub(r'[^A-Za-z0-9*-]', '', t).lower()
+
+# -----------------------------
+# CONFIGURATION FUNCTION
+# -----------------------------
+# tune these as needed
+FILELOCK_POLL_INTERVAL = 0.2   # seconds between attempts to acquire lock
+FILELOCK_TIMEOUT = 30          # overall seconds to wait for the lock
+
+# --------------------- FILE LOCK HELPERS ---------------------
+def _acquire_file_lock(lock_path, timeout=FILELOCK_TIMEOUT, poll_interval=FILELOCK_POLL_INTERVAL):
+    start = time.time()
+    fh = open(lock_path, "a+")
+    while True:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return fh
+        except BlockingIOError:
+            if (time.time() - start) >= timeout:
+                fh.close()
+                raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
+            time.sleep(poll_interval)
+        except Exception:
+            fh.close()
+            raise
+
+
+def _release_file_lock(fh):
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    except Exception:
+        pass
+    try:
+        fh.close()
+    except Exception:
+        pass
+
+
+# --------------------- INDEX CREATION ---------------------
+def get_or_create_index(index_dir):
+    """
+    Create or open a Whoosh index at the given path.
+    """
+    schema = Schema(
+        id=ID(stored=True, unique=True),
+        question=TEXT(stored=True),
+        answer=TEXT(stored=True),
+        transcript_name=TEXT(stored=True),
+        witness_name=TEXT(stored=True),
+        cite=TEXT(stored=True),
+    )
+
+    if not os.path.exists(index_dir):
+        os.makedirs(index_dir)
+
+    if not index.exists_in(index_dir):
+        ix = index.create_in(index_dir, schema)
+        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
+    else:
+        ix = index.open_dir(index_dir)
+        logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
+
+    return ix
+
+
+def index_documents(ix, docs_list):
+    """
+    Index a list of documents into the Whoosh index.
+    """
+    if not docs_list:
+        logger.warning("⚠️ No documents to index.")
+        return
+
+    writer = ix.writer()
+    for d in docs_list:
+        writer.update_document(
+            id=d["id"],
+            question=d["question"],
+            answer=d["answer"],
+            transcript_name=d["transcript_name"],
+            witness_name=d["witness_name"],
+            cite=d["cite"],
         )
-        return Response(list(data), status=status.HTTP_200_OK)
-    @action(detail=False, methods=["get"], url_path="depositions-per-case")
-    def get(self, request):
-        # Annotate each transcript with testimony count
-        data = (
-            Transcript.objects
-            .annotate(testimony_count=Count('testimony_data'))
-            .values('name', 'testimony_count')
-        )
+    writer.commit()
+    logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
 
-        return Response(list(data), status=status.HTTP_200_OK)    
-# ✅ GET /testimony/save-testimony/ → get names from SharePoint only
-    @action(detail=False, methods=["get"], url_path="save-testimony")
-    def save_testimony(self, request):
-        task = save_testimony_task.delay()  # 🔥 async call
-        return Response({
-            "status": "processing",
-            "task_id": task.id
-        })
-        # try:
-        #     results = fetch_json_files_from_sharepoint()
 
-        #     qa_objects = []
-        #     skipped = 0
+# --------------------- SEARCH FUNCTION ---------------------
 
-        #     for item in results:
-        #         item.pop("id", None)
-        #         txt_filename = item.get("filename")
+def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with="AND",
+                     page=1, page_size=200):
+    """
+    Whoosh search function with pagination.
+    - q_text_field_map: dict mapping query_text -> list of fields
+        e.g., {"Joey": ["transcript_name"], "some question": ["question", "answer"]}
+    - Supports fuzzy, boolean, and exact modes.
+    - Returns documents matching all query_text/field groups (AND across groups).
+    """
+    results = []
+    total_results = 0
 
-        #         transcript = Transcript.objects.filter(name=txt_filename).first()
-        #         if not transcript:
-        #             print(f"❌ Skipping again: No transcript found for {txt_filename}")
-        #             skipped += 1
-        #             continue
+    if not q_text_field_map:
+        q_text_field_map = {"": ["question", "answer"]}  # default: all docs
 
-        #         question = item.get("question")
-        #         answer = item.get("answer")
-        #         cite = item.get("cite")
-        #         index = item.get("index")
+    with ix.searcher() as searcher:
 
-        #         if not Testimony.objects.filter(
-        #             question=question,
-        #             answer=answer,
-        #             cite=cite,
-        #             index=index,
-        #             file=transcript
-        #         ).exists():
-        #             qa_objects.append(Testimony(
-        #                 question=question,
-        #                 answer=answer,
-        #                 cite=cite,
-        #                 index=index,
-        #                 file=transcript
-        #             ))
-        #             print("inserted QA pair")
-
-        #     Testimony.objects.bulk_create(qa_objects, batch_size=1000)
-
-        #     return Response({
-        #         "status": "success",
-        #         "inserted": len(qa_objects),
-        #         "skipped_due_to_missing_transcript": skipped,
-        #         "total_fetched": len(results)
-        #     })
-
-        # except Exception as e:
-        #     return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-# ✅ GET /testimony/search-testimony/ → get names from SharePoint only
-    @action(detail=False, methods=["get"], url_path="search-testimony")
-    def search_testimonies(self, request):        
-        query = request.GET.get("q", "").strip()
-        mode = request.GET.get("mode", "exact").lower()
-        if not query:
-            return Response({"error": "Missing search query (?q=...)"}, status=400)
-
-        fields = ["question", "answer", "cite", "transcript_name"]
-
-        if mode == "fuzzy":
-            words = query.split()
-            expanded_terms = []
-            for word in words:
-                expanded_terms.extend(expand_word_forms(word))
-
-            es_query = {
-                "query": {
-                    "bool": {
-                        "should": [
-                            {
-                                "multi_match": {
-                                    "query": term,
-                                    "fields": fields,
-                                    "fuzziness": "AUTO"
-                                }
-                            } for term in expanded_terms
-                        ]
-                    }
-                }
+        def build_hit(hit):
+            return {
+                "id": hit.get("id"),
+                "transcript_name": hit.get("transcript_name", ""),
+                "witness_name": hit.get("witness_name", ""),
+                "question": hit.get("question", ""),
+                "answer": hit.get("answer", ""),
+                "cite": hit.get("cite", ""),
             }
 
-        elif mode == "boolean":
-            import re
-            if "/s" in query:
-                parts = [part.strip() for part in query.split("/s")]
-                if len(parts) == 2:
-                    term1, term2 = parts
-                    es_query = {
-                        "query": {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "match_phrase": {
-                                            field: {
-                                                "query": f"{term1} {term2}",
-                                                "slop": 5
-                                            }
-                                        }
-                                    } for field in fields
-                                ]
-                            }
-                        }
-                    }
-                else:
-                    return Response({"error": "Invalid proximity format. Use: word1 /s word2"}, status=400)
-            else:
-                not_pattern = r"\bNOT\s+(\w+)"
-                not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
-                cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
+        # Build parser for each field group
+        def make_query(text, fields):
+            clean_terms = [t for t in re.split(r'\s+', text) if t]
+            if not clean_terms:
+                return Every()
 
-                bool_query = {"must_not": []}
-                if cleaned_query:
-                    bool_query["must"] = [{
-                        "query_string": {
-                            "query": cleaned_query,
-                            "fields": fields,
-                            "default_operator": "AND"
-                        }
-                    }]
+            if mode.lower() == "fuzzy":
+                queries = []
+                for term in clean_terms:
+                    t = term.lower()
+                    if t.endswith("*"):
+                        base = t.rstrip("*")
+                        if base:
+                            queries.append(Or([Prefix(f, base) for f in fields]))
+                        continue
+                    if re.search(r'\d', t):
+                        continue
+                    edits = max_edits if len(t) >= 4 else 1
+                    queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
+                return And(queries) if queries else None
 
-                if not_terms:
-                    for term in not_terms:
-                        bool_query["must_not"].append({
-                            "multi_match": {
-                                "query": term,
-                                "fields": fields
-                            }
-                        })
+            elif mode.lower() == "boolean":
+                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
+                qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
+                    else f" {join_with} ".join(clean_terms)
+                return parser.parse(qstring)
 
-                es_query = {"query": {"bool": bool_query}}
+            else:  # exact
+                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
+                return parser.parse(f'"{" ".join(clean_terms)}"')
+
+        # -------- COMBINE QUERIES WITH AND --------
+        field_queries = []
+        for text, fields in q_text_field_map.items():
+            q = make_query(text, fields)
+            if q is not None:
+                field_queries.append(q)
+
+        if not field_queries:
+            final_query = Every()
         else:
-            search_term = query
-            es_query = {
-                "query": {
-                    "bool": {
-                        "should": [
-                            {"match_phrase": {field: search_term}} for field in fields
-                        ]
-                    }
-                }
-            }
+            # ✅ AND across all query groups
+            final_query = And(field_queries)
 
+        # -------- PAGINATED SEARCH --------
         try:
-            response = es.search(index="transcripts", body=es_query, size=1000)
-            results = [hit["_source"] for hit in response["hits"]["hits"]]
-            return Response({
-                "query": query,
-                "mode": mode,
-                "count": len(results),
-                "results": results
-            })
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    @swagger_auto_schema(
-            method='post',
-            request_body=TranscriptNameListInputSerializer,
-            responses={200: TestimonySerializer(many=True)}
-        )
-    @action(detail=False, methods=["post"], url_path="testimony-by-transcripts")
-    def get_testimonies_by_transcripts(self, request):
-        input_serializer = TranscriptNameListInputSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
-
-        transcript_names = input_serializer.validated_data["transcript_names"]
-        transcripts = Transcript.objects.filter(name__in=transcript_names)
-
-        if not transcripts.exists():
-            return Response({"error": "No matching transcripts found."}, status=status.HTTP_404_NOT_FOUND)
-
-        testimonies = Testimony.objects.filter(file__in=transcripts).order_by("file_id", "index")
-
-        # ✅ Paginate the queryset
-        page = self.paginate_queryset(testimonies)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        # Fallback (unlikely used)
-        serializer = self.get_serializer(testimonies, many=True)
-        return Response(serializer.data)
-
-    @swagger_auto_schema(
-        method='post',
-        request_body=WitnessNameListInputSerializer,
-        responses={200: TestimonySerializer(many=True)}
-    )
-    @action(detail=False, methods=["post"], url_path="testimony-by-witness")
-    def get_testimonies_by_witness(self, request):
-        input_serializer = WitnessNameListInputSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
-
-        witness_names = input_serializer.validated_data["witness_names"]
-
-        # 🔍 Convert names to first and last name
-        name_parts = [name.strip().split(" ", 1) for name in witness_names]
-        name_filters = []
-        for part in name_parts:
-            if len(part) == 2:
-                first, last = part
-            elif len(part) == 1:
-                first, last = part[0], ""
-            else:
-                continue
-            name_filters.append({"first_name": first, "last_name": last})
-        # 🔍 Build a Q object to match multiple witnesses
-        from django.db.models import Q
-
-        witness_query = Q()
-        for name_filter in name_filters:
-            witness_query |= Q(**name_filter)
-
-        matched_witnesses = Witness.objects.filter(witness_query)
-        if not matched_witnesses.exists():
-            return Response({"error": "No matching witnesses found."}, status=status.HTTP_404_NOT_FOUND)
-
-        # ✅ Get related transcripts from the matched witnesses
-        transcript_ids = matched_witnesses.values_list("file_id", flat=True).distinct()
-        testimonies = Testimony.objects.filter(file_id__in=transcript_ids).order_by("file_id", "index")
-
-        # ✅ Paginate
-        page = self.paginate_queryset(testimonies)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(testimonies, many=True)
-        return Response(serializer.data)
-
-    @swagger_auto_schema(
-        method='post',
-        request_body=CombinedSearchInputSerializer,
-        responses={200: TestimonySerializer(many=True)}
-        )
-    @action(detail=False, methods=["post"], url_path="combined-search")
-    def combined_search(self, request):
-        """
-        Paginated Whoosh-based search on question + answer fields.
-        Fetches results batch-by-batch by incrementing page number.
-        """
-        q1 = request.data.get("q1", "").strip()
-        mode1 = request.data.get("mode1", "exact").lower()
-        q3 = request.data.get("q3", "").strip()
-        mode3 = request.data.get("mode3", "exact").lower()
-
-        page_size = int(request.data.get("page_size", 200))
-        max_pages = int(request.data.get("max_pages", 25))
-
-        try:
-            # Step 1: Fetch testimonies
-            testimonies = Testimony.objects.select_related("file").all()
-            docs_list = []
-            for t in testimonies:
-                transcript_name = t.file.name if t.file else ""
-                witness_name = getattr(t.file, "witness_name", "") or ""
-                question = t.question or ""
-                answer = t.answer or ""
-                cite = t.cite or ""
-
-                if question.strip() or answer.strip():
-                    docs_list.append({
-                        "id": str(t.id),
-                        "transcript_name": transcript_name.strip(),
-                        "witness_name": witness_name.strip(),
-                        "question": question.strip(),
-                        "answer": answer.strip(),
-                        "cite": cite.strip(),
-                    })
-
-            if not docs_list:
-                return Response({"error": "No testimonies found to index."}, status=400)
-
-            # Step 2: Configure Whoosh index
-            BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
-            INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-            ix = get_or_create_index(INDEX_DIR)
-
-            # Step 2.5: Index documents if index is empty
-            with ix.searcher() as searcher:
-                if searcher.doc_count() == 0:
-                    index_documents(ix, docs_list)
-
-            # Step 3: Search in batches (incrementing page)
-            all_results = []
+            whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
+            for hit in whoosh_page:
+                results.append(build_hit(hit))
+            total_results = whoosh_page.total
+        except ValueError:
+            results = []
             total_results = 0
-            current_page = 1
 
-            while True:
-                # Build the query map for AND across fields
-                q_text_field_map = {}
-                if q1.strip():
-                    q_text_field_map[q1.strip()] = ["question", "answer"]
-                if q3.strip():
-                    q_text_field_map[q3.strip()] = ["transcript_name"]
-
-                # Fetch this page of results using AND across fields
-                batch_results, batch_total = search_documents_and(
-                    ix,
-                    q_text_field_map,
-                    mode=mode1,           # You can adjust mode per field if needed
-                    page=current_page,
-                    page_size=page_size
-                )
-
-                if not batch_results:
-                    break  # no more results
-
-                # Extend all_results
-                all_results.extend(batch_results)
-                total_results = batch_total
-
-                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
-
-                # Stop when all data fetched or limit reached
-                if len(batch_results) < page_size or current_page >= max_pages:
-                    break
-
-                current_page += 1
-
-            # Step 4: Format response
-            results_json = [
-                {
-                    "id": r.get("id"),
-                    "transcript_name": r.get("transcript_name", ""),
-                    "witness_name": r.get("witness_name", ""),
-                    "question": r.get("question", ""),
-                    "answer": r.get("answer", ""),
-                    "cite": r.get("cite", ""),
-                }
-                for r in all_results
-            ]
-
-            return Response({
-                "query": f"q1={q1}, q3={q3}",
-                "mode": mode1,
-                "page_size": page_size,
-                "pages_fetched": current_page,
-                "total_results": total_results,
-                "results_returned": len(results_json),
-                "results": results_json,
-            })
-
-
-        except TimeoutError as e:
-            return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
-        except Exception as e:
-            import traceback
-            logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    def combined_transcript_search(self, request):
-        serializer = CombinedTranscriptSearchSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
-
-        # Get search queries
-        q1 = validated.get("q1", "").strip()
-        mode1 = validated.get("mode1", "exact").lower()
-        q2 = validated.get("q2", "").strip()
-        mode2 = validated.get("mode2", "exact").lower()
-
-        # Dates (do NOT strip, they may be datetime objects)
-        q3 = validated.get("q3")  # start date
-        q4 = validated.get("q4")  # end date
-
-        
-
-        witness_names = validated.get("witness_names", [])
-        transcript_names = validated.get("transcript_names", [])
-        witness_types = validated.get("witness_types", [])
-        sources = validated.get("sources", "all")  # 'all' or list
-
-        bool_query = {"must": [], "must_not": [], "filter": []}
-
-        # Fields for text searches
-        q1_fields = ["case_name"]
-        q2_fields = ["witness_name"]
-
-        def build_query_block(query, mode, target_fields):
-            musts = []
-            if not query:
-                return musts
-
-            if mode == "fuzzy":
-                for word in query.split():
-                    musts.append({
-                        "multi_match": {
-                            "query": word,
-                            "fields": target_fields,
-                            "fuzziness": "AUTO"
-                        }
-                    })
-            elif mode == "boolean":
-                if "/s" in query:
-                    parts = [p.strip() for p in query.split("/s")]
-                    if len(parts) == 2:
-                        term1, term2 = parts
-                        for field in target_fields:
-                            musts.append({
-                                "match_phrase": {
-                                    field: {"query": f"{term1} {term2}", "slop": 5}
-                                }
-                            })
-                else:
-                    not_pattern = r"\bNOT\s+(\w+)"
-                    not_terms = re.findall(not_pattern, query, flags=re.IGNORECASE)
-                    cleaned_query = re.sub(not_pattern, "", query, flags=re.IGNORECASE).strip()
-                    if cleaned_query:
-                        musts.append({
-                            "query_string": {
-                                "query": cleaned_query,
-                                "fields": target_fields,
-                                "default_operator": "AND"
-                            }
-                        })
-                    for term in not_terms:
-                        bool_query["must_not"].append({
-                            "multi_match": {"query": term, "fields": target_fields}
-                        })
-            else:
-                musts.append({
-                    "simple_query_string": {
-                        "query": f'"{query}"',
-                        "fields": target_fields,
-                        "default_operator": "and"
-                    }
-                })
-            return musts
-
-        # Filters
-        if witness_names:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [{"match_phrase": {"witness_name": n}} for n in witness_names],
-                    "minimum_should_match": 1
-                }
-            })
-        if transcript_names:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [{"match_phrase": {"transcript_name": n}} for n in transcript_names],
-                    "minimum_should_match": 1
-                }
-            })
-        if witness_types:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [{"match_phrase": {"type": t}} for t in witness_types],
-                    "minimum_should_match": 1
-                }
-            })
-        if isinstance(sources, list) and sources:
-            bool_query["filter"].append({
-                "bool": {
-                    "should": [{"term": {"source": s}} for s in sources],
-                    "minimum_should_match": 1
-                }
-            })
-
-        # Build queries for q1 and q2
-        bool_query["must"].extend(build_query_block(q1, mode1, q1_fields))
-        bool_query["must"].extend(build_query_block(q2, mode2, q2_fields))
-
-        # Handle date range q3/q4
-        if q3 or q4:
-            date_filter = {}
-            if q3:
-                if isinstance(q3, (datetime, date)):
-                    date_filter["gte"] = q3.strftime("%Y-%m-%d")
-                else:
-                    date_filter["gte"] = q3
-            if q4:
-                if isinstance(q4, (datetime, date)):
-                    date_filter["lte"] = q4.strftime("%Y-%m-%d")
-                else:
-                    date_filter["lte"] = q4
-
-            bool_query["filter"].append({
-                "range": {"transcript_date": date_filter}
-            })
-
-        es_query = {"query": {"bool": bool_query}, "sort": [{"created_at": "asc"}]}
-
-        try:
-            response = es.search(index="transcriptdata", body=es_query, size=10000)
-            results = [hit["_source"] for hit in response["hits"]["hits"]]
-            return Response({
-                "query1": q1,
-                "query2": q2,
-                "query3": q3,
-                "query4": q4,
-                "mode1": mode1,
-                "mode2": mode2,
-                "sources": sources,
-                "count": len(results),
-                "results": results
-            })
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-class CsrfExemptSessionAuthentication(SessionAuthentication):
-    def enforce_csrf(self, request):
-        return  # bypass CSRF check
-@method_decorator(csrf_exempt, name='dispatch')
-class WitnessViewSet(viewsets.ViewSet):
-    authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
-
-    def list(self, request):
-        # Serialize all witnesses
-        witnesses = Witness.objects.all()
-        serializer = WitnessSerializer(witnesses, many=True)
-
-        # Fetch witnesses along with their transcripts
-        witnesses_with_files = Witness.objects.select_related('file').all()
-
-        # Prepare list of dicts: one row per witness-transcript pair
-        transcripts_by_witness = []
-        for w in witnesses_with_files:
-            if w.fullname:
-                transcripts_by_witness.append({
-                    "witness": w.fullname,
-                    "transcript": w.file.name if w.file else None
-                })
-
-        # Counts grouped by WitnessType (excluding null types)
-        type_counts = (
-            Witness.objects
-            .exclude(type__isnull=True)
-            .values("type__type")
-            .annotate(count=Count("id"))
-        )
-
-        # Counts grouped by Alignment (excluding null alignments)
-        alignment_counts = (
-            Witness.objects
-            .exclude(alignment__isnull=True)
-            .values("alignment__alignment")
-            .annotate(count=Count("id"))
-        )
-
-        return Response({
-            "witnesses": serializer.data,
-            "count": len(serializer.data),
-            "type_counts": type_counts,
-            "alignment_counts": alignment_counts,
-            "transcripts_by_witness": transcripts_by_witness
-        })
-    
-    @action(detail=False, methods=["get"], url_path="save-taxonomy")
-    def save_taxonomy(self, request):
-        try:
-            result = fetch_taxonomy_from_sharepoint()
-
-            created_a = 0
-            created_t = 0
-            updated_w = 0
-            created_e = 0
-
-            def normalize_name(name):
-                return unicodedata.normalize("NFKC", name).strip()
-
-            for item in result:
-                alignment = item.get("alignment")
-                witness_name = item.get("witness_name")
-                witness_type = item.get("witness_type")
-                expert_type = item.get("expert_type")
-                transcript_name = item.get("transcript_name")
-                print("transcript", transcript_name)
-
-                # ⚠️ Ensure all required fields exist
-                if not witness_name or not alignment or not witness_type and expert_type:
-                    print(f"⚠️ Skipping witness: {witness_name} (missing alignment/type)")
-                    continue
-
-                # ✅ Ensure alignment exists
-                alignment_obj, created = WitnessAlignment.objects.get_or_create(
-                    alignment=alignment.strip()
-                )
-                if created:
-                    created_a += 1
-
-                # ✅ Ensure type exists
-                type_obj, created = WitnessType.objects.get_or_create(
-                    type=witness_type.strip()
-                )
-                if created:
-                    created_t += 1
-
-                # ✅ Normalize witness name and find all matching witnesses
-
-                # Avoid duplicates
-                witness = Witness.objects.filter(fullname=witness_name).first()
-                transcript = Transcript.objects.filter(name=transcript_name).first()
-                if witness and transcript:
-                    ExpertType.objects.create(type=expert_type, witness=witness,file=transcript )
-                    created_e += 1
-                normalized_name = normalize_name(witness_name)
-                witnesses = Witness.objects.filter(fullname__iexact=normalized_name)
-
-                if witnesses.exists():
-                    for witness in witnesses:
-                        updated = False
-                        if witness.alignment != alignment_obj:
-                            witness.alignment = alignment_obj
-                            updated = True
-                        if witness.type != type_obj:
-                            witness.type = type_obj
-                            updated = True
-
-                        if updated:
-                            witness.save()
-                            updated_w += 1
-                else:
-                    print(f"⚠️ Witness '{witness_name}' not found in DB")
-
-            # ✅ Return after processing all items
-            return Response({
-                "status": "success",
-                "inserted_alignments": created_a,
-                "inserted_types": created_t,
-                "total_fetched": len(result),
-                "witness_updated": updated_w,
-                "expert_type_inserted": created_e
-            }, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-            
-    @csrf_exempt
-    @action(detail=False, methods=["post"], url_path="save-witnesses")
-    def save_witnesses(self, request):
-            results = fetch_witness_names_and_transcripts()
-            # Fetch defaults
-            witness_type = WitnessType.objects.first()
-
-            alignment = WitnessAlignment.objects.first()
-
-            default_user = User.objects.first()
-            default_project = Project.objects.first()
-            # print("resultssssss",results)
-            created_t = 0
-            created_w = 0
-            for item in results:
-                fullname = item.get("witness_name")
-                transcript_name = item.get("transcript_name")
-                transcript_date = item.get("transcript_date")
-                case_name = item.get("case_name")
-                # transcript_date_obj = datetime.strptime(transcript_date, "%m-%d-%Y").date()
-                transcript_date_obj = parse_date(transcript_date).date()
-
-
-                if not (fullname and transcript_name and transcript_date):
-                    print("not found", transcript_name)
-                    continue
-                if not Transcript.objects.filter(
-                    name=transcript_name,
-                    transcript_date=transcript_date_obj,
-                    created_by=default_user,
-                    project=default_project,
-                    case_name=case_name
-                ).exists():
-                    Transcript.objects.create(
-                        name=transcript_name,
-                        transcript_date=transcript_date_obj,
-                        created_by=default_user,
-                        project=default_project,
-                        case_name=case_name
-                    )
-                    created_t += 1
-                transcript = Transcript.objects.filter(name=transcript_name).first()
-                if not transcript:
-                    print("Transcript not found for:", transcript_name)
-
-                # # Avoid duplicates
-                if not Witness.objects.filter(
-                            file=transcript,
-                            fullname=fullname,
-                            alignment=alignment,
-                            type=witness_type
-                        ).exists():
-                            Witness.objects.create(
-                                file=transcript,
-                                fullname=fullname,
-                                alignment=alignment,
-                                type=witness_type
-                            )
-                created_w += 1
-                                # Avoid duplicates
-
-
-
-            return Response({
-                "status": "success",
-                "inserted_transcripts": created_t,
-                "inserted_witnesses": created_w,
-                "total_fetched": len(results)
-            })
-
-
-
-
-class WitnessTypeViewSet(viewsets.ModelViewSet):
-    http_method_names = ["get"]
-    queryset = WitnessType.objects.all()
-    serializer_class = WitnessTypeSerializer
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "source": "postgres",
-            "witnesses": serializer.data,
-            "count": len(serializer.data)
-        })
-
-class WitnessAlignmentViewSet(viewsets.ModelViewSet):
-    http_method_names = ["get"]
-    queryset = WitnessAlignment.objects.all()
-    serializer_class = WitnessAlignmentSerializer
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "source": "postgres",
-            "witnesses": serializer.data,
-            "count": len(serializer.data)
-        })
-
-
-
-
-
-class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-
-    # ✅ Default: GET /witness/ → fetch from PostgreSQL DB
-    def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "source": "postgres",
-            "comments": serializer.data,
-            "count": len(serializer.data)
-        })
-    def create(self, request, *args, **kwargs):
-        # Save the comment in PostgreSQL
-        response = super().create(request, *args, **kwargs)
-        INDEX_NAME = "transcripts"
-        # Extract data from saved comment
-        testimony_id = response.data.get("testimony")
-        testimony = Testimony.objects.get(id=testimony_id)
-        content = response.data.get("content")
-
-        userData = response.data.get("user")
-        user = User.objects.filter(id=userData).first()
-
-        commenter_email = user.email
-        commenter_name = user.name
-
-        # Create a comment
-        comment = Comment.objects.create(
-            testimony=testimony,
-            user=user,
-            content=content
-        )
-
-        if testimony_id:
-            es_id = f"default_{testimony_id}"  # Matches your ES indexing format
-            try:
-                # Get current ES document
-                doc = es.get(index=INDEX_NAME, id=es_id)["_source"]
-
-                # If commenter_emails doesn't exist, create it
-                existing_commenters = doc.get("commenter_emails", [])
-                print(existing_commenters)
-                # Avoid duplicates
-                if not any(c["email"] == commenter_email for c in existing_commenters):
-                    existing_commenters.append({
-                        "name": commenter_name,
-                        "email": commenter_email
-                    })
-
-                    # Update ES document
-                    es.update(
-                        index=INDEX_NAME,
-                        id=es_id,
-                        body={"doc": {"commenter_emails": existing_commenters}}
-                    )
-                    print(f"✅ Updated commenter_emails for {es_id}")
-
-            except Exception as e:
-                print(f"❌ Error updating ES doc {es_id}: {str(e)}")
-
-        return response
-
-    def destroy(self, request, *args, **kwargs):
-        INDEX_NAME = "transcripts"
-        comment = self.get_object()
-
-        # Get details before deleting
-        testimony_id = comment.testimony.id
-        commenter_email = comment.user.email
-
-        # 1️⃣ Delete from PostgreSQL
-        comment.delete()
-
-        # 2️⃣ Check if user still has comments on this testimony
-        still_has_comments = Comment.objects.filter(
-            testimony_id=testimony_id,
-            user__email=commenter_email
-        ).exists()
-
-        # 3️⃣ Update Elasticsearch only if user has no other comments
-        if not still_has_comments:
-            es_id = f"default_{testimony_id}"
-            try:
-                doc = es.get(index=INDEX_NAME, id=es_id)["_source"]
-                existing_commenters = doc.get("commenter_emails", [])
-
-                updated_commenters = [
-                    c for c in existing_commenters 
-                    if c.get("email") != commenter_email
-                ]
-
-                if updated_commenters != existing_commenters:
-                    es.update(
-                        index=INDEX_NAME,
-                        id=es_id,
-                        body={"doc": {"commenter_emails": updated_commenters}}
-                    )
-                    print(f"🗑 Removed {commenter_email} from ES for {es_id}")
-            except Exception as e:
-                print(f"❌ Error updating ES doc {es_id}: {str(e)}")
-
-        return Response({"message": "✅ Comment deleted"}, status=status.HTTP_204_NO_CONTENT)
-    # ✅ New: GET /comments/by-testimony/<id>/
-    @swagger_auto_schema(operation_description="Get all comments by testimony ID")
-    @action(detail=False, methods=["get"], url_path="by-testimony/(?P<testimony_id>[^/.]+)")
-    def by_testimony(self, request, testimony_id=None):
-        comments = Comment.objects.filter(testimony_id=testimony_id)
-        serializer = self.get_serializer(comments, many=True)
-        return Response({
-            "testimony_id": testimony_id,
-            "count": len(serializer.data),
-            "comments": serializer.data
-        })
-
-# class CommentViewSet(viewsets.ModelViewSet):
-#     queryset = Comment.objects.all()
-#     serializer_class = CommentSerializer
-
-#     # ✅ Default: GET /witness/ → fetch from PostgreSQL DB
-#     def list(self, request, *args, **kwargs):
-#         queryset = self.get_queryset()
-#         serializer = self.get_serializer(queryset, many=True)
-#         return Response({
-#             "source": "postgres",
-#             "comments": serializer.data,
-#             "count": len(serializer.data)
-#         })
-    
-
-    
-    
-class HighlightsViewSet(viewsets.ModelViewSet):
-    queryset = Highlights.objects.all()
-    serializer_class = HighlightsSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-    
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-    @action(detail=False, methods=["post"], url_path="msal-sync")
-    def msal_sync(self, request):
-        email = request.data.get("email")
-        name = request.data.get("name", "")
-        msal_id = request.data.get("msal_id")
-
-        if not email:
-            return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={"name": name, "msal_id": msal_id}
-        )
-
-        if not created:
-            user.name = name
-            user.msal_id = msal_id
-            user.save()
-
-        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
-    
-class ExpertTypeViewSet(viewsets.ModelViewSet):
-    queryset = ExpertType.objects.all()
-    serializer_class = ExpertTypeSerializer
-
-    def list(self, request, *args, **kwargs):
-        # Get all experts
-        experts = self.get_queryset()
-        serializer = self.get_serializer(experts, many=True)
-
-        # Count by type (exclude null types)
-        type_counts = ExpertType.objects \
-            .exclude(type__isnull=True) \
-            .values("type") \
-            .annotate(count=Count("id")) \
-            .order_by("type")
-
-        return Response({
-            "experts": serializer.data,
-            "total_experts": experts.count(),
-            "type_counts": type_counts
-        }, status=status.HTTP_200_OK)
-    
+    return results, total_results
