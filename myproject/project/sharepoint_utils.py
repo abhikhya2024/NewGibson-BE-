@@ -650,6 +650,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
         with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
             for doc in valid_docs:
                 writer.update_document(**doc)
+                logger.info(f"Indexed document ID={doc.get('id')} | Transcript={doc.get('transcript_name', '')}")
+
 
         return ix
 
