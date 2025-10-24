@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token,get_or_create_index, index_documents, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, get_token, get_access_token,get_or_create_index, index_documents,search_documents_and,  search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -1078,7 +1078,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     q_text_field_map[q3.strip()] = ["transcript_name"]
 
                 # Fetch this page of results using AND across fields
-                batch_results, batch_total = search_documents(
+                batch_results, batch_total = search_documents_and(
                     ix,
                     q_text_field_map,
                     mode=mode1,           # You can adjust mode per field if needed
