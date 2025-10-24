@@ -690,11 +690,13 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
             else:  # exact
                 parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
                 return parser.parse(f'"{" ".join(clean_terms)}"')
+        logger.info("q_text_field_map", q_text_field_map)
 
         # -------- COMBINE QUERIES WITH AND --------
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
+            logger.info("qqqqqqqqqqqqqqqqqqqqq", q)
             if q is not None:
                 field_queries.append(q)
 
