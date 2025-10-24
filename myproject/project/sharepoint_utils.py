@@ -696,19 +696,20 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
-            logger.info("qqqqqqqqqqqqqqqqqqqqq00000000000000000", text, fields)
+            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | text={text}, fields={fields}")
             if q is not None:
                 field_queries.append(q)
-            logger.info("qqqqqqqqqqqqqqqqqqqqq00000000000000000", field_queries)
+            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={field_queries}")
 
         if not field_queries:
             final_query = Every()
-            logger.info("qqqqqqqqqqqqqqqqqqqqq11111111111111111", final_query)
+            logger.info(f"qqqqqqqqqqqqqqqqqqqqq11111111111111111 | final_query={final_query}")
 
         else:
             # ✅ AND across all query groups
             final_query = And(field_queries)
             logger.info("qqqqqqqqqqqqqqqqqqqqq222222222222222222", final_query)
+            logger.info(f"qqqqqqqqqqqqqqqqqqqqq222222222222222222 | final_query={final_query}")
 
         # -------- PAGINATED SEARCH --------
         try:
