@@ -663,9 +663,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 # --------------------- SEARCH FUNCTIONS ---------------------
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
     """
-    Optimized Whoosh search function.
-    Supports batch-wise retrieval for large datasets.
-    Returns all results if query_text is empty.
+    Whoosh search function — searches question + answer, returns all fields.
+    Supports batch-wise search using `search_page`.
     """
     query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
@@ -711,15 +710,15 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             else:
                 query = parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # -------- BATCHED SEARCH --------
-        offset = 0
+        # -------- PAGINATED SEARCH USING search_page() --------
+        page_num = 1
         while True:
-            batch = searcher.search(query, limit=batch_size, offset=offset)
-            if not batch:
-                break
+            try:
+                batch = searcher.search_page(query, page_num, pagelen=batch_size)
+            except ValueError:
+                break  # no more pages
             for hit in batch:
                 results.append(build_hit(hit))
-            offset += batch_size
+            page_num += 1
 
-    logger.info(f"Search complete — {len(results)} results found.")
     return results
