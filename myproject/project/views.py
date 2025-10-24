@@ -1015,39 +1015,64 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
+        """
+        Whoosh-based search on question and answer fields, returning all relevant fields.
+        """
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
         page = int(request.data.get("page", 1))
         page_size = int(request.data.get("page_size", 50))
-        start, end = (page-1)*page_size, page*page_size
+        start = (page - 1) * page_size
+        end = start + page_size
 
         try:
-            # Fetch testimonies
+            # Step 1: Fetch all testimonies and related transcript data
             testimonies = Testimony.objects.select_related("file").all()
-            docs_list = [
-                {
-                    "id": str(t.id),
-                    "transcript_name": (t.file.name or "").strip() if t.file else "",
-                    "witness_name": getattr(t.file, "witness_name", "") or "",
-                    "question": t.question.strip() if t.question else "",
-                    "answer": t.answer.strip() if t.answer else "",
-                    "cite": t.cite.strip() if t.cite else "",
-                }
-                for t in testimonies if (t.question or t.answer)
-            ]
+            docs_list = []
+            for t in testimonies:
+                transcript_name = t.file.name if t.file else ""
+                witness_name = getattr(t.file, "witness_name", "") or ""
+                question = t.question or ""
+                answer = t.answer or ""
+                cite = t.cite or ""
+
+                # Only index if question or answer exists
+                if question.strip() or answer.strip():
+                    docs_list.append({
+                        "id": str(t.id),
+                        "transcript_name": transcript_name.strip(),
+                        "witness_name": witness_name.strip(),
+                        "question": question.strip(),
+                        "answer": answer.strip(),
+                        "cite": cite.strip(),
+                    })
 
             if not docs_list:
-                return Response({"error": "No testimonies found."}, status=400)
+                return Response({"error": "No testimonies found to index."}, status=400)
 
-            # Configure index
+            # Step 2: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-            ix = configure_index(docs_list, INDEX_DIR, fields=["id","question","answer","transcript_name","witness_name","cite"])
+            # Index all relevant fields
+            ix = configure_index(docs_list, INDEX_DIR, fields=["id", "question", "answer", "transcript_name", "witness_name", "cite"])
 
-            # Search
-            results = search_documents(ix, q3, mode=mode3)
+            # Step 3: Perform search only on question + answer
+            results = search_documents(ix, q3, mode=mode3, search_fields=["question", "answer"])
+
             total_results = len(results)
             paginated = results[start:end]
+
+            results_json = [
+                {
+                    "id": r.get("id"),
+                    "transcript_name": r.get("transcript_name", ""),
+                    "witness_name": r.get("witness_name", ""),
+                    "question": r.get("question", ""),
+                    "answer": r.get("answer", ""),
+                    "cite": r.get("cite", ""),
+                }
+                for r in paginated
+            ]
 
             return Response({
                 "query": q3,
@@ -1055,7 +1080,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "page": page,
                 "page_size": page_size,
                 "total_results": total_results,
-                "results": paginated
+                "results": results_json,
             })
 
         except TimeoutError as e:
@@ -1063,7 +1088,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         except Exception as e:
             import traceback
             logger.error("Search error: %s\n%s", str(e), traceback.format_exc())
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
