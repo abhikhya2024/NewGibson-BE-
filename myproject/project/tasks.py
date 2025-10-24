@@ -52,15 +52,26 @@ def save_testimony_task():
             item.get("index"),
             transcript.id
         )
-
+        witnesses_map = {}
+        for db in DB_NAMES:
+            for w in Witness.objects.using(db).all():
+                if w.file_id not in witnesses_map:
+                    witnesses_map[w.file_id] = []
+                witnesses_map[w.file_id].append(w.fullname)
         if qa_key not in existing:
+            # get witness names for this transcript
+            witness_names = witnesses_map.get(transcript.id, [])
+            witness_name_str = ", ".join(witness_names) if witness_names else None
+
             qa_objects.append(Testimony(
                 question=item.get("question"),
                 answer=item.get("answer"),
                 cite=item.get("cite"),
                 index=item.get("index"),
-                file=transcript
+                file=transcript,
+                witness_name=witness_name_str
             ))
+
 
     # insert testimonies into *same DB as transcript*
     for db in DB_NAMES:

@@ -24,6 +24,7 @@ class Transcript(TimestampedModel):
     file= models.FileField(upload_to="transcripts", null=True)
     case_name = models.CharField(max_length=5000)
     web_url = models.URLField(null=True, blank=True)  # new column
+    
 
     def __str__(self):
         return self.file.name
@@ -105,6 +106,7 @@ class Testimony(TimestampedModel):
     index = models.FloatField()
     cite = models.CharField(max_length=50)
     file = models.ForeignKey(Transcript, on_delete=models.CASCADE, related_name="testimony_data")
+    witness_name = models.CharField(max_length=255, null=True, blank=True)  # new field
 
 # class Comments(TimestampedModel):
 #     """
