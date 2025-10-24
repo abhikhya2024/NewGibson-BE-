@@ -661,12 +661,15 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
+def search_documents_batch(ix, query_text, mode="fuzzy", batch_size=200, search_fields=None, page_num=1):
     """
-    Whoosh search function — searches question + answer, returns all fields.
-    Supports batch-wise search using `search_page`.
+    Search Whoosh index in batches using search_page().
+    Returns one batch per call.
     """
-    query_text = (query_text or "").strip()
+    from whoosh.qparser import MultifieldParser, OrGroup
+    from whoosh.query import FuzzyTerm, And, Or, Prefix, Every
+    import re
+
     search_fields = search_fields or ["question", "answer"]
     results = []
 
@@ -683,43 +686,31 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 "cite": hit.get("cite", ""),
             }
 
-        # -------- BUILD QUERY --------
         if not query_text:
             query = Every()
         else:
             clean_terms = [t for t in re.split(r'\s+', query_text) if t]
+            queries = []
+            for term in clean_terms:
+                t = term.lower()
+                if t.endswith("*"):
+                    base = t.rstrip("*")
+                    if base:
+                        queries.append(Or([Prefix(f, base) for f in search_fields]))
+                    continue
+                edits = 2 if len(t) >= 4 else 1
+                queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in search_fields]))
+            query = And(queries) if queries else parser.parse("")
 
-            if mode.lower() == "fuzzy":
-                queries = []
-                for term in clean_terms:
-                    t = term.lower()
-                    if t.endswith("*"):
-                        base = t.rstrip("*")
-                        if base:
-                            queries.append(Or([Prefix("question", base), Prefix("answer", base)]))
-                        continue
-                    if re.search(r'\d', t):
-                        continue
-                    edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([FuzzyTerm("question", t, maxdist=edits),
-                                       FuzzyTerm("answer", t, maxdist=edits)]))
-                query = And(queries) if queries else Every()
-            elif mode.lower() == "boolean":
-                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
-                query = parser.parse(qstring)
-            else:
-                query = parser.parse(f'"{" ".join(clean_terms)}"')
-
-        # -------- PAGINATED SEARCH USING search_page() --------
-        page_num = 1
-        while True:
-            try:
-                batch = searcher.search_page(query, page_num, pagelen=batch_size)
-            except ValueError:
-                break  # no more pages
-            for hit in batch:
+        # Use search_page to fetch one batch at a time
+        try:
+            page = searcher.search_page(query, page_num, pagelen=batch_size)
+            for hit in page:
                 results.append(build_hit(hit))
-            page_num += 1
-        
+            has_more = page_num < page.pagecount
+        except ValueError:
+            # No more pages
+            results = []
+            has_more = False
 
-    return results
+    return results, has_more
