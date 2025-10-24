@@ -684,7 +684,7 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             return {
                 "id": hit.get("id"),
                 "transcript_name": hit.get("transcript_name", ""),
-                "witness_name": hit.get("witness_name", ""),
+                # "witness_name": hit.get("witness_name", ""),
                 "question": hit.get("question", ""),
                 "answer": hit.get("answer", ""),
                 "cite": hit.get("cite", ""),

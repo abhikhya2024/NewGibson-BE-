@@ -1028,12 +1028,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         try:
             # ✅ Step 1: Collect transcript data — no need to load full Testimonies
-            transcripts = Transcript.objects.only("id", "name", "witness_name")
+            transcripts = Transcript.objects.only("id", "name")
             docs_list = [
                 {
                     "id": str(t.id),
                     "transcript_name": (t.name or "").strip(),
-                    "witness_name": (t.witness_name or "").strip(),
+                    # "witness_name": (t.witness_name or "").strip(),
                 }
                 for t in transcripts if (t.name or "").strip()
             ]
@@ -1058,7 +1058,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     {
                         "id": r.get("id"),
                         "transcript_name": r.get("transcript_name", ""),
-                        "witness_name": r.get("witness_name", ""),
+                        # "witness_name": r.get("witness_name", ""),
                     }
                     for r in paginated
                 ]
