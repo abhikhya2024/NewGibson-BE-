@@ -593,7 +593,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     lock_path = os.path.join(index_dir, lock_filename)
 
     # ✅ Only index transcript_name and id by default
-    fields = fields or ["id", "transcript_name"]
+    fields = fields or ["id", "question", "answer"]
 
     # ✅ Build schema dynamically based on fields
     schema_fields = {}
@@ -663,7 +663,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 # --------------------- SEARCH FUNCTIONS ---------------------
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200):
     """
-    Optimized Whoosh search function — only searches transcript_name field.
+    Optimized Whoosh search function — searches only 'question' and 'answer' fields,
+    but returns all fields for each document.
     Supports 'fuzzy', 'boolean', and 'exact' search modes.
     Returns results in batches for performance.
     """
@@ -676,15 +677,16 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
     logger.info(f"Clean terms: {clean_terms}")
     results = []
 
+    search_fields = ["question", "answer"]  # Only search these fields
 
     with ix.searcher() as searcher:
-        parser = QueryParser("transcript_name", schema=ix.schema)
+        parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
 
         def build_hit(hit):
             return {
                 "id": hit.get("id"),
                 "transcript_name": hit.get("transcript_name", ""),
-                # "witness_name": hit.get("witness_name", ""),
+                "witness_name": hit.get("witness_name", ""),
                 "question": hit.get("question", ""),
                 "answer": hit.get("answer", ""),
                 "cite": hit.get("cite", ""),
@@ -698,19 +700,24 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 if t.endswith("*"):
                     base = t.rstrip("*")
                     if base:
-                        queries.append(Prefix("transcript_name", base))
+                        queries.append(Or([
+                            Prefix("question", base),
+                            Prefix("answer", base)
+                        ]))
                     continue
                 if re.search(r'\d', t):
                     continue
                 edits = max_edits if len(t) >= 4 else 1
-                queries.append(FuzzyTerm("transcript_name", t, maxdist=edits))
+                queries.append(Or([
+                    FuzzyTerm("question", t, maxdist=edits),
+                    FuzzyTerm("answer", t, maxdist=edits)
+                ]))
 
             final_query = And(queries) if queries else parser.parse("")
             whoosh_results = searcher.search(final_query, limit=None)
 
         # -------- BOOLEAN SEARCH --------
         elif mode.lower() == "boolean":
-            # Allow manual AND/OR/NOT logic in query
             if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
                 qstring = query_text
             else:
@@ -720,7 +727,6 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
 
         # -------- EXACT SEARCH --------
         else:
-            # Exact phrase match
             q = parser.parse(f'"{" ".join(clean_terms)}"')
             whoosh_results = searcher.search(q, limit=None)
 
@@ -732,4 +738,3 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
 
     logger.info(f"Search complete — {len(results)} results found.")
     return results
-
