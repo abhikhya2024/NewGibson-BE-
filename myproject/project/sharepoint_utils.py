@@ -633,20 +633,20 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
-                     page=1, page_size=200, search_fields=None):
+def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with="AND",
+                     page=1, page_size=200):
     """
-    Whoosh search function with pagination and sequential multi-field support.
+    Whoosh search function with pagination.
+    - q_text_field_map: dict mapping query_text -> list of fields
+        e.g., {"Joey": ["transcript_name"], "some question": ["question", "answer"]}
     - Supports fuzzy, boolean, and exact modes.
-    - If query_text is empty, returns all documents.
-    - If multiple search_fields are provided, runs sequential searches and combines results.
+    - Returns documents matching all query_text/field groups (AND across groups).
     """
-    query_text = (query_text or "").strip()
     results = []
     total_results = 0
 
-    if not search_fields:
-        search_fields = ["question", "answer"]
+    if not q_text_field_map:
+        q_text_field_map = {"": ["question", "answer"]}  # default: all docs
 
     with ix.searcher() as searcher:
 
@@ -660,70 +660,58 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 "cite": hit.get("cite", ""),
             }
 
-        # Build parser dynamically
-        parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
-
-        # Prepare base query (shared logic)
+        # Build parser for each field group
         def make_query(text, fields):
             clean_terms = [t for t in re.split(r'\s+', text) if t]
-
-            # ✅ If query is empty → only then return Every()
             if not clean_terms:
                 return Every()
 
-            # Fuzzy search mode
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
                     t = term.lower()
-                    # Prefix search
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
                             queries.append(Or([Prefix(f, base) for f in fields]))
                         continue
-                    # Skip numbers
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([
-                        FuzzyTerm(f, t, maxdist=edits) for f in fields
-                    ]))
-                # ✅ Only build if we have real query terms
+                    queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
                 return And(queries) if queries else None
 
-            # Boolean mode
             elif mode.lower() == "boolean":
+                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
                 qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
                     else f" {join_with} ".join(clean_terms)
                 return parser.parse(qstring)
 
-            # Exact match mode
-            else:
+            else:  # exact
+                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
                 return parser.parse(f'"{" ".join(clean_terms)}"')
 
-        combined_results = []
-        seen_ids = set()
+        # -------- COMBINE QUERIES WITH AND --------
+        field_queries = []
+        for text, fields in q_text_field_map.items():
+            q = make_query(text, fields)
+            if q is not None:
+                field_queries.append(q)
 
-        for field_group in ([search_fields] if len(search_fields) <= 2 else [[f] for f in search_fields]):
-            q = make_query(query_text, field_group)
+        if not field_queries:
+            final_query = Every()
+        else:
+            # ✅ AND across all query groups
+            final_query = And(field_queries)
 
-            # 🚫 Skip invalid or empty queries (don’t return all)
-            if not q or isinstance(q, type(None)):
-                continue
+        # -------- PAGINATED SEARCH --------
+        try:
+            whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
+            for hit in whoosh_page:
+                results.append(build_hit(hit))
+            total_results = whoosh_page.total
+        except ValueError:
+            results = []
+            total_results = 0
 
-            try:
-                whoosh_page = searcher.search_page(q, page, pagelen=page_size)
-                for hit in whoosh_page:
-                    doc = build_hit(hit)
-                    if doc["id"] not in seen_ids:
-                        combined_results.append(doc)
-                        seen_ids.add(doc["id"])
-                total_results += whoosh_page.total
-            except ValueError:
-                continue
-
-        results = combined_results
-
-    logger.info(f"🔍 Search complete — page {page}, {len(results)} results, total (approx) {total_results}.")
     return results, total_results

@@ -1070,49 +1070,32 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             current_page = 1
 
             while True:
-                batch_results = []
-                batch_total = 0
-
-                # 🔹 Search by question/answer if q1 is given
+                # Build the query map for AND across fields
+                q_text_field_map = {}
                 if q1.strip():
-                    q1_results, q1_total = search_documents(
-                        ix,
-                        query_text=q1,
-                        mode=mode1,
-                        page=current_page,
-                        page_size=page_size,
-                        search_fields=["question", "answer"]
-                    )
-                    batch_results.extend(q1_results)
-                    batch_total += q1_total
-
-                # 🔹 Search by transcript_name if q3 is given
+                    q_text_field_map[q1.strip()] = ["question", "answer"]
                 if q3.strip():
-                    q3_results, q3_total = search_documents(
-                        ix,
-                        query_text=q3,
-                        mode=mode3,
-                        page=current_page,
-                        page_size=page_size,
-                        search_fields=["transcript_name"]
-                    )
-                    batch_results.extend(q3_results)
-                    batch_total += q3_total
+                    q_text_field_map[q3.strip()] = ["transcript_name"]
 
-                # 🔹 Stop if no results in this batch
+                # Fetch this page of results using AND across fields
+                batch_results, batch_total = search_documents(
+                    ix,
+                    q_text_field_map,
+                    mode=mode1,           # You can adjust mode per field if needed
+                    page=current_page,
+                    page_size=page_size
+                )
+
                 if not batch_results:
-                    break
+                    break  # no more results
 
-                # 🔹 Optionally deduplicate results by ID
-                unique_ids = set(r["id"] for r in all_results)
-                new_results = [r for r in batch_results if r["id"] not in unique_ids]
-                all_results.extend(new_results)
-
-                total_results = len(all_results)
+                # Extend all_results
+                all_results.extend(batch_results)
+                total_results = batch_total
 
                 logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
 
-                # 🔹 Stop when all data fetched or limit reached
+                # Stop when all data fetched or limit reached
                 if len(batch_results) < page_size or current_page >= max_pages:
                     break
 
@@ -1132,7 +1115,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             ]
 
             return Response({
-                "query": q1,
+                "query": f"q1={q1}, q3={q3}",
                 "mode": mode1,
                 "page_size": page_size,
                 "pages_fetched": current_page,
@@ -1140,6 +1123,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 "results_returned": len(results_json),
                 "results": results_json,
             })
+
 
         except TimeoutError as e:
             return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
