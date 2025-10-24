@@ -642,9 +642,10 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
     - Supports fuzzy, boolean, and exact modes.
     - Returns documents matching all query_text/field groups (AND across groups).
     """
+
     results = []
     total_results = 0
-
+    logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={q_text_field_map}")
     if not q_text_field_map:
         q_text_field_map = {"": ["question", "answer"]}  # default: all docs
 
