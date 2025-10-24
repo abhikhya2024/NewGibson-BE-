@@ -661,7 +661,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
     """
     Optimized Whoosh search function — searches only 'question' and 'answer' fields,
     but returns all fields for each document.
