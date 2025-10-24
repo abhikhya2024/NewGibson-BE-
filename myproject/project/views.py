@@ -1024,8 +1024,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         """
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
-        page_size = int(request.data.get("page_size", 200))  # batch size (default 200)
-        max_pages = int(request.data.get("max_pages", 25))    # limit total pages to fetch
+        page_size = int(request.data.get("page_size", 200))
+        max_pages = int(request.data.get("max_pages", 25))
 
         try:
             # Step 1: Fetch testimonies
@@ -1056,6 +1056,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = get_or_create_index(INDEX_DIR)
 
+            # Step 2.5: Index documents if index is empty
+            with ix.searcher() as searcher:
+                if searcher.doc_count() == 0:
+                    index_documents(ix, docs_list)
 
             # Step 3: Search in batches (incrementing page)
             all_results = []
@@ -1073,20 +1077,19 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 )
 
                 if not batch_results:
-                    break  # no more results
+                    break
 
                 all_results.extend(batch_results)
-                total_results = batch_total  # total stays same for all batches
+                total_results = batch_total
 
-                logger.info(f"Fetched page {current_page} → {len(batch_results)} results")
+                logger.info(f"📄 Fetched page {current_page} → {len(batch_results)} results")
 
-                # Stop if we fetched all or reached max_pages limit
                 if len(all_results) >= total_results or current_page >= max_pages:
                     break
 
                 current_page += 1
 
-            # Step 4: Format results
+            # Step 4: Format response
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1113,7 +1116,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
             import traceback
-            logger.error("Search error: %s\n%s", str(e), traceback.format_exc())
+            logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)

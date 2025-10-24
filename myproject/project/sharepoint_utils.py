@@ -584,6 +584,9 @@ def _release_file_lock(fh):
 
 # --------------------- INDEX CREATION ---------------------
 def get_or_create_index(index_dir):
+    """
+    Create or open a Whoosh index at the given path.
+    """
     schema = Schema(
         id=ID(stored=True, unique=True),
         question=TEXT(stored=True),
@@ -596,7 +599,6 @@ def get_or_create_index(index_dir):
     if not os.path.exists(index_dir):
         os.makedirs(index_dir)
 
-    # ✅ Create only if index doesn’t exist
     if not index.exists_in(index_dir):
         ix = index.create_in(index_dir, schema)
         logger.info(f"✅ Created new Whoosh index at: {index_dir}")
@@ -607,17 +609,38 @@ def get_or_create_index(index_dir):
     return ix
 
 
-# --------------------- SEARCH FUNCTIONS ---------------------
+def index_documents(ix, docs_list):
+    """
+    Index a list of documents into the Whoosh index.
+    """
+    if not docs_list:
+        logger.warning("⚠️ No documents to index.")
+        return
+
+    writer = ix.writer()
+    for d in docs_list:
+        writer.update_document(
+            id=d["id"],
+            question=d["question"],
+            answer=d["answer"],
+            transcript_name=d["transcript_name"],
+            witness_name=d["witness_name"],
+            cite=d["cite"],
+        )
+    writer.commit()
+    logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
+
+
+# --------------------- SEARCH FUNCTION ---------------------
 
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                      page=1, page_size=200, search_fields=None):
     """
     Whoosh search function with pagination.
-    - Searches only 'question' and 'answer' fields by default.
-    - Supports 'fuzzy', 'boolean', and 'exact' search modes.
-    - Returns results for the requested page (batch).
+    - Supports fuzzy, boolean, and exact modes.
+    - Returns paginated results.
+    - If query_text is empty, returns all documents.
     """
-
     query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
     results = []
@@ -648,7 +671,10 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
-                            queries.append(Or([Prefix("question", base), Prefix("answer", base)]))
+                            queries.append(Or([
+                                Prefix("question", base),
+                                Prefix("answer", base)
+                            ]))
                         continue
                     if re.search(r'\d', t):
                         continue
@@ -658,10 +684,13 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                         FuzzyTerm("answer", t, maxdist=edits)
                     ]))
                 query = And(queries) if queries else Every()
+
             elif mode.lower() == "boolean":
-                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
+                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) \
+                    else f" {join_with} ".join(clean_terms)
                 query = parser.parse(qstring)
-            else:
+
+            else:  # exact
                 query = parser.parse(f'"{" ".join(clean_terms)}"')
 
         # -------- PAGINATED SEARCH --------
@@ -671,9 +700,8 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 results.append(build_hit(hit))
             total_results = whoosh_page.total
         except ValueError:
-            # Page number exceeds total pages
             results = []
             total_results = 0
 
-    logger.info(f"Search complete — page {page}, {len(results)} results returned, total {total_results}.")
+    logger.info(f"🔍 Search complete — page {page}, {len(results)} results returned, total {total_results}.")
     return results, total_results
