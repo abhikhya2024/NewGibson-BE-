@@ -36,15 +36,18 @@ import io, re, os, shutil
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from contextlib import redirect_stdout
+import io
+import zipfile
+from django.http import HttpResponse
+from whoosh import index
+
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 SITE_NAME = "DocsGibsonDemo"
-import io
-import zipfile
-from django.http import HttpResponse
+
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 
@@ -1051,11 +1054,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             # Step 2: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-            ix = configure_index(
-                docs_list,
-                INDEX_DIR,
-                fields=["id", "question", "answer", "transcript_name", "witness_name", "cite"]
-            )
+            ix = index.open_dir(INDEX_DIR)
+
 
             # Step 3: Search in batches (incrementing page)
             all_results = []
