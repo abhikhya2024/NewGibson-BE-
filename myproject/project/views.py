@@ -1022,8 +1022,11 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         Paginated Whoosh-based search on question + answer fields.
         Fetches results batch-by-batch by incrementing page number.
         """
-        q3 = request.data.get("q3", "").strip()
-        mode3 = request.data.get("mode3", "exact").lower()
+        q1 = request.data.get("q1", "").strip()
+        mode1 = request.data.get("mode1", "exact").lower()
+        # q3 = request.data.get("q3", "").strip()
+        # mode3 = request.data.get("mode3", "exact").lower()
+
         page_size = int(request.data.get("page_size", 200))
         max_pages = int(request.data.get("max_pages", 25))
 
@@ -1069,8 +1072,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             while True:
                 batch_results, batch_total = search_documents(
                     ix,
-                    query_text=q3,
-                    mode=mode3,
+                    query_text=q1,
+                    mode=mode1,
                     page=current_page,
                     page_size=page_size,
                     search_fields=["question", "answer"]
@@ -1103,8 +1106,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             ]
 
             return Response({
-                "query": q3,
-                "mode": mode3,
+                "query": q1,
+                "mode": mode1,
                 "page_size": page_size,
                 "pages_fetched": current_page,
                 "total_results": total_results,
