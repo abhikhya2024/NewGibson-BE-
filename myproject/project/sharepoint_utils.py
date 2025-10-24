@@ -710,9 +710,9 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
 
         logger.info(f"✅ FINAL QUERY → {final_query}")
             # ✅ AND across all query groups
-            final_query = And(field_queries)
-            logger.info("qqqqqqqqqqqqqqqqqqqqq222222222222222222", final_query)
-            logger.info(f"qqqqqqqqqqqqqqqqqqqqq222222222222222222 | final_query={final_query}")
+        final_query = And(field_queries)
+        logger.info("qqqqqqqqqqqqqqqqqqqqq222222222222222222", final_query)
+        logger.info(f"qqqqqqqqqqqqqqqqqqqqq222222222222222222 | final_query={final_query}")
 
         # -------- PAGINATED SEARCH --------
         try:
