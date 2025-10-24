@@ -1015,6 +1015,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         )
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
+        """
+        Optimized Whoosh-based search that indexes and searches only transcript_name
+        for ultra-fast lookups.
+        """
         q3 = request.data.get("q3", "").strip().lower()
         mode3 = request.data.get("mode3", "exact").lower()
         page = int(request.data.get("page", 1))
@@ -1022,58 +1026,58 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         start = (page - 1) * page_size
         end = start + page_size
 
-        # Step 1: Get valid transcript IDs
-        valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
-
-        # Step 2: Fetch testimonies
-        testimonies = Testimony.objects.select_related("file").filter(file_id__in=valid_transcript_ids)
-        docs_list = []
-        for t in testimonies:
-            transcript_name = t.file.name if t.file else ""
-            witness_name = getattr(t.file, "witness_name", "") or ""
-            question = t.question or ""
-            answer = t.answer or ""
-            cite = t.cite or ""
-
-            if transcript_name.strip():
-                docs_list.append({
-                    "id": str(t.id),
-                    "question": question.strip(),
-                    "answer": answer.strip(),
-                    "cite": cite.strip(),
-                    "transcript_name": transcript_name.strip(),
-                    "witness_name": witness_name.strip(),
-                })
-
-        # Step 3: Index directory
-        BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
-        INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-
         try:
-            # Step 4: Configure index (index only transcript_name field)
-            ix = configure_index(docs_list, INDEX_DIR, fields=["transcript_name"])
+            # ✅ Step 1: Collect transcript data — no need to load full Testimonies
+            transcripts = Transcript.objects.only("id", "name", "witness_name")
+            docs_list = [
+                {
+                    "id": str(t.id),
+                    "transcript_name": (t.name or "").strip(),
+                    "witness_name": (t.witness_name or "").strip(),
+                }
+                for t in transcripts if (t.name or "").strip()
+            ]
 
-            # Step 5: Perform search — only transcript_name field is queried
+            if not docs_list:
+                return Response({"error": "No transcripts found to index."}, status=400)
+
+            # ✅ Step 2: Index directory path
+            BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
+            INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
+
+            # ✅ Step 3: Configure Whoosh index — only 'id' and 'transcript_name'
+            ix = configure_index(docs_list, INDEX_DIR, fields=["id", "transcript_name"])
+
+            # ✅ Step 4: Perform optimized search — only transcript_name is queried
             with io.StringIO() as buf, redirect_stdout(buf):
-                results = search_transcript_name(ix, q3, mode=mode3)
-                results_json = [{
-                    "id": hit.get("id"),
-                    "transcript_name": hit.get("transcript_name", ""),
-                    "witness_name": hit.get("witness_name", ""),
-                    "question": hit.get("question", ""),
-                    "answer": hit.get("answer", ""),
-                    "cite": hit.get("cite", ""),
-                } for hit in results[start:end]]
+                results = search_documents(ix, q3, mode=mode3)
+                total_results = len(results)
+                paginated = results[start:end]
 
+                results_json = [
+                    {
+                        "id": r.get("id"),
+                        "transcript_name": r.get("transcript_name", ""),
+                        "witness_name": r.get("witness_name", ""),
+                    }
+                    for r in paginated
+                ]
+
+            # ✅ Step 5: Return paginated search results
             return Response({
                 "query": q3,
                 "mode": mode3,
                 "page": page,
                 "page_size": page_size,
-                "total": len(results),
+                "total_results": total_results,
                 "results": results_json,
             })
+
+        except TimeoutError as e:
+            return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
+            import traceback
+            logger.error("Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def combined_transcript_search(self, request):
