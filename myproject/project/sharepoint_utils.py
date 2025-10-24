@@ -665,44 +665,53 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
 
         # Prepare base query (shared logic)
         def make_query(text, fields):
-            if not text:
-                return Every()
-
             clean_terms = [t for t in re.split(r'\s+', text) if t]
+
+            # ✅ If query is empty → only then return Every()
             if not clean_terms:
                 return Every()
 
+            # Fuzzy search mode
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
                     t = term.lower()
+                    # Prefix search
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
                             queries.append(Or([Prefix(f, base) for f in fields]))
                         continue
+                    # Skip numbers
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
                     queries.append(Or([
                         FuzzyTerm(f, t, maxdist=edits) for f in fields
                     ]))
-                return And(queries) if queries else Every()
+                # ✅ Only build if we have real query terms
+                return And(queries) if queries else None
 
+            # Boolean mode
             elif mode.lower() == "boolean":
                 qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
                     else f" {join_with} ".join(clean_terms)
                 return parser.parse(qstring)
 
-            else:  # exact
+            # Exact match mode
+            else:
                 return parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # Sequential search if multiple fields are specified
         combined_results = []
         seen_ids = set()
 
         for field_group in ([search_fields] if len(search_fields) <= 2 else [[f] for f in search_fields]):
             q = make_query(query_text, field_group)
+
+            # 🚫 Skip invalid or empty queries (don’t return all)
+            if not q or isinstance(q, type(None)):
+                continue
+
             try:
                 whoosh_page = searcher.search_page(q, page, pagelen=page_size)
                 for hit in whoosh_page:
