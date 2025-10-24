@@ -1017,15 +1017,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
     def combined_search(self, request):
         """
         Paginated Whoosh-based search on question + answer fields.
-        Returns only the requested page of results, with total count.
+        Fetches results batch-by-batch by incrementing page number.
         """
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
-        page = int(request.data.get("page", 1))
-        page_size = int(request.data.get("page_size", 50))
+        page_size = int(request.data.get("page_size", 200))  # batch size (default 200)
+        max_pages = int(request.data.get("max_pages", 5))    # limit total pages to fetch
 
         try:
-            # Step 1: Fetch all testimonies and related transcript data
+            # Step 1: Fetch testimonies
             testimonies = Testimony.objects.select_related("file").all()
             docs_list = []
             for t in testimonies:
@@ -1035,7 +1035,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 answer = t.answer or ""
                 cite = t.cite or ""
 
-                # Only index if question or answer exists
                 if question.strip() or answer.strip():
                     docs_list.append({
                         "id": str(t.id),
@@ -1058,15 +1057,34 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 fields=["id", "question", "answer", "transcript_name", "witness_name", "cite"]
             )
 
-            # Step 3: Search with pagination
-            results, total_results = search_documents(
-                ix,
-                query_text=q3,
-                mode=mode3,
-                page=page,
-                page_size=page_size,
-                search_fields=["question", "answer"]
-            )
+            # Step 3: Search in batches (incrementing page)
+            all_results = []
+            total_results = 0
+            current_page = 1
+
+            while True:
+                batch_results, batch_total = search_documents(
+                    ix,
+                    query_text=q3,
+                    mode=mode3,
+                    page=current_page,
+                    page_size=page_size,
+                    search_fields=["question", "answer"]
+                )
+
+                if not batch_results:
+                    break  # no more results
+
+                all_results.extend(batch_results)
+                total_results = batch_total  # total stays same for all batches
+
+                logger.info(f"Fetched page {current_page} → {len(batch_results)} results")
+
+                # Stop if we fetched all or reached max_pages limit
+                if len(all_results) >= total_results or current_page >= max_pages:
+                    break
+
+                current_page += 1
 
             # Step 4: Format results
             results_json = [
@@ -1078,15 +1096,16 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "answer": r.get("answer", ""),
                     "cite": r.get("cite", ""),
                 }
-                for r in results
+                for r in all_results
             ]
 
             return Response({
                 "query": q3,
                 "mode": mode3,
-                "page": page,
                 "page_size": page_size,
+                "pages_fetched": current_page,
                 "total_results": total_results,
+                "results_returned": len(results_json),
                 "results": results_json,
             })
 
