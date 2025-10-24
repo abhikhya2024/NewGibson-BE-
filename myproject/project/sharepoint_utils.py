@@ -582,9 +582,8 @@ def _release_file_lock(fh):
 # --------------------- INDEX CREATION ---------------------
 def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fields=None):
     """
-    Create or open Whoosh index.
-    - Only create a new index if none exists.
-    - If index exists, simply open it without rewriting documents.
+    Create/open Whoosh index and add docs_list while holding an OS-level file lock.
+    Supports specifying which fields to index for faster performance.
     """
     import fcntl, time, os
     from whoosh.fields import Schema, TEXT, ID
@@ -593,10 +592,10 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
 
-    # Fields to index
+    # ✅ Only index transcript_name and id by default
     fields = fields or ["id", "question", "answer","transcript_name", "witness_name"]
 
-    # Build schema dynamically
+    # ✅ Build schema dynamically based on fields
     schema_fields = {}
     for field in fields:
         if field == "id":
@@ -605,12 +604,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             schema_fields[field] = TEXT(stored=True)
     schema = Schema(**schema_fields)
 
-    # If index exists, just open it
-    if index.exists_in(index_dir):
-        ix = index.open_dir(index_dir)
-        return ix
-
-    # Otherwise, filter valid docs and create index
+    # ✅ Filter valid documents
     valid_docs = []
     for doc in docs_list:
         _id = str(doc.get("id", "")).strip()
@@ -631,7 +625,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     if not valid_docs:
         raise ValueError("No valid documents to index.")
 
-    # Acquire file lock before creating index
+    # ✅ Acquire file lock
     start = time.time()
     fh = open(lock_path, "a+")
     while True:
@@ -645,13 +639,16 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             time.sleep(0.2)
 
     try:
-        # Create new index and write documents
-        ix = index.create_in(index_dir, schema)
+        # ✅ Create or open index
+        if not index.exists_in(index_dir):
+            ix = index.create_in(index_dir, schema)
+        else:
+            ix = index.open_dir(index_dir)
+
+        # ✅ Write all documents
         with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
             for doc in valid_docs:
                 writer.update_document(**doc)
-                logger.info(f"Indexed document ID={doc.get('id')} | Transcript={doc.get('transcript_name', '')}")
-
 
         return ix
 
@@ -661,7 +658,6 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             fh.close()
         except Exception:
             pass
-
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
@@ -724,6 +720,5 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             for hit in batch:
                 results.append(build_hit(hit))
             page_num += 1
-        
 
     return results
