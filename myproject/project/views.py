@@ -1021,6 +1021,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         page_size = int(request.data.get("page_size", 50))
         start = (page - 1) * page_size
         end = start + page_size
+
         # Step 1: Get valid transcript IDs
         valid_transcript_ids = Transcript.objects.values_list("id", flat=True)
 
@@ -1034,7 +1035,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             answer = t.answer or ""
             cite = t.cite or ""
 
-            if question.strip() or answer.strip():
+            if transcript_name.strip():
                 docs_list.append({
                     "id": str(t.id),
                     "question": question.strip(),
@@ -1049,32 +1050,32 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
 
         try:
-            # Step 4: Configure index
-            ix = configure_index(docs_list, INDEX_DIR)
+            # Step 4: Configure index (index only transcript_name field)
+            ix = configure_index(docs_list, INDEX_DIR, fields=["transcript_name"])
 
-            # Step 5: Perform search
+            # Step 5: Perform search — only transcript_name field is queried
             with io.StringIO() as buf, redirect_stdout(buf):
-                results = search_documents(ix, q3, mode=mode3)
-                # Print results for debugging
-                results_json = []
-
-                for hit in results:
-                     results_json.append({
-                        "id": hit.get("id"),
-                        "transcript_name": hit.get("transcript_name", ""),
-                        "witness_name": hit.get("witness_name", ""),
-                        "question": hit.get("question", ""),
-                        "answer": hit.get("answer", ""),
-                        "cite": hit.get("cite", ""),
-                    })
+                results = search_transcript_name(ix, q3, mode=mode3)
+                results_json = [{
+                    "id": hit.get("id"),
+                    "transcript_name": hit.get("transcript_name", ""),
+                    "witness_name": hit.get("witness_name", ""),
+                    "question": hit.get("question", ""),
+                    "answer": hit.get("answer", ""),
+                    "cite": hit.get("cite", ""),
+                } for hit in results[start:end]]
 
             return Response({
                 "query": q3,
                 "mode": mode3,
-                "results": results_json
+                "page": page,
+                "page_size": page_size,
+                "total": len(results),
+                "results": results_json,
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
