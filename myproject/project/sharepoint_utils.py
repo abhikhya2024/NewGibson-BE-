@@ -580,61 +580,82 @@ def _release_file_lock(fh):
 def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fields=None):
     """
     Create/open Whoosh index and add docs_list while holding an OS-level file lock.
-    Called rarely — not on every search.
+    Supports specifying which fields to index for faster performance.
     """
+    import fcntl, time, os
+    from whoosh.fields import Schema, TEXT, ID
+    from whoosh import index
+
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
 
-    schema = Schema(
-        id=ID(stored=True, unique=True),
-        question=TEXT(stored=True),
-        answer=TEXT(stored=True),
-        cite=TEXT(stored=True),
-        transcript_name=TEXT(stored=True),
-        witness_name=TEXT(stored=True),
-    )
+    # ✅ Default to all fields if not provided
+    fields = fields or ["id", "question", "answer", "cite", "transcript_name", "witness_name"]
 
+    # ✅ Build schema dynamically based on fields
+    schema_fields = {}
+    for field in fields:
+        if field == "id":
+            schema_fields["id"] = ID(stored=True, unique=True)
+        else:
+            schema_fields[field] = TEXT(stored=True)
+    schema = Schema(**schema_fields)
+
+    # ✅ Filter valid documents
     valid_docs = []
     for doc in docs_list:
         _id = str(doc.get("id", "")).strip()
         if not _id:
             continue
-
-        fields = {k: str(doc.get(k, "")).strip() for k in ["question", "answer", "cite", "transcript_name", "witness_name"]}
-        if not any(fields.values()):
-            continue
-
-        valid_docs.append({"id": _id, **fields})
+        entry = {"id": _id}
+        has_value = False
+        for field in fields:
+            if field == "id":
+                continue
+            val = str(doc.get(field, "")).strip()
+            entry[field] = val
+            if val:
+                has_value = True
+        if has_value:
+            valid_docs.append(entry)
 
     if not valid_docs:
         raise ValueError("No valid documents to index.")
 
-    logger.info(f"📦 Indexing {len(valid_docs)} documents...")
+    # ✅ Acquire file lock
+    start = time.time()
+    fh = open(lock_path, "a+")
+    while True:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except BlockingIOError:
+            if (time.time() - start) > 30:
+                fh.close()
+                raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
+            time.sleep(0.2)
 
-    fh = None
     try:
-        fh = _acquire_file_lock(lock_path)
+        # ✅ Create or open index
         if not index.exists_in(index_dir):
             ix = index.create_in(index_dir, schema)
         else:
             ix = index.open_dir(index_dir)
 
-        writer = ix.writer()
-        for doc in valid_docs:
-            writer.update_document(**doc)
-        writer.commit()
-        logger.info(f"✅ Indexed {len(valid_docs)} documents successfully.")
+        # ✅ Write all documents
+        with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
+            for doc in valid_docs:
+                writer.update_document(**doc)
+
         return ix
-    except TimeoutError as te:
-        logger.error(f"❌ Timeout acquiring file lock: {te}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error during configure_index: {e}")
-        traceback.print_exc()
-        raise
+
     finally:
-        if fh:
-            _release_file_lock(fh)
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+            fh.close()
+        except Exception:
+            pass
+
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
