@@ -582,8 +582,9 @@ def _release_file_lock(fh):
 # --------------------- INDEX CREATION ---------------------
 def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fields=None):
     """
-    Create/open Whoosh index and add docs_list while holding an OS-level file lock.
-    Supports specifying which fields to index for faster performance.
+    Create or open Whoosh index.
+    - Only create a new index if none exists.
+    - If index exists, simply open it without rewriting documents.
     """
     import fcntl, time, os
     from whoosh.fields import Schema, TEXT, ID
@@ -592,10 +593,10 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
 
-    # ✅ Only index transcript_name and id by default
+    # Fields to index
     fields = fields or ["id", "question", "answer","transcript_name", "witness_name"]
 
-    # ✅ Build schema dynamically based on fields
+    # Build schema dynamically
     schema_fields = {}
     for field in fields:
         if field == "id":
@@ -604,7 +605,12 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             schema_fields[field] = TEXT(stored=True)
     schema = Schema(**schema_fields)
 
-    # ✅ Filter valid documents
+    # If index exists, just open it
+    if index.exists_in(index_dir):
+        ix = index.open_dir(index_dir)
+        return ix
+
+    # Otherwise, filter valid docs and create index
     valid_docs = []
     for doc in docs_list:
         _id = str(doc.get("id", "")).strip()
@@ -625,7 +631,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     if not valid_docs:
         raise ValueError("No valid documents to index.")
 
-    # ✅ Acquire file lock
+    # Acquire file lock before creating index
     start = time.time()
     fh = open(lock_path, "a+")
     while True:
@@ -639,13 +645,8 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             time.sleep(0.2)
 
     try:
-        # ✅ Create or open index
-        if not index.exists_in(index_dir):
-            ix = index.create_in(index_dir, schema)
-        else:
-            ix = index.open_dir(index_dir)
-
-        # ✅ Write all documents
+        # Create new index and write documents
+        ix = index.create_in(index_dir, schema)
         with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
             for doc in valid_docs:
                 writer.update_document(**doc)
@@ -660,16 +661,14 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             pass
 
 
-# --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents_batch(ix, query_text, mode="fuzzy", batch_size=200, search_fields=None, page_num=1):
-    """
-    Search Whoosh index in batches using search_page().
-    Returns one batch per call.
-    """
-    from whoosh.qparser import MultifieldParser, OrGroup
-    from whoosh.query import FuzzyTerm, And, Or, Prefix, Every
-    import re
 
+# --------------------- SEARCH FUNCTIONS ---------------------
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
+    """
+    Whoosh search function — searches question + answer, returns all fields.
+    Supports batch-wise search using `search_page`.
+    """
+    query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
     results = []
 
@@ -686,31 +685,43 @@ def search_documents_batch(ix, query_text, mode="fuzzy", batch_size=200, search_
                 "cite": hit.get("cite", ""),
             }
 
+        # -------- BUILD QUERY --------
         if not query_text:
             query = Every()
         else:
             clean_terms = [t for t in re.split(r'\s+', query_text) if t]
-            queries = []
-            for term in clean_terms:
-                t = term.lower()
-                if t.endswith("*"):
-                    base = t.rstrip("*")
-                    if base:
-                        queries.append(Or([Prefix(f, base) for f in search_fields]))
-                    continue
-                edits = 2 if len(t) >= 4 else 1
-                queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in search_fields]))
-            query = And(queries) if queries else parser.parse("")
 
-        # Use search_page to fetch one batch at a time
-        try:
-            page = searcher.search_page(query, page_num, pagelen=batch_size)
-            for hit in page:
+            if mode.lower() == "fuzzy":
+                queries = []
+                for term in clean_terms:
+                    t = term.lower()
+                    if t.endswith("*"):
+                        base = t.rstrip("*")
+                        if base:
+                            queries.append(Or([Prefix("question", base), Prefix("answer", base)]))
+                        continue
+                    if re.search(r'\d', t):
+                        continue
+                    edits = max_edits if len(t) >= 4 else 1
+                    queries.append(Or([FuzzyTerm("question", t, maxdist=edits),
+                                       FuzzyTerm("answer", t, maxdist=edits)]))
+                query = And(queries) if queries else Every()
+            elif mode.lower() == "boolean":
+                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
+                query = parser.parse(qstring)
+            else:
+                query = parser.parse(f'"{" ".join(clean_terms)}"')
+
+        # -------- PAGINATED SEARCH USING search_page() --------
+        page_num = 1
+        while True:
+            try:
+                batch = searcher.search_page(query, page_num, pagelen=batch_size)
+            except ValueError:
+                break  # no more pages
+            for hit in batch:
                 results.append(build_hit(hit))
-            has_more = page_num < page.pagecount
-        except ValueError:
-            # No more pages
-            results = []
-            has_more = False
+            page_num += 1
+        
 
-    return results, has_more
+    return results
