@@ -1070,12 +1070,17 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             current_page = 1
 
             while True:
-                # Build the query map for AND across fields
                 q_text_field_map = {}
+
                 if q1.strip():
-                    q_text_field_map[q1.strip()] = ["question", "answer"]
+                    q_text_field_map[q1.strip()] = q_text_field_map.get(q1.strip(), []) + ["question", "answer"]
+
                 if q3.strip():
-                    q_text_field_map[q3.strip()] = ["transcript_name"]
+                    q_text_field_map[q3.strip()] = q_text_field_map.get(q3.strip(), []) + ["transcript_name"]
+
+                # ✅ Optional: remove duplicate fields (just to be safe)
+                for key in q_text_field_map:
+                    q_text_field_map[key] = list(set(q_text_field_map[key]))
                 logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | q_text_field_map={q_text_field_map}")
                 # Fetch this page of results using AND across fields
                 batch_results, batch_total = search_documents(
