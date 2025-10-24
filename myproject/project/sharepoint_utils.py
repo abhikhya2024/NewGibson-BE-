@@ -661,23 +661,20 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
     """
-    Optimized Whoosh search function — searches only 'question' and 'answer' fields,
-    but returns all fields for each document.
-    Supports 'fuzzy', 'boolean', and 'exact' search modes.
-    Returns results in batches for performance.
+    Optimized Whoosh search function.
+    search_fields: list of fields to search (default: ["question", "answer"])
     """
     query_text = (query_text or "").strip()
     if not query_text:
         logger.info("Empty query.")
         return []
 
-    clean_terms = [t for t in re.split(r'\s+', query_text) if t]
-    logger.info(f"Clean terms: {clean_terms}")
-    results = []
+    search_fields = search_fields or ["question", "answer"]
 
-    search_fields = ["question", "answer"]  # Only search these fields
+    clean_terms = [t for t in re.split(r'\s+', query_text) if t]
+    results = []
 
     with ix.searcher() as searcher:
         parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
