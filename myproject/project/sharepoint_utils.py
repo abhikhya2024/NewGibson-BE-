@@ -593,7 +593,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     lock_path = os.path.join(index_dir, lock_filename)
 
     # ✅ Only index transcript_name and id by default
-    fields = fields or ["id", "question", "answer"]
+    fields = fields or ["id", "question", "answer","transcript_name", "witness_name"]
 
     # ✅ Build schema dynamically based on fields
     schema_fields = {}
