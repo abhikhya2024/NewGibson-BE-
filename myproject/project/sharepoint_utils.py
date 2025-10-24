@@ -659,6 +659,16 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             group=OrGroup
         )
 
+        def build_hit(hit):
+            return {
+                "id": hit.get("id"),
+                "transcript_name": hit.get("transcript_name", ""),
+                "witness_name": hit.get("witness_name", ""),
+                "question": hit.get("question", ""),
+                "answer": hit.get("answer", ""),
+                "cite": hit.get("cite", ""),
+            }
+
         # -------- FUZZY SEARCH --------
         if mode.lower() == "fuzzy":
             queries = []
@@ -687,21 +697,11 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 ]))
 
             final_query = And(queries) if queries else parser.parse("")
-            offset = 0
-            while True:
-                batch = searcher.search(final_query, limit=batch_size, offset=offset)
-                if not batch:
-                    break
+            whoosh_results = searcher.search(final_query, limit=None)
+            for offset in range(0, len(whoosh_results), batch_size):
+                batch = whoosh_results[offset:offset + batch_size]
                 for hit in batch:
-                    results.append({
-                        "id": hit.get("id"),
-                        "transcript_name": hit.get("transcript_name", ""),
-                        "witness_name": hit.get("witness_name", ""),
-                        "question": hit.get("question", ""),
-                        "answer": hit.get("answer", ""),
-                        "cite": hit.get("cite", ""),
-                    })
-                offset += batch_size
+                    results.append(build_hit(hit))
 
         # -------- BOOLEAN SEARCH --------
         elif mode.lower() == "boolean":
@@ -711,91 +711,19 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 qstring = f" {join_with} ".join(clean_terms)
 
             q = parser.parse(qstring)
-            offset = 0
-            while True:
-                batch = searcher.search(q, limit=batch_size, offset=offset)
-                if not batch:
-                    break
+            whoosh_results = searcher.search(q, limit=None)
+            for offset in range(0, len(whoosh_results), batch_size):
+                batch = whoosh_results[offset:offset + batch_size]
                 for hit in batch:
-                    results.append({
-                        "id": hit.get("id"),
-                        "transcript_name": hit.get("transcript_name", ""),
-                        "witness_name": hit.get("witness_name", ""),
-                        "question": hit.get("question", ""),
-                        "answer": hit.get("answer", ""),
-                        "cite": hit.get("cite", ""),
-                    })
-                offset += batch_size
+                    results.append(build_hit(hit))
 
         # -------- EXACT SEARCH --------
         else:
             q = parser.parse(" ".join(clean_terms))
-            offset = 0
-            while True:
-                batch = searcher.search(q, limit=batch_size, offset=offset)
-                if not batch:
-                    break
+            whoosh_results = searcher.search(q, limit=None)
+            for offset in range(0, len(whoosh_results), batch_size):
+                batch = whoosh_results[offset:offset + batch_size]
                 for hit in batch:
-                    results.append({
-                        "id": hit.get("id"),
-                        "transcript_name": hit.get("transcript_name", ""),
-                        "witness_name": hit.get("witness_name", ""),
-                        "question": hit.get("question", ""),
-                        "answer": hit.get("answer", ""),
-                        "cite": hit.get("cite", ""),
-                    })
-                offset += batch_size
+                    results.append(build_hit(hit))
 
     return results
-
-
-def search_documents_batches(ix, query_text, mode="fuzzy", batch_size=500):
-    """Generator to stream search results in batches for large datasets."""
-    query_text = (query_text or "").strip()
-    if not query_text:
-        return
-
-    clean_terms = [t for t in re.split(r'\s+', query_text) if t]
-
-    with ix.searcher() as searcher:
-        parser = MultifieldParser(
-            ["question", "answer", "cite", "transcript_name", "witness_name"],
-            schema=ix.schema,
-            group=OrGroup
-        )
-
-        if mode.lower() == "boolean":
-            q = parser.parse(query_text)
-        elif mode.lower() == "fuzzy":
-            queries = []
-            for term in clean_terms:
-                t = term.lower()
-                edits = 2 if len(t) >= 4 else 1
-                queries.append(Or([
-                    FuzzyTerm("question", t, maxdist=edits),
-                    FuzzyTerm("answer", t, maxdist=edits),
-                    FuzzyTerm("cite", t, maxdist=edits),
-                    FuzzyTerm("transcript_name", t, maxdist=edits),
-                    FuzzyTerm("witness_name", t, maxdist=edits)
-                ]))
-            q = And(queries)
-        else:
-            q = parser.parse(" ".join(clean_terms))
-
-        offset = 0
-        while True:
-            batch = searcher.search(q, limit=batch_size, offset=offset)
-            if not batch:
-                break
-            yield [
-                {
-                    "id": hit.get("id"),
-                    "transcript_name": hit.get("transcript_name", ""),
-                    "witness_name": hit.get("witness_name", ""),
-                    "question": hit.get("question", ""),
-                    "answer": hit.get("answer", ""),
-                    "cite": hit.get("cite", ""),
-                }
-                for hit in batch
-            ]
-            offset += batch_size
