@@ -1022,7 +1022,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
         page_size = int(request.data.get("page_size", 200))  # batch size (default 200)
-        max_pages = int(request.data.get("max_pages", 5))    # limit total pages to fetch
+        max_pages = int(request.data.get("max_pages", 25))    # limit total pages to fetch
 
         try:
             # Step 1: Fetch testimonies
