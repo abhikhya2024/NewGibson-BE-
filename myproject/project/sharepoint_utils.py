@@ -633,8 +633,16 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with="AND",
+def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
                      page=1, page_size=200):
+    """
+    Whoosh search function with pagination.
+    - q_text_field_map: dict mapping query_text -> list of fields
+        e.g., {"Joey": ["question", "answer"], "some name": ["transcript_name"]}
+    - OR across fields in each group
+    - AND across groups (so q1 and q3 must both match)
+    """
+
     results = []
     total_results = 0
     if not q_text_field_map:
@@ -658,7 +666,7 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
                 return Every()
 
             mode_l = mode.lower()
-            subqueries = []
+            term_queries = []
 
             for term in clean_terms:
                 t = term.lower()
@@ -667,27 +675,29 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
                 if t.endswith("*"):
                     base = t.rstrip("*")
                     if base:
-                        # ✅ require match in *all* fields (AND)
-                        subqueries.append(And([Prefix(f, base) for f in fields]))
+                        # OR across all fields
+                        term_queries.append(Or([Prefix(f, base) for f in fields]))
                     continue
 
-                # Skip numeric
+                # Skip purely numeric tokens
                 if re.search(r'\d', t):
                     continue
 
                 # Fuzzy mode
                 if mode_l == "fuzzy":
                     edits = max_edits if len(t) >= 4 else 1
-                    subqueries.append(And([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
+                    # OR across all fields for each term
+                    term_queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
                 else:
-                    # Exact match → require all fields to contain the term
-                    subqueries.append(And([Term(f, t) for f in fields]))
+                    # Exact match mode
+                    term_queries.append(Or([Term(f, t) for f in fields]))
 
-            if not subqueries:
+            if not term_queries:
                 return None
-            return And(subqueries)  # ✅ require all terms to match across all fields
+            # AND within the same group (all terms in q1/q3 must appear)
+            return And(term_queries)
 
-        # -------- COMBINE QUERIES WITH AND (q1 AND q3) --------
+        # -------- COMBINE QUERIES WITH AND (between q1, q3, etc.) --------
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
@@ -697,7 +707,7 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
         if not field_queries:
             final_query = Every()
         else:
-            final_query = And(field_queries)  # ✅ strict AND between q1 and q3
+            final_query = And(field_queries)  # AND between q1, q3 groups
 
         logger.info(f"✅ FINAL QUERY = {final_query}")
 
