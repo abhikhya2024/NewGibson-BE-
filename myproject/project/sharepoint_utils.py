@@ -720,5 +720,6 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             for hit in batch:
                 results.append(build_hit(hit))
             page_num += 1
+        
 
     return results
