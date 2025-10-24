@@ -638,7 +638,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=500):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200):
     """
     Efficient Whoosh search function — yields results in batches.
     Supports 'fuzzy', 'boolean', and 'exact' search modes.
