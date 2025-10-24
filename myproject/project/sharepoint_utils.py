@@ -664,7 +664,7 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
     """
     Optimized Whoosh search function.
-    search_fields: list of fields to search (default: ["question", "answer"])
+    Supports batch-wise retrieval for large datasets.
     Returns all results if query_text is empty.
     """
     query_text = (query_text or "").strip()
@@ -684,13 +684,12 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 "cite": hit.get("cite", ""),
             }
 
-        # -------- HANDLE EMPTY QUERY --------
+        # -------- BUILD QUERY --------
         if not query_text:
-            whoosh_results = searcher.search(Every(), limit=None)
+            query = Every()
         else:
             clean_terms = [t for t in re.split(r'\s+', query_text) if t]
 
-            # -------- FUZZY SEARCH --------
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
@@ -698,41 +697,29 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
-                            queries.append(Or([
-                                Prefix("question", base),
-                                Prefix("answer", base)
-                            ]))
+                            queries.append(Or([Prefix("question", base), Prefix("answer", base)]))
                         continue
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([
-                        FuzzyTerm("question", t, maxdist=edits),
-                        FuzzyTerm("answer", t, maxdist=edits)
-                    ]))
-
-                final_query = And(queries) if queries else Every()
-                whoosh_results = searcher.search(final_query, limit=None)
-
-            # -------- BOOLEAN SEARCH --------
+                    queries.append(Or([FuzzyTerm("question", t, maxdist=edits),
+                                       FuzzyTerm("answer", t, maxdist=edits)]))
+                query = And(queries) if queries else Every()
             elif mode.lower() == "boolean":
-                if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
-                    qstring = query_text
-                else:
-                    qstring = f" {join_with} ".join(clean_terms)
-                q = parser.parse(qstring)
-                whoosh_results = searcher.search(q, limit=None)
-
-            # -------- EXACT SEARCH --------
+                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
+                query = parser.parse(qstring)
             else:
-                q = parser.parse(f'"{" ".join(clean_terms)}"')
-                whoosh_results = searcher.search(q, limit=None)
+                query = parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # -------- BATCH RESULTS --------
-        for offset in range(0, len(whoosh_results), batch_size):
-            batch = whoosh_results[offset:offset + batch_size]
+        # -------- BATCHED SEARCH --------
+        offset = 0
+        while True:
+            batch = searcher.search(query, limit=batch_size, offset=offset)
+            if not batch:
+                break
             for hit in batch:
                 results.append(build_hit(hit))
+            offset += batch_size
 
     logger.info(f"Search complete — {len(results)} results found.")
     return results
