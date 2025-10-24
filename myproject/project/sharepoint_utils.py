@@ -638,10 +638,10 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock"):
 
 
 # --------------------- SEARCH FUNCTIONS ---------------------
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=500):
     """
-    Efficient Whoosh search function — yields results in batches.
-    Supports 'fuzzy', 'boolean', and 'exact' search modes.
+    Optimized Whoosh search function — supports 'fuzzy', 'boolean', and 'exact' search.
+    Fetches results in batches without using unsupported 'offset' parameter.
     """
     query_text = (query_text or "").strip()
     if not query_text:
@@ -649,7 +649,7 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
         return []
 
     clean_terms = [t for t in re.split(r'\s+', query_text) if t]
-    logger.info(f"Clean terms: {clean_terms}")
+    logger.info(f"🔍 Clean terms: {clean_terms}")
     results = []
 
     with ix.searcher() as searcher:
@@ -659,71 +659,60 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
             group=OrGroup
         )
 
-        def build_hit(hit):
-            return {
-                "id": hit.get("id"),
-                "transcript_name": hit.get("transcript_name", ""),
-                "witness_name": hit.get("witness_name", ""),
-                "question": hit.get("question", ""),
-                "answer": hit.get("answer", ""),
-                "cite": hit.get("cite", ""),
-            }
-
-        # -------- FUZZY SEARCH --------
+        # --- Build Query ---
         if mode.lower() == "fuzzy":
-            queries = []
+            query_parts = []
             for term in clean_terms:
                 t = term.lower()
+
+                # Handle prefix queries (ending with *)
                 if t.endswith("*"):
                     base = t.rstrip("*")
                     if base:
-                        queries.append(Or([
-                            Prefix("question", base),
-                            Prefix("answer", base),
-                            Prefix("cite", base),
-                            Prefix("transcript_name", base),
-                            Prefix("witness_name", base)
+                        query_parts.append(Or([
+                            Prefix(field, base)
+                            for field in ["question", "answer", "cite", "transcript_name", "witness_name"]
                         ]))
                     continue
+
+                # Skip pure numbers
                 if re.search(r'\d', t):
                     continue
+
                 edits = max_edits if len(t) >= 4 else 1
-                queries.append(Or([
-                    FuzzyTerm("question", t, maxdist=edits),
-                    FuzzyTerm("answer", t, maxdist=edits),
-                    FuzzyTerm("cite", t, maxdist=edits),
-                    FuzzyTerm("transcript_name", t, maxdist=edits),
-                    FuzzyTerm("witness_name", t, maxdist=edits),
+                query_parts.append(Or([
+                    FuzzyTerm(field, t, maxdist=edits)
+                    for field in ["question", "answer", "cite", "transcript_name", "witness_name"]
                 ]))
 
-            final_query = And(queries) if queries else parser.parse("")
-            whoosh_results = searcher.search(final_query, limit=None)
-            for offset in range(0, len(whoosh_results), batch_size):
-                batch = whoosh_results[offset:offset + batch_size]
-                for hit in batch:
-                    results.append(build_hit(hit))
-
-        # -------- BOOLEAN SEARCH --------
+            final_query = And(query_parts) if query_parts else parser.parse("")
+        
         elif mode.lower() == "boolean":
             if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I):
                 qstring = query_text
             else:
                 qstring = f" {join_with} ".join(clean_terms)
+            final_query = parser.parse(qstring)
+        
+        else:  # exact
+            final_query = parser.parse(" ".join(clean_terms))
 
-            q = parser.parse(qstring)
-            whoosh_results = searcher.search(q, limit=None)
-            for offset in range(0, len(whoosh_results), batch_size):
-                batch = whoosh_results[offset:offset + batch_size]
-                for hit in batch:
-                    results.append(build_hit(hit))
+        # --- Search in batches (manual slicing) ---
+        all_results = searcher.search(final_query, limit=None)
+        total_hits = len(all_results)
+        logger.info(f"✅ Total results found: {total_hits}")
 
-        # -------- EXACT SEARCH --------
-        else:
-            q = parser.parse(" ".join(clean_terms))
-            whoosh_results = searcher.search(q, limit=None)
-            for offset in range(0, len(whoosh_results), batch_size):
-                batch = whoosh_results[offset:offset + batch_size]
-                for hit in batch:
-                    results.append(build_hit(hit))
+        for offset in range(0, total_hits, batch_size):
+            batch = all_results[offset:offset + batch_size]
+            for hit in batch:
+                results.append({
+                    "id": hit.get("id"),
+                    "transcript_name": hit.get("transcript_name", ""),
+                    "witness_name": hit.get("witness_name", ""),
+                    "question": hit.get("question", ""),
+                    "answer": hit.get("answer", ""),
+                    "cite": hit.get("cite", ""),
+                })
 
+    logger.info(f"📦 Total results returned: {len(results)}")
     return results
