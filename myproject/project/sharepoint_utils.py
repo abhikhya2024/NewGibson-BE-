@@ -635,19 +635,10 @@ def index_documents(ix, docs_list):
 
 def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with="AND",
                      page=1, page_size=200):
-    """
-    Whoosh search function with pagination.
-    - q_text_field_map: dict mapping query_text -> list of fields
-        e.g., {"Joey": ["transcript_name"], "some question": ["question", "answer"]}
-    - Supports fuzzy, boolean, and exact modes.
-    - Returns documents matching all query_text/field groups (AND across groups).
-    """
-
     results = []
     total_results = 0
     if not q_text_field_map:
-        q_text_field_map = {"": ["question", "answer"]}  # default: all docs
-    logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={q_text_field_map}")
+        q_text_field_map = {"": ["question", "answer"]}
 
     with ix.searcher() as searcher:
 
@@ -662,58 +653,55 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
             }
 
         def make_query(text, fields):
-            clean_terms = [t for t in re.split(r'\s+', text) if t]
+            clean_terms = [t for t in re.split(r'\s+', text.strip()) if t]
             if not clean_terms:
                 return Every()
-            logger.info(f"🧩 clean_terms={clean_terms}, fields={fields}")
 
-            if mode.lower() == "fuzzy":
-                # Build per-field fuzzy matches
-                queries = []
-                for term in clean_terms:
-                    t = term.lower()
-                    if t.endswith("*"):
-                        base = t.rstrip("*")
-                        if base:
-                            # Each field must match the prefix (AND logic)
-                            queries.append(And([Prefix(f, base) for f in fields]))
-                        continue
-                    if re.search(r'\d', t):
-                        continue
+            mode_l = mode.lower()
+            subqueries = []
+
+            for term in clean_terms:
+                t = term.lower()
+
+                # Prefix search
+                if t.endswith("*"):
+                    base = t.rstrip("*")
+                    if base:
+                        # ✅ require match in *all* fields (AND)
+                        subqueries.append(And([Prefix(f, base) for f in fields]))
+                    continue
+
+                # Skip numeric
+                if re.search(r'\d', t):
+                    continue
+
+                # Fuzzy mode
+                if mode_l == "fuzzy":
                     edits = max_edits if len(t) >= 4 else 1
-                    # Each field must match the fuzzy term (AND logic)
-                    queries.append(And([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
-                return And(queries) if queries else None
+                    subqueries.append(And([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
+                else:
+                    # Exact match → require all fields to contain the term
+                    subqueries.append(And([Term(f, t) for f in fields]))
 
-            elif mode.lower() == "boolean":
-                parser = MultifieldParser(fields, schema=ix.schema, group=AndGroup)
-                qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
-                    else f" {join_with} ".join(clean_terms)
-                return parser.parse(qstring)
+            if not subqueries:
+                return None
+            return And(subqueries)  # ✅ require all terms to match across all fields
 
-            else:  # exact
-                parser = MultifieldParser(fields, schema=ix.schema, group=AndGroup)
-                return parser.parse(f'"{" ".join(clean_terms)}"')
-
-
-        logger.info(f"🔍 q_text_field_map = {q_text_field_map}")
-
-        # -------- COMBINE QUERIES WITH AND --------
+        # -------- COMBINE QUERIES WITH AND (q1 AND q3) --------
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
-            logger.info(f"🧩 Built query for text='{text}', fields={fields}, query={q}")
-            if q is not None:
+            if q:
                 field_queries.append(q)
 
-        # ✅ Combine all subqueries using AND (q1 and q3 must both match)
         if not field_queries:
             final_query = Every()
         else:
-            final_query = And(field_queries)
+            final_query = And(field_queries)  # ✅ strict AND between q1 and q3
 
         logger.info(f"✅ FINAL QUERY = {final_query}")
-                # -------- PAGINATED SEARCH --------
+
+        # -------- PAGINATED SEARCH --------
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
             for hit in whoosh_page:
