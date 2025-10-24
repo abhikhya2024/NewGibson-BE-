@@ -663,13 +663,16 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
 # --------------------- SEARCH FUNCTIONS ---------------------
 from whoosh.query import Every
 
-def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
+def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
+                     page=1, page_size=200, search_fields=None):
     """
-    Optimized Whoosh search function — searches only 'question' and 'answer' fields,
-    but returns all fields for each document.
-    Supports 'fuzzy', 'boolean', and 'exact' search modes.
-    Returns all documents if query_text is empty.
+    Whoosh search function with pagination.
+    - Searches only 'question' and 'answer' fields by default.
+    - Supports 'fuzzy', 'boolean', and 'exact' search modes.
+    - Returns results for the requested page (batch).
     """
+    from whoosh.query import Every
+
     query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
     results = []
@@ -689,12 +692,10 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
 
         # -------- HANDLE EMPTY QUERY --------
         if not query_text:
-            # Match all documents in the index
-            whoosh_results = searcher.search(Every(), limit=None)
+            query = Every()
         else:
             clean_terms = [t for t in re.split(r'\s+', query_text) if t]
 
-            # -------- FUZZY SEARCH --------
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
@@ -711,25 +712,23 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                         FuzzyTerm("question", t, maxdist=edits),
                         FuzzyTerm("answer", t, maxdist=edits)
                     ]))
-                final_query = And(queries) if queries else Every()
-                whoosh_results = searcher.search(final_query, limit=None)
-
-            # -------- BOOLEAN SEARCH --------
+                query = And(queries) if queries else Every()
             elif mode.lower() == "boolean":
                 qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
-                q = parser.parse(qstring)
-                whoosh_results = searcher.search(q, limit=None)
-
-            # -------- EXACT SEARCH --------
+                query = parser.parse(qstring)
             else:
-                q = parser.parse(f'"{" ".join(clean_terms)}"')
-                whoosh_results = searcher.search(q, limit=None)
+                query = parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # -------- BATCH RESULTS --------
-        for offset in range(0, len(whoosh_results), batch_size):
-            batch = whoosh_results[offset:offset + batch_size]
-            for hit in batch:
+        # -------- PAGINATED SEARCH --------
+        try:
+            whoosh_page = searcher.search_page(query, page, pagelen=page_size)
+            for hit in whoosh_page:
                 results.append(build_hit(hit))
+            total_results = whoosh_page.total
+        except ValueError:
+            # Page number exceeds total pages
+            results = []
+            total_results = 0
 
-    logger.info(f"Search complete — {len(results)} results found.")
-    return results
+    logger.info(f"Search complete — page {page}, {len(results)} results returned, total {total_results}.")
+    return results, total_results

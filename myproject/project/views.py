@@ -1016,14 +1016,13 @@ class TestimonyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         """
-        Whoosh-based search on question and answer fields, returning all relevant fields.
+        Paginated Whoosh-based search on question + answer fields.
+        Returns only the requested page of results, with total count.
         """
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
         page = int(request.data.get("page", 1))
         page_size = int(request.data.get("page_size", 50))
-        start = (page - 1) * page_size
-        end = start + page_size
 
         try:
             # Step 1: Fetch all testimonies and related transcript data
@@ -1053,15 +1052,23 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             # Step 2: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-            # Index all relevant fields
-            ix = configure_index(docs_list, INDEX_DIR, fields=["id", "question", "answer", "transcript_name", "witness_name", "cite"])
+            ix = configure_index(
+                docs_list,
+                INDEX_DIR,
+                fields=["id", "question", "answer", "transcript_name", "witness_name", "cite"]
+            )
 
-            # Step 3: Perform search only on question + answer
-            results = search_documents(ix, q3, mode=mode3, search_fields=["question", "answer"])
+            # Step 3: Search with pagination
+            results, total_results = search_documents(
+                ix,
+                query_text=q3,
+                mode=mode3,
+                page=page,
+                page_size=page_size,
+                search_fields=["question", "answer"]
+            )
 
-            total_results = len(results)
-            paginated = results[start:end]
-
+            # Step 4: Format results
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1071,7 +1078,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "answer": r.get("answer", ""),
                     "cite": r.get("cite", ""),
                 }
-                for r in paginated
+                for r in results
             ]
 
             return Response({
@@ -1089,7 +1096,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             import traceback
             logger.error("Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
