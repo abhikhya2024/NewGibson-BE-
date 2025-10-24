@@ -1076,7 +1076,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     q_text_field_map[q1.strip()] = ["question", "answer"]
                 if q3.strip():
                     q_text_field_map[q3.strip()] = ["transcript_name"]
-
+                logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | q_text_field_map={q_text_field_map}")
                 # Fetch this page of results using AND across fields
                 batch_results, batch_total = search_documents(
                     ix,
