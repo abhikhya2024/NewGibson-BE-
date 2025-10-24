@@ -637,13 +637,21 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
                      page=1, page_size=200):
     """
     q_text_field_map: list of (query_text, [fields]) tuples.
-      e.g. [("Joey", ["question", "answer"]), ("Joey", ["transcript_name"])]
-    -> OR within each field group
-    -> AND across groups
+      Example:
+        [
+          ("joey", ["question", "answer"]),
+          ("joey", ["transcript_name"])
+        ]
+
+    Logic:
+      OR inside each field group
+      AND across all query groups
+      → ((question:joey OR answer:joey) AND (transcript_name:joey))
     """
 
     results = []
     total_results = 0
+
     if not q_text_field_map:
         q_text_field_map = [("", ["question", "answer"])]
 
@@ -667,31 +675,35 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2,
             term_queries = []
             for term in clean_terms:
                 t = term.lower()
+                # Handle wildcards like 'joe*'
                 if t.endswith("*"):
                     base = t.rstrip("*")
                     if base:
                         term_queries.append(Or([Prefix(f, base) for f in fields]))
                     continue
 
+                # Skip pure numeric tokens
                 if re.search(r'\d', t):
                     continue
 
+                # Fuzzy search for each field (OR logic within the same group)
                 edits = max_edits if len(t) >= 4 else 1
                 term_queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
 
             if not term_queries:
                 return None
 
-            # AND all terms for the same query text
+            # AND all words for this group (e.g., "joey tribbiani" → both must appear)
             return And(term_queries)
 
-        # -------- COMBINE QUERIES WITH AND --------
+        # ✅ Build queries per group
         field_queries = []
-        for text, fields in q_text_field_map:
+        for text, fields in q_text_field_map:  # <- FIXED HERE
             q = make_query(text, fields)
             if q:
                 field_queries.append(q)
 
+        # ✅ Combine all groups with AND
         if not field_queries:
             final_query = Every()
         else:
