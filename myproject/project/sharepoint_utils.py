@@ -661,57 +661,54 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
                 "cite": hit.get("cite", ""),
             }
 
-        # Build parser for each field group
         def make_query(text, fields):
             clean_terms = [t for t in re.split(r'\s+', text) if t]
             if not clean_terms:
                 return Every()
-            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | clean_terms={clean_terms}")
+            logger.info(f"🧩 clean_terms={clean_terms}")
 
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
-                    logger.info(f"qqqqqqqqqqqqqqqqqqqqq000000000222222 | term={term}")
                     t = term.lower()
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
-                            queries.append(Or([Prefix(f, base) for f in fields]))
+                            queries.append(And([Prefix(f, base) for f in fields]))
                         continue
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
-                logger.info(f"qqqqqqqqqqqqqqqqqqqqq0000033333333 | term={queries}")
-                logger.info(f"qqqqqqqqqqqqqqqq444444444444444 | And(queries)={And(queries)}")
-
+                    queries.append(And([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
                 return And(queries) if queries else None
 
             elif mode.lower() == "boolean":
-                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
+                parser = MultifieldParser(fields, schema=ix.schema, group=AndGroup)
                 qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
                     else f" {join_with} ".join(clean_terms)
                 return parser.parse(qstring)
 
             else:  # exact
-                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
+                parser = MultifieldParser(fields, schema=ix.schema, group=AndGroup)
                 return parser.parse(f'"{" ".join(clean_terms)}"')
-        logger.info("q_text_field_map", q_text_field_map)
+
+        logger.info(f"🔍 q_text_field_map = {q_text_field_map}")
 
         # -------- COMBINE QUERIES WITH AND --------
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
-            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | text={text}, fields={fields}")
+            logger.info(f"🧩 Built query for {text=} {fields=} → {q}")
             if q is not None:
                 field_queries.append(q)
-            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={field_queries}")
 
+        # 🔹 Combine: AND all queries (so q1 & q3 must both match)
         if not field_queries:
             final_query = Every()
-            logger.info(f"qqqqqqqqqqqqqqqqqqqqq11111111111111111 | final_query={final_query}")
-
         else:
+            final_query = And(field_queries)
+
+        logger.info(f"✅ FINAL QUERY → {final_query}")
             # ✅ AND across all query groups
             final_query = And(field_queries)
             logger.info("qqqqqqqqqqqqqqqqqqqqq222222222222222222", final_query)
