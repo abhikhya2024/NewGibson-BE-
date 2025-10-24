@@ -645,9 +645,9 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
 
     results = []
     total_results = 0
-    logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={q_text_field_map}")
     if not q_text_field_map:
         q_text_field_map = {"": ["question", "answer"]}  # default: all docs
+    logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | field_queries={q_text_field_map}")
 
     with ix.searcher() as searcher:
 
@@ -666,10 +666,12 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
             clean_terms = [t for t in re.split(r'\s+', text) if t]
             if not clean_terms:
                 return Every()
+            logger.info(f"qqqqqqqqqqqqqqqqqqqqq00000000000000000 | clean_terms={clean_terms}")
 
             if mode.lower() == "fuzzy":
                 queries = []
                 for term in clean_terms:
+                    logger.info(f"qqqqqqqqqqqqqqqqqqqqq000000000222222 | term={term}")
                     t = term.lower()
                     if t.endswith("*"):
                         base = t.rstrip("*")
@@ -680,6 +682,9 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
                         continue
                     edits = max_edits if len(t) >= 4 else 1
                     queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
+                logger.info(f"qqqqqqqqqqqqqqqqqqqqq0000033333333 | term={queries}")
+                logger.info(f"qqqqqqqqqqqqqqqq444444444444444 | And(queries)={And(queries)}")
+
                 return And(queries) if queries else None
 
             elif mode.lower() == "boolean":
