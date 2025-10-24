@@ -24,6 +24,9 @@ from whoosh.index import LockError
 import fcntl
 from whoosh.fields import Schema, TEXT, ID
 from whoosh.query import Or, And, Term
+from whoosh.qparser import QueryParser
+from whoosh.query import FuzzyTerm, Or, And, Prefix
+import re
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -673,9 +676,6 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
     logger.info(f"Clean terms: {clean_terms}")
     results = []
 
-    from whoosh.qparser import QueryParser
-    from whoosh.query import FuzzyTerm, Or, And, Prefix
-    import re
 
     with ix.searcher() as searcher:
         parser = QueryParser("transcript_name", schema=ix.schema)
