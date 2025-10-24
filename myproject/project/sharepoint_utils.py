@@ -633,85 +633,71 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with="AND",
-                     page=1, page_size=200):
+def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy",
+                         max_edits=2, page=1, page_size=200):
     """
-    Whoosh search function with pagination.
-    - q_text_field_map: dict mapping query_text -> list of fields
-        e.g., {"Joey": ["transcript_name"], "some question": ["question", "answer"]}
-    - Supports fuzzy, boolean, and exact modes.
-    - Returns documents matching all query_text/field groups (AND across groups).
+    Search Whoosh index with AND logic:
+    - q1 searches ["question","answer"]
+    - q3 searches ["transcript_name"]
+    - Only documents matching both conditions appear.
     """
     results = []
     total_results = 0
 
-    if not q_text_field_map:
-        q_text_field_map = {"": ["question", "answer"]}  # default: all docs
-
     with ix.searcher() as searcher:
-
-        def build_hit(hit):
-            return {
-                "id": hit.get("id"),
-                "transcript_name": hit.get("transcript_name", ""),
-                "witness_name": hit.get("witness_name", ""),
-                "question": hit.get("question", ""),
-                "answer": hit.get("answer", ""),
-                "cite": hit.get("cite", ""),
-            }
-
-        # Build parser for each field group
-        def make_query(text, fields):
-            clean_terms = [t for t in re.split(r'\s+', text) if t]
-            if not clean_terms:
-                return Every()
-
-            if mode.lower() == "fuzzy":
-                queries = []
-                for term in clean_terms:
-                    t = term.lower()
-                    if t.endswith("*"):
-                        base = t.rstrip("*")
-                        if base:
-                            queries.append(Or([Prefix(f, base) for f in fields]))
-                        continue
-                    if re.search(r'\d', t):
-                        continue
-                    edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
-                return And(queries) if queries else None
-
-            elif mode.lower() == "boolean":
-                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
-                qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
-                    else f" {join_with} ".join(clean_terms)
-                return parser.parse(qstring)
-
-            else:  # exact
-                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
-                return parser.parse(f'"{" ".join(clean_terms)}"')
-
-        # -------- COMBINE QUERIES WITH AND --------
         field_queries = []
-        for text, fields in q_text_field_map.items():
-            q = make_query(text, fields)
-            if q is not None:
-                field_queries.append(q)
 
+        # Build query for question/answer (q1)
+        if q1.strip():
+            clean_terms = [t for t in re.split(r'\s+', q1) if t]
+            q_terms = []
+            for term in clean_terms:
+                t = term.lower()
+                edits = max_edits if len(t) >= 4 else 1
+                if mode1.lower() == "fuzzy":
+                    q_terms.append(Or([FuzzyTerm("question", t, maxdist=edits),
+                                       FuzzyTerm("answer", t, maxdist=edits)]))
+                else:
+                    q_terms.append(Or([Prefix("question", t), Prefix("answer", t)]))
+            if q_terms:
+                field_queries.append(And(q_terms))
+
+        # Build query for transcript_name (q3)
+        if q3.strip():
+            clean_terms = [t for t in re.split(r'\s+', q3) if t]
+            q_terms = []
+            for term in clean_terms:
+                t = term.lower()
+                edits = max_edits if len(t) >= 4 else 1
+                if mode3.lower() == "fuzzy":
+                    q_terms.append(FuzzyTerm("transcript_name", t, maxdist=edits))
+                else:
+                    q_terms.append(Prefix("transcript_name", t))
+            if q_terms:
+                field_queries.append(And(q_terms))
+
+        # Combine all field queries with AND
         if not field_queries:
             final_query = Every()
         else:
-            # ✅ AND across all query groups
             final_query = And(field_queries)
 
-        # -------- PAGINATED SEARCH --------
+        # Paginate results
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
             for hit in whoosh_page:
-                results.append(build_hit(hit))
+                results.append({
+                    "id": hit.get("id"),
+                    "transcript_name": hit.get("transcript_name", ""),
+                    "witness_name": hit.get("witness_name", ""),
+                    "question": hit.get("question", ""),
+                    "answer": hit.get("answer", ""),
+                    "cite": hit.get("cite", ""),
+                })
             total_results = whoosh_page.total
         except ValueError:
             results = []
             total_results = 0
 
     return results, total_results
+
