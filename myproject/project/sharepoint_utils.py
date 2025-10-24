@@ -633,21 +633,32 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH FUNCTION ---------------------
 
-def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy",
-                         max_edits=2, page=1, page_size=200):
+def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy", max_edits=2,
+                         page=1, page_size=200):
     """
-    Search Whoosh index with AND logic:
+    Whoosh search with strict AND:
     - q1 searches ["question","answer"]
     - q3 searches ["transcript_name"]
-    - Only documents matching both conditions appear.
+    - Both conditions must be satisfied.
     """
     results = []
     total_results = 0
 
     with ix.searcher() as searcher:
-        field_queries = []
 
-        # Build query for question/answer (q1)
+        def build_hit(hit):
+            return {
+                "id": hit.get("id"),
+                "transcript_name": hit.get("transcript_name", ""),
+                "witness_name": hit.get("witness_name", ""),
+                "question": hit.get("question", ""),
+                "answer": hit.get("answer", ""),
+                "cite": hit.get("cite", ""),
+            }
+
+        subqueries = []
+
+        # -------- Q1 on question/answer --------
         if q1.strip():
             clean_terms = [t for t in re.split(r'\s+', q1) if t]
             q_terms = []
@@ -655,49 +666,45 @@ def search_documents_and(ix, q1="", q3="", mode1="fuzzy", mode3="fuzzy",
                 t = term.lower()
                 edits = max_edits if len(t) >= 4 else 1
                 if mode1.lower() == "fuzzy":
-                    q_terms.append(Or([FuzzyTerm("question", t, maxdist=edits),
-                                       FuzzyTerm("answer", t, maxdist=edits)]))
+                    q_terms.append(Or([
+                        FuzzyTerm("question", t, maxdist=edits),
+                        FuzzyTerm("answer", t, maxdist=edits)
+                    ]))
                 else:
-                    q_terms.append(Or([Prefix("question", t), Prefix("answer", t)]))
+                    q_terms.append(Or([
+                        Prefix("question", t),
+                        Prefix("answer", t)
+                    ]))
             if q_terms:
-                field_queries.append(And(q_terms))
+                subqueries.append(And(q_terms))
 
-        # Build query for transcript_name (q3)
+        # -------- Q3 on transcript_name --------
         if q3.strip():
             clean_terms = [t for t in re.split(r'\s+', q3) if t]
-            q_terms = []
+            t_terms = []
             for term in clean_terms:
                 t = term.lower()
-                edits = max_edits if len(t) >= 4 else 1
                 if mode3.lower() == "fuzzy":
-                    q_terms.append(FuzzyTerm("transcript_name", t, maxdist=edits))
+                    t_terms.append(FuzzyTerm("transcript_name", t, maxdist=max_edits))
                 else:
-                    q_terms.append(Prefix("transcript_name", t))
-            if q_terms:
-                field_queries.append(And(q_terms))
+                    t_terms.append(Prefix("transcript_name", t))
+            if t_terms:
+                subqueries.append(And(t_terms))
 
-        # Combine all field queries with AND
-        if not field_queries:
-            final_query = Every()
+        # -------- FINAL QUERY --------
+        if subqueries:
+            final_query = And(subqueries)
         else:
-            final_query = And(field_queries)
+            final_query = Every()
 
-        # Paginate results
+        # -------- PAGINATED SEARCH --------
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
             for hit in whoosh_page:
-                results.append({
-                    "id": hit.get("id"),
-                    "transcript_name": hit.get("transcript_name", ""),
-                    "witness_name": hit.get("witness_name", ""),
-                    "question": hit.get("question", ""),
-                    "answer": hit.get("answer", ""),
-                    "cite": hit.get("cite", ""),
-                })
+                results.append(build_hit(hit))
             total_results = whoosh_page.total
         except ValueError:
             results = []
             total_results = 0
 
     return results, total_results
-
