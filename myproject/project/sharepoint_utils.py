@@ -584,36 +584,18 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
     """
     Create or open Whoosh index and add docs_list with OS-level file lock.
     Only indexes fields provided; skips empty documents.
+    If index already exists, it will be opened and no new indexing occurs.
     """
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
-    fields = fields or ["id", "question", "answer", "transcript_name", "witness_name"]
+    fields = fields or ["id", "question", "answer", "transcript_name", "witness_name", "cite"]
 
     # Build schema
     schema_fields = {f: TEXT(stored=True) for f in fields if f != "id"}
     schema_fields["id"] = ID(stored=True, unique=True)
     schema = Schema(**schema_fields)
 
-    # Filter valid docs
-    valid_docs = []
-    for doc in docs_list:
-        _id = str(doc.get("id", "")).strip()
-        if not _id:
-            continue
-        entry = {"id": _id}
-        has_value = False
-        for f in fields:
-            if f == "id": continue
-            val = str(doc.get(f, "")).strip()
-            entry[f] = val
-            if val: has_value = True
-        if has_value:
-            valid_docs.append(entry)
-
-    if not valid_docs:
-        raise ValueError("No valid documents to index.")
-
-    # File lock
+    # Acquire file lock
     start = time.time()
     with open(lock_path, "a+") as fh:
         while True:
@@ -625,13 +607,39 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
                     raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
                 time.sleep(0.2)
 
-        # Open or create index
-        ix = index.open_dir(index_dir) if index.exists_in(index_dir) else index.create_in(index_dir, schema)
+        # Create or open index
+        if index.exists_in(index_dir):
+            ix = index.open_dir(index_dir)
+            logger.info(f"Index already exists in {index_dir}. Skipping reindex.")
+        else:
+            ix = index.create_in(index_dir, schema)
+            logger.info(f"Created new index in {index_dir} with {len(docs_list)} documents.")
 
-        # Batch write
-        with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
-            for doc in valid_docs:
-                writer.update_document(**doc)
+            # Filter valid docs for initial indexing
+            valid_docs = []
+            for doc in docs_list:
+                _id = str(doc.get("id", "")).strip()
+                if not _id:
+                    continue
+                entry = {"id": _id}
+                has_value = False
+                for f in fields:
+                    if f == "id":
+                        continue
+                    val = str(doc.get(f, "")).strip()
+                    entry[f] = val
+                    if val:
+                        has_value = True
+                if has_value:
+                    valid_docs.append(entry)
+
+            if valid_docs:
+                with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
+                    for doc in valid_docs:
+                        writer.update_document(**doc)
+                        logger.info(f"Indexed document ID: {doc['id']}")
+            else:
+                logger.warning("No valid documents to index.")
 
     return ix
 
