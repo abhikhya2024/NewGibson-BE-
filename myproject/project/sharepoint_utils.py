@@ -665,20 +665,23 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
             clean_terms = [t for t in re.split(r'\s+', text) if t]
             if not clean_terms:
                 return Every()
-            logger.info(f"🧩 clean_terms={clean_terms}")
+            logger.info(f"🧩 clean_terms={clean_terms}, fields={fields}")
 
             if mode.lower() == "fuzzy":
+                # Build per-field fuzzy matches
                 queries = []
                 for term in clean_terms:
                     t = term.lower()
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
+                            # Each field must match the prefix (AND logic)
                             queries.append(And([Prefix(f, base) for f in fields]))
                         continue
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
+                    # Each field must match the fuzzy term (AND logic)
                     queries.append(And([FuzzyTerm(f, t, maxdist=edits) for f in fields]))
                 return And(queries) if queries else None
 
@@ -692,29 +695,25 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, join_with=
                 parser = MultifieldParser(fields, schema=ix.schema, group=AndGroup)
                 return parser.parse(f'"{" ".join(clean_terms)}"')
 
+
         logger.info(f"🔍 q_text_field_map = {q_text_field_map}")
 
         # -------- COMBINE QUERIES WITH AND --------
         field_queries = []
         for text, fields in q_text_field_map.items():
             q = make_query(text, fields)
-            logger.info(f"🧩 Built query for {text=} {fields=} → {q}")
+            logger.info(f"🧩 Built query for text='{text}', fields={fields}, query={q}")
             if q is not None:
                 field_queries.append(q)
 
-        # 🔹 Combine: AND all queries (so q1 & q3 must both match)
+        # ✅ Combine all subqueries using AND (q1 and q3 must both match)
         if not field_queries:
             final_query = Every()
         else:
             final_query = And(field_queries)
 
-        logger.info(f"✅ FINAL QUERY → {final_query}")
-            # ✅ AND across all query groups
-        final_query = And(field_queries)
-        logger.info("qqqqqqqqqqqqqqqqqqqqq222222222222222222", final_query)
-        logger.info(f"qqqqqqqqqqqqqqqqqqqqq222222222222222222 | final_query={final_query}")
-
-        # -------- PAGINATED SEARCH --------
+        logger.info(f"✅ FINAL QUERY = {final_query}")
+                # -------- PAGINATED SEARCH --------
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
             for hit in whoosh_page:
