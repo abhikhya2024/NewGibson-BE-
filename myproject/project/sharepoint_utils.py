@@ -582,29 +582,19 @@ def _release_file_lock(fh):
 # --------------------- INDEX CREATION ---------------------
 def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fields=None):
     """
-    Create/open Whoosh index and add docs_list while holding an OS-level file lock.
-    Supports specifying which fields to index for faster performance.
+    Create or open Whoosh index and add docs_list with OS-level file lock.
+    Only indexes fields provided; skips empty documents.
     """
-    import fcntl, time, os
-    from whoosh.fields import Schema, TEXT, ID
-    from whoosh import index
-
     os.makedirs(index_dir, exist_ok=True)
     lock_path = os.path.join(index_dir, lock_filename)
+    fields = fields or ["id", "question", "answer", "transcript_name", "witness_name"]
 
-    # ✅ Only index transcript_name and id by default
-    fields = fields or ["id", "question", "answer","transcript_name", "witness_name"]
-
-    # ✅ Build schema dynamically based on fields
-    schema_fields = {}
-    for field in fields:
-        if field == "id":
-            schema_fields["id"] = ID(stored=True, unique=True)
-        else:
-            schema_fields[field] = TEXT(stored=True)
+    # Build schema
+    schema_fields = {f: TEXT(stored=True) for f in fields if f != "id"}
+    schema_fields["id"] = ID(stored=True, unique=True)
     schema = Schema(**schema_fields)
 
-    # ✅ Filter valid documents
+    # Filter valid docs
     valid_docs = []
     for doc in docs_list:
         _id = str(doc.get("id", "")).strip()
@@ -612,111 +602,84 @@ def configure_index(docs_list, index_dir, lock_filename=".whoosh_index_lock", fi
             continue
         entry = {"id": _id}
         has_value = False
-        for field in fields:
-            if field == "id":
-                continue
-            val = str(doc.get(field, "")).strip()
-            entry[field] = val
-            if val:
-                has_value = True
+        for f in fields:
+            if f == "id": continue
+            val = str(doc.get(f, "")).strip()
+            entry[f] = val
+            if val: has_value = True
         if has_value:
             valid_docs.append(entry)
 
     if not valid_docs:
         raise ValueError("No valid documents to index.")
 
-    # ✅ Acquire file lock
+    # File lock
     start = time.time()
-    fh = open(lock_path, "a+")
-    while True:
-        try:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except BlockingIOError:
-            if (time.time() - start) > 30:
-                fh.close()
-                raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
-            time.sleep(0.2)
+    with open(lock_path, "a+") as fh:
+        while True:
+            try:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if (time.time() - start) > 30:
+                    raise TimeoutError(f"Timeout waiting for file lock {lock_path}")
+                time.sleep(0.2)
 
-    try:
-        # ✅ Create or open index
-        if not index.exists_in(index_dir):
-            ix = index.create_in(index_dir, schema)
-        else:
-            ix = index.open_dir(index_dir)
+        # Open or create index
+        ix = index.open_dir(index_dir) if index.exists_in(index_dir) else index.create_in(index_dir, schema)
 
-        # ✅ Write all documents
+        # Batch write
         with ix.writer(limitmb=256, procs=2, multisegment=True) as writer:
             for doc in valid_docs:
                 writer.update_document(**doc)
 
-        return ix
-
-    finally:
-        try:
-            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-            fh.close()
-        except Exception:
-            pass
-
+    return ix
 
 # --------------------- SEARCH FUNCTIONS ---------------------
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND", batch_size=200, search_fields=None):
     """
-    Whoosh search function — searches question + answer, returns all fields.
-    Supports batch-wise search using `search_page`.
+    Search Whoosh index on question + answer; returns all stored fields.
+    Supports fuzzy, boolean, and exact modes. Fetches results batch-wise.
     """
-    query_text = (query_text or "").strip()
     search_fields = search_fields or ["question", "answer"]
+    query_text = (query_text or "").strip()
     results = []
 
     with ix.searcher() as searcher:
         parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
 
         def build_hit(hit):
-            return {
-                "id": hit.get("id"),
-                "transcript_name": hit.get("transcript_name", ""),
-                "witness_name": hit.get("witness_name", ""),
-                "question": hit.get("question", ""),
-                "answer": hit.get("answer", ""),
-                "cite": hit.get("cite", ""),
-            }
+            return {f: hit.get(f, "") for f in ix.schema.names()}
 
-        # -------- BUILD QUERY --------
+        # Build query
         if not query_text:
             query = Every()
         else:
-            clean_terms = [t for t in re.split(r'\s+', query_text) if t]
-
+            terms = [t for t in re.split(r'\s+', query_text) if t]
             if mode.lower() == "fuzzy":
                 queries = []
-                for term in clean_terms:
-                    t = term.lower()
+                for t in terms:
+                    t = t.lower()
                     if t.endswith("*"):
                         base = t.rstrip("*")
-                        if base:
-                            queries.append(Or([Prefix("question", base), Prefix("answer", base)]))
-                        continue
-                    if re.search(r'\d', t):
+                        if base: queries.append(Or([Prefix(f, base) for f in search_fields]))
                         continue
                     edits = max_edits if len(t) >= 4 else 1
-                    queries.append(Or([FuzzyTerm("question", t, maxdist=edits),
-                                       FuzzyTerm("answer", t, maxdist=edits)]))
+                    queries.append(Or([FuzzyTerm(f, t, maxdist=edits) for f in search_fields]))
                 query = And(queries) if queries else Every()
             elif mode.lower() == "boolean":
-                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(clean_terms)
+                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) else f" {join_with} ".join(terms)
                 query = parser.parse(qstring)
             else:
-                query = parser.parse(f'"{" ".join(clean_terms)}"')
+                query = parser.parse(f'"{" ".join(terms)}"')
 
-        # -------- PAGINATED SEARCH USING search_page() --------
+        # Batch-wise search
         page_num = 1
         while True:
             try:
                 batch = searcher.search_page(query, page_num, pagelen=batch_size)
             except ValueError:
-                break  # no more pages
+                break
             for hit in batch:
                 results.append(build_hit(hit))
             page_num += 1
