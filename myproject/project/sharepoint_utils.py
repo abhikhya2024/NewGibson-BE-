@@ -636,17 +636,19 @@ def index_documents(ix, docs_list):
 def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                      page=1, page_size=200, search_fields=None):
     """
-    Whoosh search function with pagination.
+    Whoosh search function with pagination and sequential multi-field support.
     - Supports fuzzy, boolean, and exact modes.
-    - Returns paginated results.
     - If query_text is empty, returns all documents.
+    - If multiple search_fields are provided, runs sequential searches and combines results.
     """
     query_text = (query_text or "").strip()
-    search_fields = search_fields or ["question", "answer"]
     results = []
+    total_results = 0
+
+    if not search_fields:
+        search_fields = ["question", "answer"]
 
     with ix.searcher() as searcher:
-        parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
 
         def build_hit(hit):
             return {
@@ -658,11 +660,17 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                 "cite": hit.get("cite", ""),
             }
 
-        # -------- HANDLE EMPTY QUERY --------
-        if not query_text:
-            query = Every()
-        else:
-            clean_terms = [t for t in re.split(r'\s+', query_text) if t]
+        # Build parser dynamically
+        parser = MultifieldParser(search_fields, schema=ix.schema, group=OrGroup)
+
+        # Prepare base query (shared logic)
+        def make_query(text, fields):
+            if not text:
+                return Every()
+
+            clean_terms = [t for t in re.split(r'\s+', text) if t]
+            if not clean_terms:
+                return Every()
 
             if mode.lower() == "fuzzy":
                 queries = []
@@ -671,37 +679,42 @@ def search_documents(ix, query_text, mode="fuzzy", max_edits=2, join_with="AND",
                     if t.endswith("*"):
                         base = t.rstrip("*")
                         if base:
-                            queries.append(Or([
-                                Prefix("question", base),
-                                Prefix("answer", base)
-                            ]))
+                            queries.append(Or([Prefix(f, base) for f in fields]))
                         continue
                     if re.search(r'\d', t):
                         continue
                     edits = max_edits if len(t) >= 4 else 1
                     queries.append(Or([
-                        FuzzyTerm("question", t, maxdist=edits),
-                        FuzzyTerm("answer", t, maxdist=edits)
+                        FuzzyTerm(f, t, maxdist=edits) for f in fields
                     ]))
-                query = And(queries) if queries else Every()
+                return And(queries) if queries else Every()
 
             elif mode.lower() == "boolean":
-                qstring = query_text if re.search(r'\b(AND|OR|NOT)\b', query_text, re.I) \
+                qstring = text if re.search(r'\b(AND|OR|NOT)\b', text, re.I) \
                     else f" {join_with} ".join(clean_terms)
-                query = parser.parse(qstring)
+                return parser.parse(qstring)
 
             else:  # exact
-                query = parser.parse(f'"{" ".join(clean_terms)}"')
+                return parser.parse(f'"{" ".join(clean_terms)}"')
 
-        # -------- PAGINATED SEARCH --------
-        try:
-            whoosh_page = searcher.search_page(query, page, pagelen=page_size)
-            for hit in whoosh_page:
-                results.append(build_hit(hit))
-            total_results = whoosh_page.total
-        except ValueError:
-            results = []
-            total_results = 0
+        # Sequential search if multiple fields are specified
+        combined_results = []
+        seen_ids = set()
 
-    logger.info(f"🔍 Search complete — page {page}, {len(results)} results returned, total {total_results}.")
+        for field_group in ([search_fields] if len(search_fields) <= 2 else [[f] for f in search_fields]):
+            q = make_query(query_text, field_group)
+            try:
+                whoosh_page = searcher.search_page(q, page, pagelen=page_size)
+                for hit in whoosh_page:
+                    doc = build_hit(hit)
+                    if doc["id"] not in seen_ids:
+                        combined_results.append(doc)
+                        seen_ids.add(doc["id"])
+                total_results += whoosh_page.total
+            except ValueError:
+                continue
+
+        results = combined_results
+
+    logger.info(f"🔍 Search complete — page {page}, {len(results)} results, total (approx) {total_results}.")
     return results, total_results

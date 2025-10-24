@@ -1024,8 +1024,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         """
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
-        # q3 = request.data.get("q3", "").strip()
-        # mode3 = request.data.get("mode3", "exact").lower()
+        q3 = request.data.get("q3", "").strip()
+        mode3 = request.data.get("mode3", "exact").lower()
 
         page_size = int(request.data.get("page_size", 200))
         max_pages = int(request.data.get("max_pages", 25))
@@ -1070,24 +1070,50 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             current_page = 1
 
             while True:
-                batch_results, batch_total = search_documents(
-                    ix,
-                    query_text=q1,
-                    mode=mode1,
-                    page=current_page,
-                    page_size=page_size,
-                    search_fields=["question", "answer"]
-                )
+                batch_results = []
+                batch_total = 0
 
+                # 🔹 Search by question/answer if q1 is given
+                if q1.strip():
+                    q1_results, q1_total = search_documents(
+                        ix,
+                        query_text=q1,
+                        mode=mode1,
+                        page=current_page,
+                        page_size=page_size,
+                        search_fields=["question", "answer"]
+                    )
+                    batch_results.extend(q1_results)
+                    batch_total += q1_total
+
+                # 🔹 Search by transcript_name if q3 is given
+                if q3.strip():
+                    q3_results, q3_total = search_documents(
+                        ix,
+                        query_text=q3,
+                        mode=mode3,
+                        page=current_page,
+                        page_size=page_size,
+                        search_fields=["transcript_name"]
+                    )
+                    batch_results.extend(q3_results)
+                    batch_total += q3_total
+
+                # 🔹 Stop if no results in this batch
                 if not batch_results:
                     break
 
-                all_results.extend(batch_results)
-                total_results = batch_total
+                # 🔹 Optionally deduplicate results by ID
+                unique_ids = set(r["id"] for r in all_results)
+                new_results = [r for r in batch_results if r["id"] not in unique_ids]
+                all_results.extend(new_results)
 
-                logger.info(f"📄 Fetched page {current_page} → {len(batch_results)} results")
+                total_results = len(all_results)
 
-                if len(all_results) >= total_results or current_page >= max_pages:
+                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
+
+                # 🔹 Stop when all data fetched or limit reached
+                if len(batch_results) < page_size or current_page >= max_pages:
                     break
 
                 current_page += 1
