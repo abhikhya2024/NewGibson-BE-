@@ -635,12 +635,11 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH ---------------------
 
-def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=1, page=1, page_size=200):
+def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     results = []
     total_results = 0
 
     with ix.searcher() as searcher:
-
         def build_hit(hit):
             return {
                 "id": hit.get("id"),
@@ -651,57 +650,38 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=1, page=1, pa
                 "cite": hit.get("cite", ""),
             }
 
-        def make_query(text, fields):
-            """Build query depending on mode."""
+        def make_query(text, fields, mode):
             clean_terms = [t for t in re.split(r'\s+', text.strip()) if t]
             if not clean_terms:
                 return None
 
-            term_queries = []
-
-            # --- Fuzzy search ---
-            if mode == "fuzzy":
-                for term in clean_terms:
-                    term = term.lower()
-                    term_queries.append(
-                        Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields])
-                    )
-
-            # --- Exact (case-insensitive) match ---
-            elif mode == "exact":
-                for term in clean_terms:
-                    term = term.lower()
-                    term_queries.append(
-                        Or([Term(f, term) for f in fields])
-                    )
-
-            # --- Boolean search (AND / OR logic) ---
-            elif mode == "boolean":
-                # Example: "apple AND banana OR orange"
+            # Boolean mode (Whoosh parser)
+            if mode == "boolean":
                 parser = MultifieldParser(fields, schema=ix.schema)
-                q = parser.parse(text)
-                return q  # directly return the parsed boolean query
+                return parser.parse(text)
 
-            # --- Default fallback (same as fuzzy) ---
-            else:
-                for term in clean_terms:
-                    term = term.lower()
-                    term_queries.append(
-                        Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields])
-                    )
+            term_queries = []
+            for term in clean_terms:
+                term = term.lower()
+                if mode == "fuzzy":
+                    term_queries.append(Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields]))
+                elif mode == "exact":
+                    term_queries.append(Or([Term(f, term) for f in fields]))
+                else:
+                    # default fuzzy
+                    term_queries.append(Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields]))
 
             return And(term_queries)
 
-        # Build combined query
+        # Build combined query (AND all field queries)
         field_queries = []
-        for text, fields in q_text_field_map:
-            q = make_query(text, fields)
+        for entry in q_text_field_map:
+            q = make_query(entry["text"], entry["fields"], entry["mode"])
             if q:
                 field_queries.append(q)
 
         final_query = And(field_queries) if field_queries else Every()
-
-        logger.info(f"✅ FINAL QUERY ({mode}) = {final_query}")
+        logger.info(f"✅ FINAL QUERY = {final_query}")
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
@@ -709,7 +689,7 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=1, page=1, pa
                 results.append(build_hit(hit))
             total_results = whoosh_page.total
         except ValueError:
-            results = []
-            total_results = 0
+            results, total_results = [], 0
 
     return results, total_results
+

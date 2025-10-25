@@ -1020,14 +1020,14 @@ class TestimonyViewSet(viewsets.ModelViewSet):
     def combined_search(self, request):
         """
         Paginated Whoosh-based search on question + answer fields.
-        AND logic applied: results must match all provided query fields.
+        Allows per-query mode selection (mode1, mode2, mode3).
         """
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
-        q3 = request.data.get("q3", "").strip()
-        mode3 = request.data.get("mode3", "exact").lower()
         q2 = request.data.get("q2", "").strip()
         mode2 = request.data.get("mode2", "exact").lower()
+        q3 = request.data.get("q3", "").strip()
+        mode3 = request.data.get("mode3", "exact").lower()
 
         page_size = int(request.data.get("page_size", 200))
         max_pages = int(request.data.get("max_pages", 25))
@@ -1038,7 +1038,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             docs_list = []
             for t in testimonies:
                 transcript_name = t.file.name if t.file else ""
-                witness_name = t.witness_name or ""  # ✅ FIXED: get from Testimony, not Transcript
+                witness_name = t.witness_name or ""
                 question = t.question or ""
                 answer = t.answer or ""
                 cite = t.cite or ""
@@ -1066,30 +1066,27 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
 
-            # Step 3: Prepare query map
+            # Step 3: Prepare query map (each entry has text, fields, and mode)
             q_text_field_map = []
             if q1:
-                q_text_field_map.append((q1, ["question", "answer"]))
-            if q3:
-                q_text_field_map.append((q3, ["transcript_name", "witness_name"]))  # ✅ include witness name
+                q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
             if q2:
-                q_text_field_map.append((q2, ["witness_name"]))  # ✅ include witness name
-
+                q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
+            if q3:
+                q_text_field_map.append({"text": q3, "fields": ["transcript_name", "witness_name"], "mode": mode3})
 
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
-            
-            max_edits=2
+
             # Step 4: Search in batches
             all_results = []
             total_results = 0
             current_page = 1
-            if len(q1)<=4:
-                max_edits=1
+            max_edits = 1 if len(q1) <= 4 else 2
+
             while True:
                 batch_results, batch_total = search_documents(
                     ix,
-                    q_text_field_map,
-                    mode=mode1,
+                    q_text_field_map=q_text_field_map,
                     page=current_page,
                     page_size=page_size,
                     max_edits=max_edits,
@@ -1123,7 +1120,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
             return Response({
                 "query": f"q1={q1}, q2={q2}, q3={q3}",
-                "mode": mode1,
+                "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
                 "page_size": page_size,
                 "pages_fetched": current_page,
                 "total_results": total_results,
