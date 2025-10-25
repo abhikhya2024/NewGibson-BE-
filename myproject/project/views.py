@@ -1072,19 +1072,22 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 q_text_field_map.append((q3, ["transcript_name", "witness_name"]))  # ✅ include witness name
 
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
-
+            
+            max_edits=2
             # Step 4: Search in batches
             all_results = []
             total_results = 0
             current_page = 1
-
+            if len(q1)<=4:
+                max_edits=1
             while True:
                 batch_results, batch_total = search_documents(
                     ix,
                     q_text_field_map,
                     mode=mode1,
                     page=current_page,
-                    page_size=page_size
+                    page_size=page_size,
+                    max_edits=max_edits,
                 )
 
                 if not batch_results:
