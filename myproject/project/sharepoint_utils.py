@@ -653,31 +653,36 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             }
 
         def make_query(text, fields, mode):
-            clean_text = text.strip().lower()
-            if not clean_text:
+            text = text.strip()
+            if not text:
                 return None
 
-            terms = [t for t in re.split(r'\s+', clean_text) if t]
+            terms = [t for t in re.split(r'\s+', text.lower()) if t]
 
             # Boolean mode
             if mode == "boolean":
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
 
-            # Exact phrase or full string match
-            if mode == "exact":
-                # If multi-word, try both exact ID field and phrase
-                queries = []
-                for f in fields:
-                    if f.endswith("_exact"):  # exact filename field
-                        queries.append(Term(f, clean_text))
+            queries = []
+            for f in fields:
+                if f.endswith("_exact"):
+                    # Exact full string match (case-sensitive)
+                    queries.append(Term(f, text))  # do NOT lowercase
+                else:
+                    if mode == "fuzzy":
+                        # Fuzzy search (tokenized field)
+                        queries.append(And([FuzzyTerm(f, t, maxdist=1) for t in terms]))
                     else:
+                        # Exact phrase match on tokenized field
                         if len(terms) > 1:
                             queries.append(Phrase(f, terms))
                         else:
-                            queries.append(Term(f, clean_text))
-                return Or(queries)
+                            queries.append(Term(f, terms[0]))
 
+            if len(queries) == 1:
+                return queries[0]
+            return Or(queries)
             # Fuzzy search
             if mode == "fuzzy":
                 return And([Or([FuzzyTerm(f, t, maxdist=1) for f in fields]) for t in terms])
