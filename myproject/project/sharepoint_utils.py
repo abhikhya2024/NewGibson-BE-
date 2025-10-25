@@ -28,8 +28,9 @@ from whoosh.qparser import QueryParser
 from whoosh.query import FuzzyTerm, Or, And, Prefix
 import re
 import fcntl, time, os
-from whoosh import index
+from whoosh import index, plugins
 from whoosh.query import Every
+from whoosh import plugins
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -666,10 +667,23 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
             # Boolean search
             if mode == "boolean":
-                from whoosh.qparser import MultifieldParser
-                parser = MultifieldParser(fields, schema=ix.schema)
-                return parser.parse(text)
+                # We want the boolean query to support nested operators like AND, OR, parentheses
+                # Also map fields: _search for normalized fuzzy search, _exact for exact matches
+                parser_fields = []
+                for f in fields:
+                    if f.endswith("_search") or f.endswith("_exact") or f.endswith("_name"):
+                        parser_fields.append(f)
 
+                parser = MultifieldParser(parser_fields, schema=ix.schema, group=OrGroup.factory(0.9))
+                parser.add_plugin(plugins.FuzzyTermPlugin())  # optional: allow ~ fuzzy in boolean
+
+                # normalize boolean query for _search fields
+                normalized_text = text
+                for f in fields:
+                    if f.endswith("_search"):
+                        normalized_text = normalize_index_text(text)
+
+                return parser.parse(normalized_text)
             queries = []
 
             for f in fields:
