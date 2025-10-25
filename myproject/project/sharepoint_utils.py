@@ -597,17 +597,16 @@ def get_or_create_index(index_dir):
         witness_name=TEXT(stored=True)
     )
 
-    if os.path.exists(index_dir):
-        # 🧹 Delete old index completely
-        shutil.rmtree(index_dir)
-        logger.info(f"🗑️ Deleted old Whoosh index at: {index_dir}")
+    if not os.path.exists(index_dir):
+        os.makedirs(index_dir)
 
-    # 🏗️ Create fresh directory
-    os.makedirs(index_dir, exist_ok=True)
+    if not index.exists_in(index_dir):
+        ix = index.create_in(index_dir, schema)
+        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
+    else:
+        ix = index.open_dir(index_dir)
+        logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
 
-    # 🆕 Create a new index
-    ix = index.create_in(index_dir, schema)
-    logger.info(f"✅ Created new Whoosh index at: {index_dir}")
     return ix
 
 
