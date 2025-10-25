@@ -1073,8 +1073,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             if q2:
                 q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
             if q3:
-                q_text_field_map.append({"text": q3, "fields": ["transcript_name", "witness_name"], "mode": mode3})
-
+                # Search in both fuzzy and exact filename
+                q_text_field_map.append({
+                    "text": q3,
+                    "fields": ["transcript_name", "transcript_name_exact"],
+                    "mode": mode3
+                })
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
 
             # Step 4: Search in batches
