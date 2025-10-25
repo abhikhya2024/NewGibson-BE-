@@ -664,7 +664,10 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
             # Boolean mode
             if mode == "boolean":
-                parser = MultifieldParser(fields, schema=ix.schema)
+                # parser = MultifieldParser(fields, schema=ix.schema)
+                # return parser.parse(text)
+                    # Use OrGroup by default, but AND can also be forced if needed
+                parser = MultifieldParser(fields, schema=ix.schema, group=OrGroup)
                 return parser.parse(text)
 
             queries = []
