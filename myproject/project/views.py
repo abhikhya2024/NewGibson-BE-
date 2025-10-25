@@ -1036,7 +1036,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             docs_list = []
             for t in testimonies:
                 transcript_name = t.file.name if t.file else ""
-                witness_name = getattr(t.file, "witness_name", "") or ""
+                witness_name = t.witness_name or ""  # ✅ FIXED: get from Testimony, not Transcript
                 question = t.question or ""
                 answer = t.answer or ""
                 cite = t.cite or ""
@@ -1064,12 +1064,12 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
 
-            # Step 3: Prepare query map (list of tuples)
+            # Step 3: Prepare query map
             q_text_field_map = []
             if q1:
                 q_text_field_map.append((q1, ["question", "answer"]))
             if q3:
-                q_text_field_map.append((q3, ["transcript_name"]))
+                q_text_field_map.append((q3, ["transcript_name", "witness_name"]))  # ✅ include witness name
 
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
 
@@ -1082,13 +1082,13 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 batch_results, batch_total = search_documents(
                     ix,
                     q_text_field_map,
-                    mode=mode1,           # using mode1 for simplicity; you can extend per-field if needed
+                    mode=mode1,
                     page=current_page,
                     page_size=page_size
                 )
 
                 if not batch_results:
-                    break  # no more results
+                    break
 
                 all_results.extend(batch_results)
                 total_results = batch_total
@@ -1100,7 +1100,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
                 current_page += 1
 
-            # Step 5: Format response
+            # Step 5: Return results
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1129,7 +1129,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             import traceback
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     def combined_transcript_search(self, request):
         serializer = CombinedTranscriptSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

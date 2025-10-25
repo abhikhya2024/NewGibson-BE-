@@ -593,8 +593,7 @@ def get_or_create_index(index_dir):
         answer=TEXT(stored=True),
         transcript_name=TEXT(stored=True),
         witness_name=TEXT(stored=True),
-        cite=TEXT(stored=True),
-        witness_name=TEXT(stored=True)
+        cite=TEXT(stored=True)
     )
 
     if not os.path.exists(index_dir):
@@ -609,6 +608,8 @@ def get_or_create_index(index_dir):
 
     return ix
 
+
+# --------------------- INDEXING ---------------------
 
 def index_documents(ix, docs_list):
     """
@@ -632,7 +633,7 @@ def index_documents(ix, docs_list):
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
 
 
-# --------------------- SEARCH FUNCTION ---------------------
+# --------------------- SEARCH ---------------------
 
 def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, page_size=200):
     results = []
@@ -647,7 +648,7 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, pa
                 "question": hit.get("question", ""),
                 "answer": hit.get("answer", ""),
                 "witness_name": hit.get("witness_name", ""),
-
+                "cite": hit.get("cite", ""),
             }
 
         def make_query(text, fields):
@@ -658,12 +659,12 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, pa
             term_queries = []
             for term in clean_terms:
                 term = term.lower()
-                term_queries.append(Or([FuzzyTerm(f, term, maxdist=1) for f in fields]))
+                term_queries.append(Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields]))
 
             return And(term_queries)
 
         field_queries = []
-        for text, fields in q_text_field_map:  # ✅ correct unpacking
+        for text, fields in q_text_field_map:
             q = make_query(text, fields)
             if q:
                 field_queries.append(q)
