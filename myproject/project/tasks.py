@@ -23,7 +23,16 @@ def save_testimony_task():
     transcripts = {}
     for db in DB_NAMES:
         for t in Transcript.objects.using(db).all():
-            transcripts[t.name] = (t, db)   # keep track of db also
+            transcripts[t.name] = (t, db)  # keep track of db also
+
+    # preload witnesses for all transcripts
+    witnesses_map = {}
+    for db in DB_NAMES:
+        for w in Witness.objects.using(db).all():
+            if w.file_id not in witnesses_map:
+                witnesses_map[w.file_id] = []
+            if w.fullname:
+                witnesses_map[w.file_id].append(w.fullname)
 
     # preload existing testimonies from all databases
     existing = set()
@@ -52,12 +61,7 @@ def save_testimony_task():
             item.get("index"),
             transcript.id
         )
-        witnesses_map = {}
-        for db in DB_NAMES:
-            for w in Witness.objects.using(db).all():
-                if w.file_id not in witnesses_map:
-                    witnesses_map[w.file_id] = []
-                witnesses_map[w.file_id].append(w.fullname)
+
         if qa_key not in existing:
             # get witness names for this transcript
             witness_names = witnesses_map.get(transcript.id, [])
@@ -72,7 +76,6 @@ def save_testimony_task():
                 witness_name=witness_name_str
             ))
 
-
     # insert testimonies into *same DB as transcript*
     for db in DB_NAMES:
         objs_for_db = [obj for obj in qa_objects if obj.file._state.db == db]
@@ -84,6 +87,7 @@ def save_testimony_task():
         "skipped": skipped,
         "total": len(results)
     }
+
 
 def safe_bulk(client, actions, source_label):
     """
