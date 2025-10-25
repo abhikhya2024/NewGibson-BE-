@@ -1026,6 +1026,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         mode1 = request.data.get("mode1", "exact").lower()
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
+        q2 = request.data.get("q2", "").strip()
+        mode2 = request.data.get("mode2", "exact").lower()
 
         page_size = int(request.data.get("page_size", 200))
         max_pages = int(request.data.get("max_pages", 25))
@@ -1070,6 +1072,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 q_text_field_map.append((q1, ["question", "answer"]))
             if q3:
                 q_text_field_map.append((q3, ["transcript_name", "witness_name"]))  # ✅ include witness name
+            if q2:
+                q_text_field_map.append((q3, ["witness_name"]))  # ✅ include witness name
+
 
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
             
