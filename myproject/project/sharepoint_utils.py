@@ -706,10 +706,6 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
 
 
-
-
-
-
             if not queries:
                 return None
             if len(queries) == 1:
