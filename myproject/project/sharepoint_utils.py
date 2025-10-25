@@ -642,6 +642,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     total_results = 0
 
     with ix.searcher() as searcher:
+
         def build_hit(hit):
             return {
                 "id": hit.get("id"),
@@ -671,8 +672,8 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     queries.append(Term(f, text))  # do NOT lowercase
                 else:
                     if mode == "fuzzy":
-                        # Fuzzy search (tokenized field)
-                        queries.append(And([FuzzyTerm(f, t, maxdist=1) for t in terms]))
+                        # Fuzzy search on tokenized field
+                        queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
                     else:
                         # Exact phrase match on tokenized field
                         if len(terms) > 1:
@@ -683,15 +684,8 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if len(queries) == 1:
                 return queries[0]
             return Or(queries)
-            # Fuzzy search
-            if mode == "fuzzy":
-                return And([Or([FuzzyTerm(f, t, maxdist=1) for f in fields]) for t in terms])
 
-            # Default fallback
-            return And([Or([FuzzyTerm(f, t, maxdist=1) for f in fields]) for t in terms])
-
-
-        # Build combined query (AND all field queries)
+        # Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
             q = make_query(entry["text"], entry["fields"], entry["mode"])
@@ -710,4 +704,3 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             results, total_results = [], 0
 
     return results, total_results
-
