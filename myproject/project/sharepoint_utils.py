@@ -654,7 +654,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
 
             }
-        def normalize_search_text(text)
+        def normalize_search_text(text):
             """
             Normalize user query for fuzzy search: lowercase, remove punctuation.
             """
