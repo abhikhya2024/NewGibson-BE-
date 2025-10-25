@@ -593,7 +593,7 @@ def get_or_create_index(index_dir):
         answer=TEXT(stored=True),
         transcript_name=TEXT(stored=True),       # for fuzzy/partial search
         transcript_name_exact=ID(stored=True),   # for full filename exact match
-        transcript_name_search = TEXT(stored=False)
+        transcript_name_search = TEXT(stored=False),
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
 
