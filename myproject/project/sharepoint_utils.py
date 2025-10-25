@@ -669,7 +669,9 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
+            
 
+            
             queries = []
 
             for f in fields:
@@ -684,12 +686,29 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                         if terms:
                             queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
                     else:
-                        # Exact phrase search on tokenized field
-                        terms = [t.lower() for t in re.split(r'\s+', text) if t]
+                                    # Exact phrase search on tokenized field
+                        cleaned_text = re.sub(r"[^\w\s]", " ", text)
+                        cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+
+                        # Split into terms
+                        terms = cleaned_text.lower().split()
+                        if not terms:
+                            continue
+
                         if len(terms) > 1:
+                            # Exact phrase match
                             queries.append(Phrase(f, terms))
-                        elif terms:
+                        else:
+                            # Single exact term
                             queries.append(Term(f, terms[0]))
+
+
+
+
+
+
+
+
 
             if not queries:
                 return None
