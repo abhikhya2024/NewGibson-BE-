@@ -1078,7 +1078,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 # Search in both fuzzy and exact filename
                 q_text_field_map.append({
                     "text": q3,
-                    "fields": ["transcript_name", "transcript_name_exact"],
+                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
                     "mode": mode3
                 })
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
