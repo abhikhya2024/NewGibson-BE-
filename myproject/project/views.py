@@ -1073,7 +1073,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             if q3:
                 q_text_field_map.append((q3, ["transcript_name", "witness_name"]))  # ✅ include witness name
             if q2:
-                q_text_field_map.append((q3, ["witness_name"]))  # ✅ include witness name
+                q_text_field_map.append((q2, ["witness_name"]))  # ✅ include witness name
 
 
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
@@ -1122,7 +1122,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             ]
 
             return Response({
-                "query": f"q1={q1}, q3={q3}",
+                "query": f"q1={q1}, q2={q2}, q3={q3}",
                 "mode": mode1,
                 "page_size": page_size,
                 "pages_fetched": current_page,
