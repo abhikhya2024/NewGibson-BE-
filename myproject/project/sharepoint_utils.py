@@ -609,7 +609,15 @@ def get_or_create_index(index_dir):
     print(f"✅ Created new Whoosh index at: {index_dir}")
     return ix
 
-
+def normalize_filename(name: str) -> str:
+    """
+    Remove punctuation and lowercase everything for fuzzy matching.
+    """
+    if not name:
+        return ""
+    # Remove everything except letters and numbers
+    name_clean = re.sub(r'[^A-Za-z0-9\s]', '', name)
+    return name_clean.lower()
 # --------------------- INDEXING ---------------------
 
 def index_documents(ix, docs_list):
@@ -626,8 +634,8 @@ def index_documents(ix, docs_list):
             id=d["id"],
             question=d["question"],
             answer=d["answer"],
-            transcript_name=d["transcript_name"],          # tokenized
-            transcript_name_exact=d["transcript_name_exact"],    # exact ID
+            transcript_name=normalize_filename(d["transcript_name"]),      # tokenized, normalized
+            transcript_name_exact=d["transcript_name"],                    # keep original for exact match
             witness_name=d["witness_name"],
             cite=d["cite"],
         )
@@ -678,7 +686,11 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 else:
                     if mode == "fuzzy":
                         # Fuzzy search on tokenized field
-                        queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                        if mode == "fuzzy":
+                            # Normalize query text same as index
+                            clean_text = normalize_filename(text)
+                            terms = [t for t in re.split(r'\s+', clean_text) if t]
+                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
                     else:
                         # Exact phrase match on tokenized field
                         if len(terms) > 1:
