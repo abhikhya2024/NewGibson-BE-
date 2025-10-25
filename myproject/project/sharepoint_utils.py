@@ -679,7 +679,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 else:
                     if mode == "fuzzy":
                         # Normalize text for fuzzy search
-                        normalized = normalize_search_text(text)  # lowercase, remove punctuation
+                        normalized = normalize_index_text(text)  # lowercase, remove punctuation
                         terms = [t for t in normalized.split() if t]
                         if terms:
                             queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
