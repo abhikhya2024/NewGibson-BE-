@@ -594,18 +594,20 @@ def get_or_create_index(index_dir):
         transcript_name=TEXT(stored=True),
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
+        witness_name=TEXT(stored=True)
     )
 
-    if not os.path.exists(index_dir):
-        os.makedirs(index_dir)
+    if os.path.exists(index_dir):
+        # 🧹 Delete old index completely
+        shutil.rmtree(index_dir)
+        logger.info(f"🗑️ Deleted old Whoosh index at: {index_dir}")
 
-    if not index.exists_in(index_dir):
-        ix = index.create_in(index_dir, schema)
-        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
-    else:
-        ix = index.open_dir(index_dir)
-        logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
+    # 🏗️ Create fresh directory
+    os.makedirs(index_dir, exist_ok=True)
 
+    # 🆕 Create a new index
+    ix = index.create_in(index_dir, schema)
+    logger.info(f"✅ Created new Whoosh index at: {index_dir}")
     return ix
 
 
@@ -645,6 +647,8 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, pa
                 "transcript_name": hit.get("transcript_name", ""),
                 "question": hit.get("question", ""),
                 "answer": hit.get("answer", ""),
+                "witness_name": hit.get("witness_name", ""),
+
             }
 
         def make_query(text, fields):
