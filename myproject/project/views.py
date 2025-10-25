@@ -1051,6 +1051,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                         "question": question.strip(),
                         "answer": answer.strip(),
                         "cite": cite.strip(),
+                        "transcript_name_exact": transcript_name.strip(),  # add this
+
                     })
 
             if not docs_list:
