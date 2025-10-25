@@ -593,8 +593,10 @@ def get_or_create_index(index_dir):
         answer=TEXT(stored=True),
         transcript_name=TEXT(stored=True),       # for fuzzy/partial search
         transcript_name_exact=ID(stored=True),   # for full filename exact match
+        transcript_name_search = TEXT(stored=False)
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
+
     )
 
     if os.path.exists(index_dir):
@@ -611,7 +613,8 @@ def get_or_create_index(index_dir):
 
 
 # --------------------- INDEXING ---------------------
-
+def normalize_index_text(text: str) -> str:
+    return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
 def index_documents(ix, docs_list):
     """
     Index a list of documents into the Whoosh index.
@@ -626,8 +629,9 @@ def index_documents(ix, docs_list):
             id=d["id"],
             question=d["question"],
             answer=d["answer"],
-            transcript_name=d["transcript_name"],          # tokenized
-            transcript_name_exact=d["transcript_name_exact"],    # exact ID
+            transcript_name=d["transcript_name"],          # original for display
+            transcript_name_exact=d["transcript_name_exact"], # exact match
+            transcript_name_search=normalize_index_text(d["transcript_name"]),  # searchable normalized
             witness_name=d["witness_name"],
             cite=d["cite"],
         )
@@ -654,16 +658,13 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
 
             }
-        def normalize_search_text(text):
-            """
-            Normalize user query for fuzzy search: lowercase, remove punctuation.
-            """
-            return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
+
         def make_query(text, fields, mode, max_edits=1):
             text = text.strip()
             if not text:
                 return None
 
+            # Boolean search
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
@@ -673,26 +674,28 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
             for f in fields:
                 if f.endswith("_exact"):
-                    # Exact match on full filename (keeps punctuation)
+                    # Exact match on full filename (keeps punctuation, case-sensitive)
                     queries.append(Term(f, text))
                 else:
                     if mode == "fuzzy":
                         # Normalize text for fuzzy search
-                        normalized = normalize_search_text(text)
+                        normalized = normalize_search_text(text)  # lowercase, remove punctuation
                         terms = [t for t in normalized.split() if t]
-                        queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                        if terms:
+                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
                     else:
-                        # Exact phrase on tokenized field
-                        terms = [t for t in text.lower().split() if t]
+                        # Exact phrase search on tokenized field
+                        terms = [t.lower() for t in re.split(r'\s+', text) if t]
                         if len(terms) > 1:
                             queries.append(Phrase(f, terms))
-                        else:
+                        elif terms:
                             queries.append(Term(f, terms[0]))
 
+            if not queries:
+                return None
             if len(queries) == 1:
                 return queries[0]
             return Or(queries)
-
         # Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
