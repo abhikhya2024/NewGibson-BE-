@@ -652,29 +652,56 @@ def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=1, page=1, pa
             }
 
         def make_query(text, fields):
+            """Build query depending on mode."""
             clean_terms = [t for t in re.split(r'\s+', text.strip()) if t]
             if not clean_terms:
                 return None
 
             term_queries = []
-            for term in clean_terms:
-                term = term.lower()
-                term_queries.append(Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields]))
+
+            # --- Fuzzy search ---
+            if mode == "fuzzy":
+                for term in clean_terms:
+                    term = term.lower()
+                    term_queries.append(
+                        Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields])
+                    )
+
+            # --- Exact (case-insensitive) match ---
+            elif mode == "exact":
+                for term in clean_terms:
+                    term = term.lower()
+                    term_queries.append(
+                        Or([Term(f, term) for f in fields])
+                    )
+
+            # --- Boolean search (AND / OR logic) ---
+            elif mode == "boolean":
+                # Example: "apple AND banana OR orange"
+                parser = MultifieldParser(fields, schema=ix.schema)
+                q = parser.parse(text)
+                return q  # directly return the parsed boolean query
+
+            # --- Default fallback (same as fuzzy) ---
+            else:
+                for term in clean_terms:
+                    term = term.lower()
+                    term_queries.append(
+                        Or([FuzzyTerm(f, term, maxdist=max_edits) for f in fields])
+                    )
 
             return And(term_queries)
 
+        # Build combined query
         field_queries = []
         for text, fields in q_text_field_map:
             q = make_query(text, fields)
             if q:
                 field_queries.append(q)
 
-        if not field_queries:
-            final_query = Every()
-        else:
-            final_query = And(field_queries)
+        final_query = And(field_queries) if field_queries else Every()
 
-        logger.info(f"✅ FINAL QUERY = {final_query}")
+        logger.info(f"✅ FINAL QUERY ({mode}) = {final_query}")
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
