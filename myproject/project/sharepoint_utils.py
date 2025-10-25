@@ -635,7 +635,7 @@ def index_documents(ix, docs_list):
 
 # --------------------- SEARCH ---------------------
 
-def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=2, page=1, page_size=200):
+def search_documents(ix, q_text_field_map, mode="fuzzy", max_edits=1, page=1, page_size=200):
     results = []
     total_results = 0
 
