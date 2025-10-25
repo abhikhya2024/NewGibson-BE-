@@ -597,16 +597,16 @@ def get_or_create_index(index_dir):
         cite=TEXT(stored=True),
     )
 
-    if not os.path.exists(index_dir):
-        os.makedirs(index_dir)
+    if os.path.exists(index_dir):
+        shutil.rmtree(index_dir)
+        print(f"🗑️ Removed old Whoosh index at: {index_dir}")
 
-    if not index.exists_in(index_dir):
-        ix = index.create_in(index_dir, schema)
-        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
-    else:
-        ix = index.open_dir(index_dir)
-        logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
+    # Create directory
+    os.makedirs(index_dir, exist_ok=True)
 
+    # Create new index
+    ix = create_in(index_dir, schema)
+    print(f"✅ Created new Whoosh index at: {index_dir}")
     return ix
 
 
@@ -627,7 +627,7 @@ def index_documents(ix, docs_list):
             question=d["question"],
             answer=d["answer"],
             transcript_name=d["transcript_name"],          # tokenized
-            transcript_name_exact=d["transcript_name"],    # exact ID
+            transcript_name_exact=d["transcript_name_exact"],    # exact ID
             witness_name=d["witness_name"],
             cite=d["cite"],
         )

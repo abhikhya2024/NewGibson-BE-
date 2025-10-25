@@ -1120,6 +1120,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "question": r.get("question", ""),
                     "answer": r.get("answer", ""),
                     "cite": r.get("cite", ""),
+                    
                 }
                 for r in all_results
             ]
