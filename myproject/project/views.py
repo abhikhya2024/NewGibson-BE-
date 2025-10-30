@@ -1053,7 +1053,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                         "answer": answer.strip(),
                         "cite": cite.strip(),
                         "transcript_name_exact": transcript_name.strip(),  # add this
-                        "created_at": created_at.strip(),  # add this
+                        "created_at": created_at,  # add this
 
                     })
 
