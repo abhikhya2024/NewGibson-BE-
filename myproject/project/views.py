@@ -1042,8 +1042,10 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 question = t.question or ""
                 answer = t.answer or ""
                 cite = t.cite or ""
-                created_at=t.created_at or ""
-
+                created_at = t.created_at
+                if created_at and created_at.tzinfo:
+                    created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
+                    
                 if question.strip() or answer.strip():
                     docs_list.append({
                         "id": str(t.id),

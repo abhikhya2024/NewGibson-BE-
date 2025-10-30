@@ -658,6 +658,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "witness_name": hit.get("witness_name", ""),
                 "cite": hit.get("cite", ""),
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
+                "created_at": hit.get("created_at"),  # ✅ Add this line
 
             }
 
