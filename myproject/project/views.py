@@ -1042,6 +1042,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 question = t.question or ""
                 answer = t.answer or ""
                 cite = t.cite or ""
+                created_at=t.created_at or ""
 
                 if question.strip() or answer.strip():
                     docs_list.append({
@@ -1052,6 +1053,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                         "answer": answer.strip(),
                         "cite": cite.strip(),
                         "transcript_name_exact": transcript_name.strip(),  # add this
+                        "created_at": created_at.strip(),  # add this
 
                     })
 
@@ -1120,6 +1122,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "question": r.get("question", ""),
                     "answer": r.get("answer", ""),
                     "cite": r.get("cite", ""),
+                    "created_at": r.get("created_at")
 
 
                 }

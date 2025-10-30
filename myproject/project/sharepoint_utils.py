@@ -634,6 +634,7 @@ def index_documents(ix, docs_list):
             transcript_name_search=normalize_index_text(d["transcript_name"]),  # searchable normalized
             witness_name=d["witness_name"],
             cite=d["cite"],
+            created_at=d["created_at"]
         )
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
