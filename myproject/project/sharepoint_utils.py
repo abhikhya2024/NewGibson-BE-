@@ -12,7 +12,7 @@ import spacy
 nlp = spacy.load("en_core_web_sm")
 import msal
 from whoosh.index import create_in
-from whoosh.fields import Schema, TEXT, ID
+from whoosh.fields import Schema, TEXT, ID, DATETIME
 from whoosh import index
 from whoosh.analysis import RegexTokenizer, LowercaseFilter
 from whoosh.qparser import MultifieldParser, OrGroup, AndGroup
@@ -596,6 +596,7 @@ def get_or_create_index(index_dir):
         transcript_name_search = TEXT(stored=False),
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
+        created_at=DATETIME(stored=True)          # ✅ fixed here
 
     )
 
