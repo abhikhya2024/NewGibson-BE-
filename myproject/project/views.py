@@ -1133,7 +1133,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             # ✅ Step 6: Sort by created_at (newest first)
             results_json.sort(
                 key=lambda x: x["created_at"] or datetime.min,
-                reverse=True  # descending (latest first)
+                reverse=False  # descending (latest first)
             )
 
             return Response({
