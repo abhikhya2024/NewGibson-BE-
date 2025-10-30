@@ -1045,7 +1045,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 created_at = t.created_at
                 if created_at and created_at.tzinfo:
                     created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
-                    
+
                 if question.strip() or answer.strip():
                     docs_list.append({
                         "id": str(t.id),
@@ -1116,20 +1116,25 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 current_page += 1
 
             # Step 5: Return results
-            results_json = [
-                {
-                    "id": r.get("id"),
-                    "transcript_name": r.get("transcript_name", ""),
-                    "witness_name": r.get("witness_name", ""),
-                    "question": r.get("question", ""),
-                    "answer": r.get("answer", ""),
-                    "cite": r.get("cite", ""),
-                    "created_at": r.get("created_at")
+# Step 5: Prepare results
+                results_json = [
+                    {
+                        "id": r.get("id"),
+                        "transcript_name": r.get("transcript_name", ""),
+                        "witness_name": r.get("witness_name", ""),
+                        "question": r.get("question", ""),
+                        "answer": r.get("answer", ""),
+                        "cite": r.get("cite", ""),
+                        "created_at": r.get("created_at"),
+                    }
+                    for r in all_results
+                ]
 
-
-                }
-                for r in all_results
-            ]
+                # ✅ Step 6: Sort by created_at (newest first)
+                results_json.sort(
+                    key=lambda x: x["created_at"] or datetime.min,
+                    reverse=True  # descending (latest first)
+                )
 
             return Response({
                 "query": f"q1={q1}, q2={q2}, q3={q3}",
