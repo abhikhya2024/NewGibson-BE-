@@ -1156,7 +1156,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        
+
     @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):
         q1 = request.data.get("q1", "").strip()
@@ -1170,8 +1170,29 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         max_pages = int(request.data.get("max_pages", 25))
 
         try:
-            # Step 1: Fetch testimonies
+            # ✅ Step 1: Parse date filters
+            def parse_date(value):
+                if not value:
+                    return None
+                try:
+                    return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+                except Exception:
+                    try:
+                        return datetime.strptime(value, "%Y-%m-%d").date()
+                    except Exception:
+                        return None
+
+            start_date = parse_date(q3)
+            end_date = parse_date(q4)
+
+            # ✅ Step 2: Fetch testimonies with date filtering
             transcripts = Transcript.objects.all().prefetch_related("witness_set")
+            if start_date and end_date:
+                transcripts = transcripts.filter(transcript_date__range=[start_date, end_date])
+            elif start_date:
+                transcripts = transcripts.filter(transcript_date__gte=start_date)
+            elif end_date:
+                transcripts = transcripts.filter(transcript_date__lte=end_date)
 
             docs_list = []
             for t in transcripts:
@@ -1181,9 +1202,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 web_url = t.web_url or ""
                 created_at = t.created_at
                 if created_at and created_at.tzinfo:
-                    created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
+                    created_at = created_at.replace(tzinfo=None)
 
-                # Fetch all witness names linked to this transcript
                 witness_names = [w.fullname.strip() for w in t.witness_set.all() if w.fullname]
                 if not witness_names:
                     witness_names = [""]
@@ -1200,47 +1220,29 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     })
 
             if not docs_list:
-                return Response({"error": "No testimonies found to index."}, status=400)
+                return Response({"error": "No testimonies found for the given date range."}, status=400)
 
-            # Step 2: Configure Whoosh index
+            # ✅ Step 3: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index2")
             ix = get_or_create_index2(INDEX_DIR)
 
-            # Step 2.5: Index documents if index is empty
+            # Step 3.5: Index only if index is empty
             with ix.searcher() as searcher:
                 if searcher.doc_count() == 0:
                     index_documents2(ix, docs_list)
 
-            # Step 3: Prepare query map
+            # ✅ Step 4: Prepare search query map
             q_text_field_map = []
             if q1:
                 q_text_field_map.append({"text": q1, "fields": ["case_name"], "mode": mode1})
             if q2:
                 q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
 
-            # ✅ Step 3.5: Date range filter setup
-            date_filter = {}
-            date_format = "%Y-%m-%d"
-
-            if q3:
-                try:
-                    start_date = q3 if isinstance(q3, (datetime, date)) else datetime.strptime(q3, date_format).date()
-                    date_filter["gte"] = start_date
-                except ValueError:
-                    logger.warning(f"⚠️ Invalid start date format: {q3}")
-
-            if q4:
-                try:
-                    end_date = q4 if isinstance(q4, (datetime, date)) else datetime.strptime(q4, date_format).date()
-                    date_filter["lte"] = end_date
-                except ValueError:
-                    logger.warning(f"⚠️ Invalid end date format: {q4}")
-
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
-            logger.info(f"📅 date_filter = {date_filter}")
+            logger.info(f"📅 start_date={start_date}, end_date={end_date}")
 
-            # Step 4: Search in batches
+            # ✅ Step 5: Perform Whoosh search in batches
             all_results = []
             total_results = 0
             current_page = 1
@@ -1268,23 +1270,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
                 current_page += 1
 
-            # ✅ Step 5: Apply date range filter on transcript_date
-            if date_filter:
-                filtered_results = []
-                for r in all_results:
-                    t_date = r.get("transcript_date")
-                    if not t_date:
-                        continue
-                    if isinstance(t_date, datetime):
-                        t_date = t_date.date()
-                    if (
-                        (not date_filter.get("gte") or t_date >= date_filter["gte"]) and
-                        (not date_filter.get("lte") or t_date <= date_filter["lte"])
-                    ):
-                        filtered_results.append(r)
-                all_results = filtered_results
-
-            # Step 6: Prepare results
+            # ✅ Step 6: Prepare results
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1298,7 +1284,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 for r in all_results
             ]
 
-            # ✅ Step 7: Sort by created_at (oldest first)
+            # ✅ Step 7: Sort by created_at ascending
             results_json.sort(
                 key=lambda x: x["created_at"] or datetime.min,
                 reverse=False
@@ -1320,7 +1306,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             import traceback
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
         # serializer = CombinedTranscriptSearchSerializer(data=request.data)
         # serializer.is_valid(raise_exception=True)
         # validated = serializer.validated_data
