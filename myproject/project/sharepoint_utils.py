@@ -596,7 +596,8 @@ def get_or_create_index(index_dir):
         transcript_name_search = TEXT(stored=False),
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
-        created_at=DATETIME(stored=True)          # ✅ fixed here
+        created_at=DATETIME(stored=True)  ,        # ✅ fixed here
+        web_url=TEXT(stored=True)
 
     )
 
@@ -635,7 +636,8 @@ def index_documents(ix, docs_list):
             transcript_name_search=normalize_index_text(d["transcript_name"]),  # searchable normalized
             witness_name=d["witness_name"],
             cite=d["cite"],
-            created_at=d["created_at"]
+            created_at=d["created_at"],
+            web_url=d["web_url"]
         )
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
@@ -659,7 +661,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "cite": hit.get("cite", ""),
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
                 "created_at": hit.get("created_at"),  # ✅ Add this line
-
+                "web_url": hit.get("web_url")
             }
 
         def make_query(text, fields, mode, max_edits=1):
