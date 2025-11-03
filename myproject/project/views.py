@@ -1266,7 +1266,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "witness_name": r.get("witness_name", ""),
                     "created_at": r.get("created_at"),
                     "web_url": r.get("web_url"),
-                    "transcript_date": r.get("transcript_date"),
+                    "transcript_date": r.get("transcript_date").strftime("%Y-%m-%d") if r.get("transcript_date") else None,
                     "case_name": r.get("case_name"),
                 }
                 for r in all_results
