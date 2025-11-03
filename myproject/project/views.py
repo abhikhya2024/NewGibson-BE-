@@ -1217,7 +1217,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             # Step 3: Prepare query map (each entry has text, fields, and mode)
             q_text_field_map = []
             if q1:
-                q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
+                q_text_field_map.append({"text": q1, "fields": ["case_name"], "mode": mode1})
             if q2:
                 q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
             if q3:
