@@ -1156,6 +1156,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+        
     @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):
         q1 = request.data.get("q1", "").strip()
