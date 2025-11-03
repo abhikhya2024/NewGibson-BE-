@@ -444,6 +444,7 @@ class TranscriptViewSet(viewsets.ModelViewSet):
                     if transcript:
                         transcript.web_url = web_url
                         transcript.save(update_fields=["web_url"])
+                        Testimony.objects.filter(file=transcript).update(web_url=web_url)
 
                     files.append({
                         "name": file_name,
