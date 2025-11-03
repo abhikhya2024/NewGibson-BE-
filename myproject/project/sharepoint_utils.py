@@ -30,6 +30,7 @@ import re
 import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
+from datetime import datetime, time, date
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -677,15 +678,26 @@ def index_documents2(ix, docs_list):
 
     writer = ix.writer()
     for d in docs_list:
+        created_at = d["created_at"]
+        transcript_date = d["transcript_date"]
+
+        # 🔧 Fix: ensure both are datetime objects
+        if isinstance(created_at, date) and not isinstance(created_at, datetime):
+            created_at = datetime.combine(created_at, time.min)
+
+        if isinstance(transcript_date, date) and not isinstance(transcript_date, datetime):
+            transcript_date = datetime.combine(transcript_date, time.min)
+
         writer.update_document(
             id=d["id"],
-            transcript_name=d["transcript_name"],          # original for display
+            transcript_name=d["transcript_name"],
             witness_name=d["witness_name"],
-            created_at=d["created_at"],
+            created_at=created_at,
             web_url=d["web_url"],
             case_name=d["case_name"],
-            transcript_date=d["transcript_date"]
+            transcript_date=transcript_date,
         )
+
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
 # --------------------- SEARCH ---------------------
