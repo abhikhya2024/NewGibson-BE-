@@ -1220,8 +1220,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     })
 
             if not docs_list:
-                return Response({"error": "No testimonies found for the given date range."}, status=400)
-
+                return Response({
+                    "query": f"q1={q1}, q2={q2}, q3={q3}, q4={q4}",
+                    "modes": {"mode1": mode1, "mode2": mode2},
+                    "page_size": page_size,
+                    "pages_fetched": current_page,
+                    "total_results": total_results,
+                    "results_returned": 0,
+                    "results": [],
+                })
             # ✅ Step 3: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index2")
