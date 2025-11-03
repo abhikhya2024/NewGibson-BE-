@@ -1162,8 +1162,8 @@ class TestimonyViewSet(viewsets.ModelViewSet):
         mode1 = request.data.get("mode1", "exact").lower()
         q2 = request.data.get("q2", "").strip()
         mode2 = request.data.get("mode2", "exact").lower()
-        q3 = request.data.get("q3", "").strip()
-        mode3 = request.data.get("mode3", "exact").lower()
+        q3 = request.data.get("q3")  # start date
+        q4 = request.data.get("q4")  # end date
 
         page_size = int(request.data.get("page_size", 200))
         max_pages = int(request.data.get("max_pages", 25))
@@ -1184,12 +1184,9 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
                 # Fetch all witness names linked to this transcript
                 witness_names = [w.fullname.strip() for w in t.witness_set.all() if w.fullname]
-
-                # If no witnesses found, still index transcript (with empty witness_name)
                 if not witness_names:
                     witness_names = [""]
 
-                # For each witness, create one entry
                 for witness_name in witness_names:
                     docs_list.append({
                         "id": f"transcript_{t.id}_{witness_name or 'none'}",
@@ -1214,20 +1211,33 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 if searcher.doc_count() == 0:
                     index_documents2(ix, docs_list)
 
-            # Step 3: Prepare query map (each entry has text, fields, and mode)
+            # Step 3: Prepare query map
             q_text_field_map = []
             if q1:
                 q_text_field_map.append({"text": q1, "fields": ["case_name"], "mode": mode1})
             if q2:
                 q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
+
+            # ✅ Step 3.5: Date range filter setup
+            date_filter = {}
+            date_format = "%Y-%m-%d"
+
             if q3:
-                # Search in both fuzzy and exact filename
-                q_text_field_map.append({
-                    "text": q3,
-                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
-                    "mode": mode3
-                })
+                try:
+                    start_date = q3 if isinstance(q3, (datetime, date)) else datetime.strptime(q3, date_format).date()
+                    date_filter["gte"] = start_date
+                except ValueError:
+                    logger.warning(f"⚠️ Invalid start date format: {q3}")
+
+            if q4:
+                try:
+                    end_date = q4 if isinstance(q4, (datetime, date)) else datetime.strptime(q4, date_format).date()
+                    date_filter["lte"] = end_date
+                except ValueError:
+                    logger.warning(f"⚠️ Invalid end date format: {q4}")
+
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
+            logger.info(f"📅 date_filter = {date_filter}")
 
             # Step 4: Search in batches
             all_results = []
@@ -1257,8 +1267,23 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
                 current_page += 1
 
-            # Step 5: Return results
-# Step 5: Prepare results
+            # ✅ Step 5: Apply date range filter on transcript_date
+            if date_filter:
+                filtered_results = []
+                for r in all_results:
+                    t_date = r.get("transcript_date")
+                    if not t_date:
+                        continue
+                    if isinstance(t_date, datetime):
+                        t_date = t_date.date()
+                    if (
+                        (not date_filter.get("gte") or t_date >= date_filter["gte"]) and
+                        (not date_filter.get("lte") or t_date <= date_filter["lte"])
+                    ):
+                        filtered_results.append(r)
+                all_results = filtered_results
+
+            # Step 6: Prepare results
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1272,15 +1297,15 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 for r in all_results
             ]
 
-            # ✅ Step 6: Sort by created_at (newest first)
+            # ✅ Step 7: Sort by created_at (oldest first)
             results_json.sort(
                 key=lambda x: x["created_at"] or datetime.min,
-                reverse=False  # descending (latest first)
+                reverse=False
             )
 
             return Response({
-                "query": f"q1={q1}, q2={q2}, q3={q3}",
-                "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
+                "query": f"q1={q1}, q2={q2}, q3={q3}, q4={q4}",
+                "modes": {"mode1": mode1, "mode2": mode2},
                 "page_size": page_size,
                 "pages_fetched": current_page,
                 "total_results": total_results,
@@ -1294,7 +1319,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             import traceback
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
         # serializer = CombinedTranscriptSearchSerializer(data=request.data)
         # serializer.is_valid(raise_exception=True)
