@@ -1043,6 +1043,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                 question = t.question or ""
                 answer = t.answer or ""
                 cite = t.cite or ""
+                web_url = t.web_url or ""
                 created_at = t.created_at
                 if created_at and created_at.tzinfo:
                     created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
@@ -1057,7 +1058,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                         "cite": cite.strip(),
                         "transcript_name_exact": transcript_name.strip(),  # add this
                         "created_at": created_at,  # add this
-
+                        "web_url": web_url,
                     })
 
             if not docs_list:

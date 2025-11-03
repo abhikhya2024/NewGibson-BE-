@@ -596,7 +596,7 @@ def get_or_create_index(index_dir):
         transcript_name_search = TEXT(stored=False),
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
-        created_at=DATETIME(stored=True)  ,        # ✅ fixed here
+        created_at=DATETIME(stored=True),        # ✅ fixed here
         web_url=TEXT(stored=True)
 
     )
