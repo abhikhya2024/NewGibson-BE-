@@ -624,7 +624,7 @@ def get_or_create_index2(index_dir):
         created_at=DATETIME(stored=True),        # ✅ fixed here
         web_url=TEXT(stored=True),
         case_name=TEXT(stored=True),
-        transcript_date=TEXT(stored=True),
+        transcript_date=DATETIME(stored=True),
     )
 
     if os.path.exists(index_dir):
