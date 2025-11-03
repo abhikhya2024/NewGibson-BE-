@@ -1224,8 +1224,6 @@ class TestimonyViewSet(viewsets.ModelViewSet):
                     "query": f"q1={q1}, q2={q2}, q3={q3}, q4={q4}",
                     "modes": {"mode1": mode1, "mode2": mode2},
                     "page_size": page_size,
-                    "pages_fetched": current_page,
-                    "total_results": total_results,
                     "results_returned": 0,
                     "results": [],
                 })
