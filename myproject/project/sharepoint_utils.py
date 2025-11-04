@@ -31,6 +31,7 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
+from whoosh.analysis import StemmingAnalyzer
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -588,18 +589,19 @@ def get_or_create_index(index_dir):
     """
     Create or open a Whoosh index at the given path.
     """
+    stem = StemmingAnalyzer()
+
     schema = Schema(
         id=ID(stored=True, unique=True),
-        question=TEXT(stored=True),
-        answer=TEXT(stored=True),
-        transcript_name=TEXT(stored=True),       # for fuzzy/partial search
-        transcript_name_exact=ID(stored=True),   # for full filename exact match
-        transcript_name_search = TEXT(stored=False),
-        witness_name=TEXT(stored=True),
+        question=TEXT(stored=True, analyzer=stem),
+        answer=TEXT(stored=True, analyzer=stem),
+        transcript_name=TEXT(stored=True, analyzer=stem),
+        transcript_name_exact=ID(stored=True),   # keep exact separate
+        transcript_name_search=TEXT(stored=False, analyzer=stem),
+        witness_name=TEXT(stored=True, analyzer=stem),
         cite=TEXT(stored=True),
-        created_at=DATETIME(stored=True),        # ✅ fixed here
-        web_url=TEXT(stored=True)
-
+        created_at=DATETIME(stored=True),
+        web_url=TEXT(stored=True),
     )
 
     if os.path.exists(index_dir):
