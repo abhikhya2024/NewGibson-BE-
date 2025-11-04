@@ -721,7 +721,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "web_url": hit.get("web_url")
             }
 
-        def make_query(text, fields, mode, max_edits):
+        def make_query(text, fields, mode, max_edits=1):
             text = text.strip()
             if not text:
                 return None
@@ -776,7 +776,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
         # Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
-            q = make_query(entry["text"], entry["fields"], entry["mode"],max_edits)
+            q = make_query(entry["text"], entry["fields"], entry["mode"])
             if q:
                 field_queries.append(q)
 
