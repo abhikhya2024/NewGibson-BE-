@@ -719,66 +719,48 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "witness_name": hit.get("witness_name", ""),
                 "cite": hit.get("cite", ""),
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
-                "created_at": hit.get("created_at"),  # ✅ Add this line
+                "created_at": hit.get("created_at"),
                 "web_url": hit.get("web_url")
             }
 
-        def make_query(text, fields, mode, max_edits=1):
+        def make_query(text, fields, mode, max_edits):
             text = text.strip()
             if not text:
                 return None
 
-            # Boolean search
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
-            
 
-            
             queries = []
-
             for f in fields:
                 if f.endswith("_exact"):
-                    # Exact match on full filename (keeps punctuation, case-sensitive)
                     queries.append(Term(f, text))
                 else:
+                    cleaned_text = re.sub(r"[^\w\s]", " ", text)
+                    cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip().lower()
+                    terms = cleaned_text.split()
+                    if not terms:
+                        continue
+
                     if mode == "fuzzy":
-                        normalized = normalize_index_text(text)
-                        terms = [t for t in normalized.split() if t]
-                        if terms:
-                            fuzzy_terms = [FuzzyTerm(f, t, maxdist=1, prefixlength=2) for t in terms]
-                            queries.append(And(fuzzy_terms))
+                        # small maxdist avoids too many results
+                        queries.append(
+                            And([FuzzyTerm(f, t, maxdist=min(max_edits, 1), prefixlength=2) for t in terms])
+                        )
+                    elif len(terms) > 1:
+                        queries.append(Phrase(f, terms))
                     else:
-                                    # Exact phrase search on tokenized field
-                        cleaned_text = re.sub(r"[^\w\s]", " ", text)
-                        cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
-
-                        # Split into terms
-                        terms = cleaned_text.lower().split()
-                        if not terms:
-                            continue
-
-                        if len(terms) > 1:
-                            # Exact phrase match
-                            queries.append(Phrase(f, terms))
-                        else:
-                            # Single exact term
-                            queries.append(Term(f, terms[0]))
-
-
-
-
+                        queries.append(Term(f, terms[0]))
 
             if not queries:
                 return None
-            if len(queries) == 1:
-                return queries[0]
-            return Or(queries)
-        # Combine all field queries using AND
+            return Or(queries) if len(queries) > 1 else queries[0]
+
         field_queries = []
         for entry in q_text_field_map:
-            q = make_query(entry["text"], entry["fields"], entry["mode"])
+            q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits)
             if q:
                 field_queries.append(q)
 
@@ -787,9 +769,17 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
+            seen_ids = set()  # ✅ dedupe set
+
             for hit in whoosh_page:
+                doc_id = hit.get("id")
+                if doc_id in seen_ids:
+                    continue  # ✅ skip duplicates
+                seen_ids.add(doc_id)
+
                 results.append(build_hit(hit))
-            total_results = whoosh_page.total
+
+            total_results = len(seen_ids)  # ✅ accurate count
         except ValueError:
             results, total_results = [], 0
 
