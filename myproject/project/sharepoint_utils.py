@@ -745,10 +745,13 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                         continue
 
                     if mode == "fuzzy":
-                        # small maxdist avoids too many results
-                        queries.append(
-                            And([FuzzyTerm(f, t, maxdist=min(max_edits, 1), prefixlength=2) for t in terms])
-                        )
+    # Normalize text for fuzzy search
+                        normalized = normalize_index_text(text)
+                        terms = [t for t in normalized.split() if t]
+                        if terms:
+                            queries.append(
+                                And([FuzzyTerm(f, t, maxdist=2, prefixlength=1) for t in terms])
+                            )
                     elif len(terms) > 1:
                         queries.append(Phrase(f, terms))
                     else:
