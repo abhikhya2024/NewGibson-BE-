@@ -1251,7 +1251,7 @@ class TestimonyViewSet(viewsets.ModelViewSet):
             all_results = []
             total_results = 0
             current_page = 1
-            max_edits = 1 if len(q1) <= 4 else 2
+            max_edits = 1 if len(q1) <= 4 else 3
 
             while True:
                 batch_results, batch_total = search_documents2(
