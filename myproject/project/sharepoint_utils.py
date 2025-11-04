@@ -31,6 +31,8 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
+from whoosh.analysis import StemmingAnalyzer
+stemmer = StemmingAnalyzer()
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -731,9 +733,6 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
-            
-
-            
             queries = []
 
             for f in fields:
@@ -742,11 +741,17 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     queries.append(Term(f, text))
                 else:
                     if mode == "fuzzy":
-                        # Normalize text for fuzzy search
+                        # Normalize text and apply stemming
                         normalized = normalize_index_text(text)  # lowercase, remove punctuation
-                        terms = [t for t in normalized.split() if t]
-                        if terms:
-                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                        stemmed_terms = [token.text for token in stemmer(normalized)]
+                        if stemmed_terms:
+                            # Try fuzzy match on stemmed form and normal form
+                            field_terms = []
+                            for t in stemmed_terms:
+                                field_terms.append(FuzzyTerm(f, t, maxdist=max_edits))
+                            for t in normalized.split():
+                                field_terms.append(FuzzyTerm(f, t, maxdist=max_edits))
+                            queries.append(Or(field_terms))
                     else:
                                     # Exact phrase search on tokenized field
                         cleaned_text = re.sub(r"[^\w\s]", " ", text)
