@@ -31,8 +31,6 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
-from whoosh.analysis import StemmingAnalyzer
-stemmer = StemmingAnalyzer()
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -733,6 +731,9 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
+            
+
+            
             queries = []
 
             for f in fields:
@@ -741,16 +742,29 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     queries.append(Term(f, text))
                 else:
                     if mode == "fuzzy":
-                        # Normalize text and apply stemming
+                        # Normalize text
                         normalized = normalize_index_text(text)  # lowercase, remove punctuation
-                        stemmed_terms = [token.text for token in stemmer(normalized)]
-                        if stemmed_terms:
-                            # Try fuzzy match on stemmed form and normal form
+                        terms = [t for t in normalized.split() if t]
+
+                        if terms:
                             field_terms = []
-                            for t in stemmed_terms:
+
+                            for t in terms:
+                                # Add original term
                                 field_terms.append(FuzzyTerm(f, t, maxdist=max_edits))
-                            for t in normalized.split():
-                                field_terms.append(FuzzyTerm(f, t, maxdist=max_edits))
+                                
+                                # Handle simple pluralization rules
+                                if t.endswith("y") and len(t) > 1:
+                                    plural = t[:-1] + "ies"
+                                    field_terms.append(FuzzyTerm(f, plural, maxdist=max_edits))
+                                elif not t.endswith("s"):
+                                    plural = t + "s"
+                                    field_terms.append(FuzzyTerm(f, plural, maxdist=max_edits))
+                                elif t.endswith("s") and len(t) > 2:
+                                    singular = t[:-1]
+                                    field_terms.append(FuzzyTerm(f, singular, maxdist=max_edits))
+
+                            # Use OR so any of the forms match
                             queries.append(Or(field_terms))
                     else:
                                     # Exact phrase search on tokenized field
