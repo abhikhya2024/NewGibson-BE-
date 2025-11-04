@@ -775,7 +775,12 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
+            seen_keys = set()
             for hit in whoosh_page:
+                key = (hit.get("transcript_name"), hit.get("question"), hit.get("answer"))
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
                 results.append(build_hit(hit))
             total_results = whoosh_page.total
         except ValueError:
