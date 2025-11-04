@@ -25,7 +25,7 @@ import fcntl
 from whoosh.fields import Schema, TEXT, ID
 from whoosh.query import Or, And, Term
 from whoosh.qparser import QueryParser
-from whoosh.query import FuzzyTerm, Or, And, Prefix
+from whoosh.query import FuzzyTerm, Or, And, Prefix, Wildcard
 import re
 import fcntl, time, os
 from whoosh import index
@@ -748,10 +748,11 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                             term_queries = []
 
                             for t in terms:
-                                # For each term, allow fuzzy OR prefix match
+                                # For each term, allow fuzzy OR prefix OR substring match
                                 term_queries.append(Or([
-                                    FuzzyTerm(f, t, maxdist=max_edits),
-                                    Prefix(f, t)  # matches words starting with t
+                                    FuzzyTerm(f, t, maxdist=max_edits),   # fuzzy match
+                                    Prefix(f, t),                          # matches words starting with t
+                                    Wildcard(f, f"*{t}*")                 # matches term anywhere in the word
                                 ]))
 
                             # If multiple terms, all of them should appear (AND between terms)
