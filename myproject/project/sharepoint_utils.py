@@ -31,7 +31,6 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
-from whoosh.analysis import StemmingAnalyzer
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -591,8 +590,8 @@ def get_or_create_index(index_dir):
     """
     schema = Schema(
         id=ID(stored=True, unique=True),
-        question=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-        answer=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+        question=TEXT(stored=True),
+        answer=TEXT(stored=True),
         transcript_name=TEXT(stored=True),       # for fuzzy/partial search
         transcript_name_exact=ID(stored=True),   # for full filename exact match
         transcript_name_search = TEXT(stored=False),
@@ -718,8 +717,8 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "witness_name": hit.get("witness_name", ""),
                 "cite": hit.get("cite", ""),
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
-                "created_at": hit.get("created_at"),
-                "web_url": hit.get("web_url"),
+                "created_at": hit.get("created_at"),  # ✅ Add this line
+                "web_url": hit.get("web_url")
             }
 
         def make_query(text, fields, mode, max_edits):
@@ -727,51 +726,57 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if not text:
                 return None
 
+            # Boolean search
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
+            
 
+            
             queries = []
-            cleaned_text = re.sub(r"[^\w\s]", " ", text)
-            cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip().lower()
-            terms = cleaned_text.split()
 
             for f in fields:
-                if not terms:
-                    continue
-
                 if f.endswith("_exact"):
+                    # Exact match on full filename (keeps punctuation, case-sensitive)
                     queries.append(Term(f, text))
-                    continue
-
-                if mode == "fuzzy":
-                    # 🔹 Limit fuzzy matching to a small radius
-                    if len(terms) > 1:
-                        queries.append(And([FuzzyTerm(f, t, maxdist=min(max_edits, 1)) for t in terms]))
-                    else:
-                        queries.append(FuzzyTerm(f, terms[0], maxdist=min(max_edits, 1)))
-
-                elif mode == "exact":
-                    if len(terms) > 1:
-                        queries.append(Phrase(f, terms))
-                    else:
-                        queries.append(Term(f, terms[0]))
-
                 else:
-                    queries.append(Or([Term(f, t) for t in terms]))
+                    if mode == "fuzzy":
+                        # Normalize text for fuzzy search
+                        normalized = normalize_index_text(text)  # lowercase, remove punctuation
+                        terms = [t for t in normalized.split() if t]
+                        if terms:
+                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                    else:
+                                    # Exact phrase search on tokenized field
+                        cleaned_text = re.sub(r"[^\w\s]", " ", text)
+                        cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+
+                        # Split into terms
+                        terms = cleaned_text.lower().split()
+                        if not terms:
+                            continue
+
+                        if len(terms) > 1:
+                            # Exact phrase match
+                            queries.append(Phrase(f, terms))
+                        else:
+                            # Single exact term
+                            queries.append(Term(f, terms[0]))
+
+
+
+
 
             if not queries:
                 return None
             if len(queries) == 1:
                 return queries[0]
-            # 🔹 Use And here to avoid massive OR explosion across fields
-            return And(queries)
-
-        # Combine field queries with AND (each query set must match)
+            return Or(queries)
+        # Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
-            q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits)
+            q = make_query(entry["text"], entry["fields"], entry["mode"],max_edits)
             if q:
                 field_queries.append(q)
 
@@ -780,18 +785,13 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
-            seen_ids = set()
             for hit in whoosh_page:
-                doc_id = hit.get("id")
-                if doc_id not in seen_ids:
-                    seen_ids.add(doc_id)
-                    results.append(build_hit(hit))
-            total_results = len(seen_ids)  # prevent inflated totals
+                results.append(build_hit(hit))
+            total_results = whoosh_page.total
         except ValueError:
             results, total_results = [], 0
 
     return results, total_results
-
 
 def search_documents2(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     results = []
