@@ -727,7 +727,6 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if not text:
                 return None
 
-            # ✅ Boolean mode: handled separately
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
@@ -743,27 +742,22 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     continue
 
                 if f.endswith("_exact"):
-                    # Exact match on untokenized field (case-sensitive)
                     queries.append(Term(f, text))
                     continue
 
-                # ✅ Fuzzy search mode
                 if mode == "fuzzy":
+                    # 🔹 Limit fuzzy matching to a small radius
                     if len(terms) > 1:
-                        queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                        queries.append(And([FuzzyTerm(f, t, maxdist=min(max_edits, 1)) for t in terms]))
                     else:
-                        queries.append(FuzzyTerm(f, terms[0], maxdist=max_edits))
+                        queries.append(FuzzyTerm(f, terms[0], maxdist=min(max_edits, 1)))
 
-                # ✅ Exact mode (tokenized fields)
                 elif mode == "exact":
                     if len(terms) > 1:
-                        # Exact phrase match (case-insensitive)
                         queries.append(Phrase(f, terms))
                     else:
-                        # Single token term (lowercase)
                         queries.append(Term(f, terms[0]))
 
-                # ✅ Default fallback: match any of the words (for lenient search)
                 else:
                     queries.append(Or([Term(f, t) for t in terms]))
 
@@ -771,9 +765,10 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 return None
             if len(queries) == 1:
                 return queries[0]
-            return Or(queries)
+            # 🔹 Use And here to avoid massive OR explosion across fields
+            return And(queries)
 
-        # Combine all field queries using AND
+        # Combine field queries with AND (each query set must match)
         field_queries = []
         for entry in q_text_field_map:
             q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits)
@@ -785,13 +780,18 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
 
         try:
             whoosh_page = searcher.search_page(final_query, page, pagelen=page_size)
+            seen_ids = set()
             for hit in whoosh_page:
-                results.append(build_hit(hit))
-            total_results = whoosh_page.total
+                doc_id = hit.get("id")
+                if doc_id not in seen_ids:
+                    seen_ids.add(doc_id)
+                    results.append(build_hit(hit))
+            total_results = len(seen_ids)  # prevent inflated totals
         except ValueError:
             results, total_results = [], 0
 
     return results, total_results
+
 
 def search_documents2(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     results = []
