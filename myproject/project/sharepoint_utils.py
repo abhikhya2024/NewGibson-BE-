@@ -726,73 +726,44 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if not text:
                 return None
 
-            # Boolean search
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
-            
 
-            
             queries = []
 
             for f in fields:
                 if f.endswith("_exact"):
-                    # Exact match on full filename (keeps punctuation, case-sensitive)
                     queries.append(Term(f, text))
                 else:
-                    if mode == "fuzzy":
-                        # Normalize text
-                        normalized = normalize_index_text(text)  # lowercase, remove punctuation
-                        terms = [t for t in normalized.split() if t]
+                    cleaned_text = re.sub(r"[^\w\s]", " ", text).lower()
+                    cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+                    terms = cleaned_text.split()
+                    if not terms:
+                        continue
 
-                        if terms:
-                            field_terms = []
+                    field_terms = []
 
-                            for t in terms:
-                                # Add original term
-                                field_terms.append(FuzzyTerm(f, t, maxdist=max_edits))
-                                
-                                # Handle simple pluralization rules
-                                if t.endswith("y") and len(t) > 1:
-                                    plural = t[:-1] + "ies"
-                                    field_terms.append(FuzzyTerm(f, plural, maxdist=max_edits))
-                                elif not t.endswith("s"):
-                                    plural = t + "s"
-                                    field_terms.append(FuzzyTerm(f, plural, maxdist=max_edits))
-                                elif t.endswith("s") and len(t) > 2:
-                                    singular = t[:-1]
-                                    field_terms.append(FuzzyTerm(f, singular, maxdist=max_edits))
+                    for t in terms:
+                        # Original term
+                        field_terms.append(FuzzyTerm(f, t, maxdist=max_edits, prefixlength=1))
 
-                            # Use OR so any of the forms match
-                            queries.append(Or(field_terms))
-                    else:
-                                    # Exact phrase search on tokenized field
-                        cleaned_text = re.sub(r"[^\w\s]", " ", text)
-                        cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+                        # Plural / singular variants
+                        if t.endswith("y") and len(t) > 1:
+                            field_terms.append(FuzzyTerm(f, t[:-1] + "ies", maxdist=max_edits, prefixlength=1))
+                        elif not t.endswith("s"):
+                            field_terms.append(FuzzyTerm(f, t + "s", maxdist=max_edits, prefixlength=1))
+                        elif t.endswith("s") and len(t) > 2:
+                            field_terms.append(FuzzyTerm(f, t[:-1], maxdist=max_edits, prefixlength=1))
 
-                        # Split into terms
-                        terms = cleaned_text.lower().split()
-                        if not terms:
-                            continue
-
-                        if len(terms) > 1:
-                            # Exact phrase match
-                            queries.append(Phrase(f, terms))
-                        else:
-                            # Single exact term
-                            queries.append(Term(f, terms[0]))
-
-
-
-
+                    # Combine all variants for this field with OR
+                    queries.append(Or(field_terms))
 
             if not queries:
                 return None
-            if len(queries) == 1:
-                return queries[0]
-            return Or(queries)
-        # Combine all field queries using AND
+            # Combine all fields with OR if multiple fields are searched
+            return Or(queries) if len(queries) > 1 else queries[0]# Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
             q = make_query(entry["text"], entry["fields"], entry["mode"])
