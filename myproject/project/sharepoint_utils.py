@@ -742,11 +742,11 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     queries.append(Term(f, text))
                 else:
                     if mode == "fuzzy":
-                        # Normalize text for fuzzy search
-                        normalized = normalize_index_text(text)  # lowercase, remove punctuation
+                        normalized = normalize_index_text(text)
                         terms = [t for t in normalized.split() if t]
                         if terms:
-                            queries.append(And([FuzzyTerm(f, t, maxdist=3) for t in terms]))
+                            fuzzy_terms = [FuzzyTerm(f, t, maxdist=1, prefixlength=2) for t in terms]
+                            queries.append(And(fuzzy_terms))
                     else:
                                     # Exact phrase search on tokenized field
                         cleaned_text = re.sub(r"[^\w\s]", " ", text)
