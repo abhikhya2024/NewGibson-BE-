@@ -32,6 +32,7 @@ from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
 from whoosh.analysis import StemmingAnalyzer
+stemmer = StemmingAnalyzer()
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -722,7 +723,6 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "created_at": hit.get("created_at"),
                 "web_url": hit.get("web_url")
             }
-
         def make_query(text, fields, mode, max_edits):
             text = text.strip()
             if not text:
@@ -740,18 +740,15 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 else:
                     cleaned_text = re.sub(r"[^\w\s]", " ", text)
                     cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip().lower()
-                    terms = cleaned_text.split()
+                    terms = [t.text for t in stemmer(cleaned_text)]
+
                     if not terms:
                         continue
 
                     if mode == "fuzzy":
-    # Normalize text for fuzzy search
-                        normalized = normalize_index_text(text)
-                        terms = [t for t in normalized.split() if t]
-                        if terms:
-                            queries.append(
-                                And([FuzzyTerm(f, t, maxdist=2, prefixlength=1) for t in terms])
-                            )
+                        queries.append(
+                            Or([FuzzyTerm(f, t, maxdist=2, prefixlength=1) for t in terms])
+                        )
                     elif len(terms) > 1:
                         queries.append(Phrase(f, terms))
                     else:
@@ -760,7 +757,6 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if not queries:
                 return None
             return Or(queries) if len(queries) > 1 else queries[0]
-
         field_queries = []
         for entry in q_text_field_map:
             q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits)
