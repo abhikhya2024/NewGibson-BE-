@@ -718,8 +718,8 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                 "witness_name": hit.get("witness_name", ""),
                 "cite": hit.get("cite", ""),
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
-                "created_at": hit.get("created_at"),  # ✅ Add this line
-                "web_url": hit.get("web_url")
+                "created_at": hit.get("created_at"),
+                "web_url": hit.get("web_url"),
             }
 
         def make_query(text, fields, mode, max_edits):
@@ -727,57 +727,56 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             if not text:
                 return None
 
-            # Boolean search
+            # ✅ Boolean mode: handled separately
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
-            
 
-            
             queries = []
+            cleaned_text = re.sub(r"[^\w\s]", " ", text)
+            cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip().lower()
+            terms = cleaned_text.split()
 
             for f in fields:
+                if not terms:
+                    continue
+
                 if f.endswith("_exact"):
-                    # Exact match on full filename (keeps punctuation, case-sensitive)
+                    # Exact match on untokenized field (case-sensitive)
                     queries.append(Term(f, text))
-                else:
-                    if mode == "fuzzy":
-                        # Normalize text for fuzzy search
-                        normalized = normalize_index_text(text)  # lowercase, remove punctuation
-                        terms = [t for t in normalized.split() if t]
-                        if terms:
-                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                    continue
+
+                # ✅ Fuzzy search mode
+                if mode == "fuzzy":
+                    if len(terms) > 1:
+                        queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
                     else:
-                                    # Exact phrase search on tokenized field
-                        cleaned_text = re.sub(r"[^\w\s]", " ", text)
-                        cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+                        queries.append(FuzzyTerm(f, terms[0], maxdist=max_edits))
 
-                        # Split into terms
-                        terms = cleaned_text.lower().split()
-                        if not terms:
-                            continue
+                # ✅ Exact mode (tokenized fields)
+                elif mode == "exact":
+                    if len(terms) > 1:
+                        # Exact phrase match (case-insensitive)
+                        queries.append(Phrase(f, terms))
+                    else:
+                        # Single token term (lowercase)
+                        queries.append(Term(f, terms[0]))
 
-                        if len(terms) > 1:
-                            # Exact phrase match
-                            queries.append(Phrase(f, terms))
-                        else:
-                            # Single exact term
-                            queries.append(Term(f, terms[0]))
-
-
-
-
+                # ✅ Default fallback: match any of the words (for lenient search)
+                else:
+                    queries.append(Or([Term(f, t) for t in terms]))
 
             if not queries:
                 return None
             if len(queries) == 1:
                 return queries[0]
             return Or(queries)
+
         # Combine all field queries using AND
         field_queries = []
         for entry in q_text_field_map:
-            q = make_query(entry["text"], entry["fields"], entry["mode"],max_edits)
+            q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits)
             if q:
                 field_queries.append(q)
 
