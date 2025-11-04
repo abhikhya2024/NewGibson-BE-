@@ -31,6 +31,7 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
+from whoosh.analysis import StemmingAnalyzer
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -590,8 +591,8 @@ def get_or_create_index(index_dir):
     """
     schema = Schema(
         id=ID(stored=True, unique=True),
-        question=TEXT(stored=True),
-        answer=TEXT(stored=True),
+        question=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+        answer=TEXT(stored=True, analyzer=StemmingAnalyzer()),
         transcript_name=TEXT(stored=True),       # for fuzzy/partial search
         transcript_name_exact=ID(stored=True),   # for full filename exact match
         transcript_name_search = TEXT(stored=False),
