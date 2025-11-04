@@ -746,7 +746,7 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                         normalized = normalize_index_text(text)  # lowercase, remove punctuation
                         terms = [t for t in normalized.split() if t]
                         if terms:
-                            queries.append(And([FuzzyTerm(f, t, maxdist=max_edits) for t in terms]))
+                            queries.append(And([FuzzyTerm(f, t, maxdist=3) for t in terms]))
                     else:
                                     # Exact phrase search on tokenized field
                         cleaned_text = re.sub(r"[^\w\s]", " ", text)
