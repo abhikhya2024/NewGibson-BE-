@@ -1039,7 +1039,7 @@ class TestimonyViewSet(viewsets.ViewSet):
         )
 
         # ✅ Force large page size (5000) and accept page number
-        page_size = 5000
+        page_size = 100
         page_number = int(request.data.get("page_number", 1))
 
         try:
