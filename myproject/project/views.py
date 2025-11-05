@@ -1032,6 +1032,9 @@ class TestimonyViewSet(viewsets.ViewSet):
         """
         Paginated Whoosh-based search.
         """
+        BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
+        INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
+
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
         q2 = request.data.get("q2", "").strip()
