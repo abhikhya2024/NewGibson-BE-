@@ -1042,7 +1042,6 @@ class TestimonyViewSet(viewsets.ViewSet):
         max_pages = int(request.data.get("max_pages", 25))
 
         try:
-            # Step 1: Fetch and prepare testimonies
             testimonies = (
                 Testimony.objects.select_related("file")
                 .only("id", "file__name", "witness_name", "question", "answer", "cite", "created_at", "web_url")
@@ -1065,20 +1064,18 @@ class TestimonyViewSet(viewsets.ViewSet):
             ]
 
             if not docs_list:
-                return Response([], status=200)  # ✅ Return empty instead of error
+                return Response([], status=200)
 
-            # Step 2: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
 
-            # Step 3: Initialize index if empty
             with ix.searcher() as searcher:
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
                     logger.info("🆕 Whoosh index was empty — reindexed all testimonies.")
 
-            # Step 4: Build query map dynamically
+            # --- Build query map ---
             q_text_field_map = []
             if q1:
                 q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
@@ -1090,14 +1087,29 @@ class TestimonyViewSet(viewsets.ViewSet):
                     "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
                     "mode": mode3,
                 })
+
             logger.info(f"📌 Search Query Map: {q_text_field_map}")
 
-            # Step 5: Execute paginated Whoosh search
+            # --- Efficient search ---
             all_results = []
-            unique_transcripts = set()
             total_results = 0
             max_edits = 1 if len(q1) <= 4 else 3
 
+            # ✅ Count unique transcript_names efficiently (no pagination)
+            with ix.searcher() as searcher:
+                full_results = search_documents(
+                    ix,
+                    q_text_field_map=q_text_field_map,
+                    page=1,
+                    page_size=999999,  # fetch all
+                    max_edits=max_edits,
+                )[0]
+                unique_transcripts = {
+                    r.get("transcript_name", "").strip().lower()
+                    for r in full_results if r.get("transcript_name")
+                }
+
+            # ✅ Now fetch only the paginated display results (fast)
             for current_page in range(1, max_pages + 1):
                 batch_results, batch_total = search_documents(
                     ix,
@@ -1108,21 +1120,13 @@ class TestimonyViewSet(viewsets.ViewSet):
                 )
                 if not batch_results:
                     break
-
                 all_results.extend(batch_results)
                 total_results = batch_total
-
-                for r in batch_results:
-                    tn = r.get("transcript_name")
-                    if tn:
-                        unique_transcripts.add(tn.strip().lower())
-
-                logger.info(f"📄 Page {current_page}: {len(batch_results)} results (Total so far: {total_results})")
 
                 if len(batch_results) < page_size:
                     break
 
-            # Step 6: Prepare results
+            # --- Prepare response ---
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1137,7 +1141,6 @@ class TestimonyViewSet(viewsets.ViewSet):
                 for r in all_results
             ]
 
-            # Sort newest first
             results_json.sort(key=lambda x: x["created_at"] or datetime.min, reverse=True)
 
             return Response({
@@ -1148,7 +1151,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "total_results": total_results,
                 "results_returned": len(results_json),
                 "results": results_json,
-                "unique_transcript_count": len(unique_transcripts),
+                "unique_transcript_count": len(unique_transcripts),  # ✅ accurate
             })
 
         except TimeoutError as e:
@@ -1157,7 +1160,6 @@ class TestimonyViewSet(viewsets.ViewSet):
             logger.exception("❌ Search error")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        
     @action(detail=False, methods=["post"], url_path="rebuild-index")
     def rebuild_index(self, request):
         """
