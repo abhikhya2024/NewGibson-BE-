@@ -1099,11 +1099,12 @@ class TestimonyViewSet(viewsets.ViewSet):
                 })
             logger.info(f"📌 q_text_field_map = {q_text_field_map}")
 
-            # Step 4: Search in batches
+                        # Step 4: Search in batches
             all_results = []
             total_results = 0
             current_page = 1
             max_edits = 1 if len(q1) <= 4 else 3
+            unique_transcripts = set()  # ✅ track unique transcript_name
 
             while True:
                 batch_results, batch_total = search_documents(
@@ -1120,12 +1121,22 @@ class TestimonyViewSet(viewsets.ViewSet):
                 all_results.extend(batch_results)
                 total_results = batch_total
 
+                # Add transcript_name from this batch to the set
+                for r in batch_results:
+                    tn = r.get("transcript_name")
+                    if tn:
+                        unique_transcripts.add(tn.strip().lower())
+
                 logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
 
                 if len(batch_results) < page_size or current_page >= max_pages:
                     break
 
                 current_page += 1
+
+            # Total unique transcript_name count
+            unique_transcript_count = len(unique_transcripts)
+            logger.info(f"📌 Unique transcript_name count: {unique_transcript_count}")
 
             # Step 5: Return results
 # Step 5: Prepare results
