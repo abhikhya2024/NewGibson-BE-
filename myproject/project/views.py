@@ -1168,6 +1168,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "total_results": total_results,
                 "results_returned": len(results_json),
                 "results": results_json,
+                "unique_transcript_count": unique_transcript_count,
             })
 
         except TimeoutError as e:
