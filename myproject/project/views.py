@@ -1039,7 +1039,7 @@ class TestimonyViewSet(viewsets.ViewSet):
         )
 
         page_size = int(request.data.get("page_size", 200))
-        max_pages = int(request.data.get("max_pages", 25))
+        max_pages = int(request.data.get("max_pages", 250))
 
         try:
             testimonies = (
