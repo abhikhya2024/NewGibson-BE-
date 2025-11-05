@@ -1104,6 +1104,7 @@ class TestimonyViewSet(viewsets.ViewSet):
             total_results = 0
             current_page = 1
             max_edits = 1 if len(q1) <= 4 else 3
+            unique_transcripts = set()  # ✅ track unique transcript_name across all pages
 
             while True:
                 batch_results, batch_total = search_documents(
@@ -1120,12 +1121,23 @@ class TestimonyViewSet(viewsets.ViewSet):
                 all_results.extend(batch_results)
                 total_results = batch_total
 
+                # Add unique transcript names from this batch
+                for r in batch_results:
+                    transcript_name = r.get("transcript_name")
+                    if transcript_name:
+                        unique_transcripts.add(transcript_name.strip().lower())
+
                 logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
 
                 if len(batch_results) < page_size or current_page >= max_pages:
                     break
 
                 current_page += 1
+
+            # Total unique transcripts
+            unique_transcript_count = len(unique_transcripts)
+            logger.info(f"📌 Unique transcript_name count: {unique_transcript_count}")
+
 
             # Step 5: Return results
 # Step 5: Prepare results
@@ -1157,6 +1169,8 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "total_results": total_results,
                 "results_returned": len(results_json),
                 "results": results_json,
+                "unique_transcript_count": unique_transcript_count,
+
             })
 
         except TimeoutError as e:
