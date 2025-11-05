@@ -585,17 +585,18 @@ def _release_file_lock(fh):
 
 
 # --------------------- INDEX CREATION ---------------------
-def get_or_create_index(index_dir):
+def get_or_create_index(index_dir: str):
     """
-    Create a Whoosh index if it doesn't exist, otherwise open the existing one.
+    Open an existing Whoosh index, or create a new one if it doesn't exist.
+    Does NOT delete existing index to avoid LockError.
     """
     schema = Schema(
         id=ID(stored=True, unique=True),
         question=TEXT(stored=True),
         answer=TEXT(stored=True),
-        transcript_name=TEXT(stored=True),       # for fuzzy/partial search
-        transcript_name_exact=ID(stored=True),   # for exact filename match
-        transcript_name_search=TEXT(stored=False),  # normalized for searching
+        transcript_name=TEXT(stored=True),        # fuzzy/partial search
+        transcript_name_exact=ID(stored=True),    # exact filename match
+        transcript_name_search=TEXT(stored=False), # normalized for searching
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
         created_at=DATETIME(stored=True),
@@ -603,15 +604,17 @@ def get_or_create_index(index_dir):
     )
 
     if os.path.exists(index_dir) and os.listdir(index_dir):
-        # Index exists, just open it
-        ix = open_dir(index_dir)
-        print(f"📂 Opened existing Whoosh index at: {index_dir}")
+        try:
+            ix = open_dir(index_dir)
+            logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to open existing index, creating new one: {e}")
+            ix = create_in(index_dir, schema)
+            logger.info(f"✅ Created new Whoosh index at: {index_dir}")
     else:
-        # Create directory if it doesn't exist
         os.makedirs(index_dir, exist_ok=True)
-        # Create new index
         ix = create_in(index_dir, schema)
-        print(f"✅ Created new Whoosh index at: {index_dir}")
+        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
 
     return ix
 

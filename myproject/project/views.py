@@ -26,7 +26,7 @@ from datetime import datetime, timezone, date
 from django.db.models import Count
 import unicodedata
 from collections import defaultdict
-from .tasks import save_testimony_task, index_task, index_transcript_task
+from .tasks import save_testimony_task, index_task, index_transcript_task, build_whoosh_index
 import logging
 from elasticsearch.helpers import bulk
 import requests
@@ -1166,6 +1166,19 @@ class TestimonyViewSet(viewsets.ViewSet):
             logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+    @action(detail=False, methods=["post"], url_path="rebuild-index")
+    def rebuild_index(self, request):
+        """
+        Trigger the Whoosh index build asynchronously via Celery.
+        """
+        try:
+            task = build_whoosh_index.delay()
+            return Response({
+                "message": "Indexing task has been triggered.",
+                "task_id": task.id
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):

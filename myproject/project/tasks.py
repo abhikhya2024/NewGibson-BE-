@@ -1,6 +1,6 @@
 from celery import shared_task
 from .models import Transcript, Testimony, Witness
-from .sharepoint_utils import fetch_json_files_from_sharepoint, download_all_transcripts
+from .sharepoint_utils import fetch_json_files_from_sharepoint, download_all_transcripts, get_or_create_index, index_documents
 from elasticsearch import Elasticsearch
 from datetime import datetime, timezone
 from rest_framework.response import Response
@@ -9,17 +9,68 @@ es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 import logging
 from elasticsearch.helpers import bulk
 from collections import defaultdict
+import os
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default']  # 5 databases
 INDEX_NAME = "testimonies"
-
+BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
+INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
 # ✅ Helper to split dictionary into chunks of N transcripts
 def chunk_transcripts(transcripts_dict, size=10):
     items = list(transcripts_dict.items())
     for i in range(0, len(items), size):
         yield dict(items[i:i + size])
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def build_whoosh_index(self):
+    """
+    Celery task to build/update the Whoosh index from testimonies.
+    """
+    try:
+        # Step 1: Fetch testimonies
+        testimonies = Testimony.objects.select_related("file").all()
+        docs_list = []
+        for t in testimonies:
+            transcript_name = t.file.name if t.file else ""
+            witness_name = t.witness_name or ""
+            question = t.question or ""
+            answer = t.answer or ""
+            cite = t.cite or ""
+            web_url = t.web_url or ""
+            created_at = t.created_at
+            if created_at and created_at.tzinfo:
+                created_at = created_at.replace(tzinfo=None)
+
+            if question.strip() or answer.strip():
+                docs_list.append({
+                    "id": str(t.id),
+                    "transcript_name": transcript_name.strip(),
+                    "witness_name": witness_name.strip(),
+                    "question": question.strip(),
+                    "answer": answer.strip(),
+                    "cite": cite.strip(),
+                    "transcript_name_exact": transcript_name.strip(),
+                    "created_at": created_at,
+                    "web_url": web_url,
+                })
+
+        if not docs_list:
+            logger.warning("⚠️ No testimonies found to index.")
+            return "No testimonies to index."
+
+        # Step 2: Get or create index
+        ix = get_or_create_index(INDEX_DIR)
+
+        # Step 3: Index documents
+        index_documents(ix, docs_list)
+
+        logger.info(f"✅ Whoosh index built successfully with {len(docs_list)} documents.")
+        return f"Indexed {len(docs_list)} documents successfully."
+
+    except Exception as e:
+        logger.error("❌ Error building index: %s", str(e))
+        self.retry(exc=e)
 # ✅ Main Celery Task
 @shared_task
 def save_testimony_task():
