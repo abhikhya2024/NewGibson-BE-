@@ -777,13 +777,22 @@ class TestimonyViewSet(viewsets.ModelViewSet):
 
         return Response(list(data), status=status.HTTP_200_OK)    
 # ✅ GET /testimony/save-testimony/ → get names from SharePoint only
+class TestimonyViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], url_path="save-testimony")
     def save_testimony(self, request):
-        task = save_testimony_task.delay()  # 🔥 async call
-        return Response({
-            "status": "processing",
-            "task_id": task.id
-        })
+        try:
+            task = save_testimony_task.delay()  # 🚀 Run async via Celery
+            return Response({
+                "status": "processing",
+                "task_id": task.id,
+                "message": "Background task started successfully."
+            })
+        except Exception as e:
+            logger.exception("❌ Failed to trigger Celery task:")
+            return Response({
+                "status": "error",
+                "message": str(e)
+            }, status=500)
         # try:
         #     results = fetch_json_files_from_sharepoint()
 

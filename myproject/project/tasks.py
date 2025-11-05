@@ -8,24 +8,64 @@ from rest_framework import status, permissions
 es = Elasticsearch("http://localhost:9200")  # Adjust if needed
 import logging
 from elasticsearch.helpers import bulk
+from collections import defaultdict
 
 logger = logging.getLogger("logging_handler")  # 👈 custom logger name
 DB_NAMES = ['default']  # 5 databases
 INDEX_NAME = "testimonies"
 
+# ✅ Helper to split dictionary into chunks of N transcripts
+def chunk_transcripts(transcripts_dict, size=10):
+    items = list(transcripts_dict.items())
+    for i in range(0, len(items), size):
+        yield dict(items[i:i + size])
+
+# ✅ Main Celery Task
 @shared_task
 def save_testimony_task():
-    results = fetch_json_files_from_sharepoint()
+    try:
+        logger.info("🚀 Starting testimony save task...")
+
+        results = fetch_json_files_from_sharepoint()
+        logger.info(f"📦 Total QA pairs fetched: {len(results)}")
+
+        # Group all fetched records by transcript filename
+        transcript_groups = defaultdict(list)
+        for item in results:
+            transcript_groups[item["filename"]].append(item)
+
+        inserted_total = 0
+        skipped_total = 0
+
+        # Process transcripts in batches of 10 at a time
+        for batch in chunk_transcripts(transcript_groups, size=10):
+            logger.info(f"🧩 Processing batch with {len(batch)} transcripts...")
+
+            batch_inserted, batch_skipped = process_transcript_batch(batch)
+            inserted_total += batch_inserted
+            skipped_total += batch_skipped
+
+            logger.info(f"✅ Finished batch: inserted={batch_inserted}, skipped={batch_skipped}")
+
+        logger.info(f"🎯 Task completed. Total inserted={inserted_total}, skipped={skipped_total}")
+        return {"inserted": inserted_total, "skipped": skipped_total}
+
+    except Exception as e:
+        logger.exception("❌ save_testimony_task failed:")
+        return {"error": str(e)}
+
+
+# ✅ Helper function to process each transcript batch
+def process_transcript_batch(batch):
     qa_objects = []
     skipped = 0
 
-    # preload transcripts from all databases
+    # preload transcripts & witnesses
     transcripts = {}
     for db in DB_NAMES:
         for t in Transcript.objects.using(db).all():
-            transcripts[t.name] = (t, db)  # keep track of db also
+            transcripts[t.name] = (t, db)
 
-    # preload witnesses for all transcripts
     witnesses_map = {}
     for db in DB_NAMES:
         for w in Witness.objects.using(db).all():
@@ -34,7 +74,6 @@ def save_testimony_task():
             if w.fullname:
                 witnesses_map[w.file_id].append(w.fullname)
 
-    # preload existing testimonies from all databases
     existing = set()
     for db in DB_NAMES:
         existing |= set(
@@ -43,51 +82,43 @@ def save_testimony_task():
             )
         )
 
-    for item in results:
-        item.pop("id", None)
-        txt_filename = item.get("filename")
-        transcript_info = transcripts.get(txt_filename)
-
+    for filename, items in batch.items():
+        transcript_info = transcripts.get(filename)
         if not transcript_info:
-            skipped += 1
+            skipped += len(items)
             continue
 
         transcript, db = transcript_info
+        witness_names = witnesses_map.get(transcript.id, [])
+        witness_name_str = ", ".join(witness_names) if witness_names else None
 
-        qa_key = (
-            item.get("question"),
-            item.get("answer"),
-            item.get("cite"),
-            item.get("index"),
-            transcript.id
-        )
+        for item in items:
+            qa_key = (
+                item.get("question"),
+                item.get("answer"),
+                item.get("cite"),
+                item.get("index"),
+                transcript.id
+            )
+            if qa_key not in existing:
+                qa_objects.append(Testimony(
+                    question=item.get("question"),
+                    answer=item.get("answer"),
+                    cite=item.get("cite"),
+                    index=item.get("index"),
+                    file=transcript,
+                    witness_name=witness_name_str
+                ))
+            else:
+                skipped += 1
 
-        if qa_key not in existing:
-            # get witness names for this transcript
-            witness_names = witnesses_map.get(transcript.id, [])
-            witness_name_str = ", ".join(witness_names) if witness_names else None
-
-            qa_objects.append(Testimony(
-                question=item.get("question"),
-                answer=item.get("answer"),
-                cite=item.get("cite"),
-                index=item.get("index"),
-                file=transcript,
-                witness_name=witness_name_str
-            ))
-
-    # insert testimonies into *same DB as transcript*
+    # Insert in bulk per DB
     for db in DB_NAMES:
         objs_for_db = [obj for obj in qa_objects if obj.file._state.db == db]
         if objs_for_db:
             Testimony.objects.using(db).bulk_create(objs_for_db, batch_size=5000)
 
-    return {
-        "inserted": len(qa_objects),
-        "skipped": skipped,
-        "total": len(results)
-    }
-
+    return len(qa_objects), skipped
 
 def safe_bulk(client, actions, source_label):
     """
