@@ -38,7 +38,7 @@ TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SHAREPOINT_HOST = os.getenv("SHAREPOINT_HOST")
-SITE_PATH1 = "/sites/DocsGibsonDemo"
+SITE_PATH1 = "/sites/DocsFarrarBallTireMFG"
 FOLDER = "FormattedQA"
 TEXTFILESFOLDER = "OriginalFiles"
 SITE_PATH2 = "/sites/DocsFarrarBallTireMFG"
@@ -163,7 +163,7 @@ def fetch_json_files_from_sharepoint():
 
     try:
         logger.info("Fetching drive id…")
-        drive_id = get_dive_id("/sites/DocsGibsonDemo")
+        drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
 
         files_res = requests.get(
             f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
@@ -231,7 +231,7 @@ def format_name(name):
 def fetch_witness_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/site/DocsGibsonDemo")
+    drive_id = get_dive_id("/site/DocsFarrarBallTireMFG")
 
     files_res = requests.get(
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}:/children",
@@ -247,7 +247,7 @@ def fetch_witness_from_sharepoint():
 def fetch_jurisdictions():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
@@ -269,7 +269,7 @@ def fetch_jurisdictions():
 def fetch_attorney():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{JSON_FILENAME}:/content"
@@ -299,7 +299,7 @@ def fetch_attorney():
 def fetch_witness_names_and_transcripts():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
     
     try:
         # Download the JSON file content
@@ -423,7 +423,7 @@ def fetch_from_sharepoint():
 def fetch_taxonomy_from_sharepoint():
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
-    drive_id = get_dive_id("/sites/DocsGibsonDemo")
+    drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
 
     # Download the JSON file content
     file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FILEMETADATAPATH}/{TAXONOMY_FILENAME}:/content"
@@ -490,7 +490,7 @@ def download_all_transcripts():
 
     # Step 1: Get Site ID
     site_res = requests.get(
-        "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsGibsonDemo:/?select=id,webUrl",
+        "https://graph.microsoft.com/v1.0/sites/cloudcourtinc.sharepoint.com:/sites/DocsFarrarBallTireMFG:/?select=id,webUrl",
         headers={"Authorization": f"Bearer {access_token}"}
     )
     site_res.raise_for_status()
