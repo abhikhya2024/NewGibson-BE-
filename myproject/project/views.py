@@ -40,6 +40,7 @@ import io
 import zipfile
 from django.http import HttpResponse
 from whoosh import index
+from whoosh.index import open_dir
 
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
@@ -1076,7 +1077,7 @@ class TestimonyViewSet(viewsets.ViewSet):
             # Step 2: Configure Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-            ix = get_or_create_index(INDEX_DIR)
+            ix = open_dir(INDEX_DIR)
 
             # Step 2.5: Index documents if index is empty
             with ix.searcher() as searcher:
