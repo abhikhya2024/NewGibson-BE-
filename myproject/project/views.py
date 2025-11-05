@@ -1104,7 +1104,8 @@ class TestimonyViewSet(viewsets.ViewSet):
             total_results = 0
             current_page = 1
             max_edits = 1 if len(q1) <= 4 else 3
-            unique_transcripts = set()  # ✅ track unique transcript_name across all pages
+            unique_transcripts = set()
+            page_size = 1000  # adjust as needed
 
             while True:
                 batch_results, batch_total = search_documents(
@@ -1127,12 +1128,14 @@ class TestimonyViewSet(viewsets.ViewSet):
                     if transcript_name:
                         unique_transcripts.add(transcript_name.strip().lower())
 
-                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
+                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {len(all_results)})")
 
-                if len(batch_results) < page_size or current_page >= max_pages:
+                # Stop only if we have fetched all total results
+                if len(all_results) >= total_results:
                     break
 
                 current_page += 1
+
 
             # Total unique transcripts
             unique_transcript_count = len(unique_transcripts)
