@@ -31,6 +31,7 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
+from whoosh.index import create_in, open_dir
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -586,61 +587,34 @@ def _release_file_lock(fh):
 # --------------------- INDEX CREATION ---------------------
 def get_or_create_index(index_dir):
     """
-    Create or open a Whoosh index at the given path.
+    Create a Whoosh index if it doesn't exist, otherwise open the existing one.
     """
     schema = Schema(
         id=ID(stored=True, unique=True),
         question=TEXT(stored=True),
         answer=TEXT(stored=True),
         transcript_name=TEXT(stored=True),       # for fuzzy/partial search
-        transcript_name_exact=ID(stored=True),   # for full filename exact match
-        transcript_name_search = TEXT(stored=False),
+        transcript_name_exact=ID(stored=True),   # for exact filename match
+        transcript_name_search=TEXT(stored=False),  # normalized for searching
         witness_name=TEXT(stored=True),
         cite=TEXT(stored=True),
-        created_at=DATETIME(stored=True),        # ✅ fixed here
+        created_at=DATETIME(stored=True),
         web_url=TEXT(stored=True)
-
     )
 
-    if os.path.exists(index_dir):
-        shutil.rmtree(index_dir)
-        print(f"🗑️ Removed old Whoosh index at: {index_dir}")
+    if os.path.exists(index_dir) and os.listdir(index_dir):
+        # Index exists, just open it
+        ix = open_dir(index_dir)
+        print(f"📂 Opened existing Whoosh index at: {index_dir}")
+    else:
+        # Create directory if it doesn't exist
+        os.makedirs(index_dir, exist_ok=True)
+        # Create new index
+        ix = create_in(index_dir, schema)
+        print(f"✅ Created new Whoosh index at: {index_dir}")
 
-    # Create directory
-    os.makedirs(index_dir, exist_ok=True)
-
-    # Create new index
-    ix = create_in(index_dir, schema)
-    print(f"✅ Created new Whoosh index at: {index_dir}")
     return ix
 
-def get_or_create_index2(index_dir):
-    """
-    Create or open a Whoosh index at the given path.
-    """
-    schema = Schema(
-        id=ID(stored=True, unique=True),
-        transcript_name=TEXT(stored=True),
-        witness_name=TEXT(stored=True),
-        created_at=DATETIME(stored=True),        # ✅ fixed here
-        web_url=TEXT(stored=True),
-        case_name=TEXT(stored=True),
-        transcript_date=DATETIME(stored=True),
-    )
-
-    if os.path.exists(index_dir):
-        shutil.rmtree(index_dir)
-        print(f"🗑️ Removed old Whoosh index at: {index_dir}")
-
-    # Create directory
-    os.makedirs(index_dir, exist_ok=True)
-
-    # Create new index
-    ix = create_in(index_dir, schema)
-    print(f"✅ Created new Whoosh index at: {index_dir}")
-    return ix
-
-# --------------------- INDEXING ---------------------
 def normalize_index_text(text: str) -> str:
     return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
 def index_documents(ix, docs_list):
@@ -667,41 +641,6 @@ def index_documents(ix, docs_list):
         )
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
-
-def index_documents2(ix, docs_list):
-    """
-    Index a list of documents into the Whoosh index.
-    """
-    if not docs_list:
-        logger.warning("⚠️ No documents to index.")
-        return
-
-    writer = ix.writer()
-    for d in docs_list:
-        created_at = d["created_at"]
-        transcript_date = d["transcript_date"]
-
-        # 🔧 Fix: ensure both are datetime objects
-        if isinstance(created_at, date) and not isinstance(created_at, datetime):
-            created_at = datetime.combine(created_at, time.min)
-
-        if isinstance(transcript_date, date) and not isinstance(transcript_date, datetime):
-            transcript_date = datetime.combine(transcript_date, time.min)
-
-        writer.update_document(
-            id=d["id"],
-            transcript_name=d["transcript_name"],
-            witness_name=d["witness_name"],
-            created_at=created_at,
-            web_url=d["web_url"],
-            case_name=d["case_name"],
-            transcript_date=transcript_date,
-        )
-
-    writer.commit()
-    logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
-# --------------------- SEARCH ---------------------
-
 def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     results = []
     total_results = 0
@@ -802,6 +741,70 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
             results, total_results = [], 0
 
     return results, total_results
+
+def get_or_create_index2(index_dir):
+    """
+    Create or open a Whoosh index at the given path.
+    """
+    schema = Schema(
+        id=ID(stored=True, unique=True),
+        transcript_name=TEXT(stored=True),
+        witness_name=TEXT(stored=True),
+        created_at=DATETIME(stored=True),        # ✅ fixed here
+        web_url=TEXT(stored=True),
+        case_name=TEXT(stored=True),
+        transcript_date=DATETIME(stored=True),
+    )
+
+    if os.path.exists(index_dir):
+        shutil.rmtree(index_dir)
+        print(f"🗑️ Removed old Whoosh index at: {index_dir}")
+
+    # Create directory
+    os.makedirs(index_dir, exist_ok=True)
+
+    # Create new index
+    ix = create_in(index_dir, schema)
+    print(f"✅ Created new Whoosh index at: {index_dir}")
+    return ix
+
+# --------------------- INDEXING ---------------------
+
+def index_documents2(ix, docs_list):
+    """
+    Index a list of documents into the Whoosh index.
+    """
+    if not docs_list:
+        logger.warning("⚠️ No documents to index.")
+        return
+
+    writer = ix.writer()
+    for d in docs_list:
+        created_at = d["created_at"]
+        transcript_date = d["transcript_date"]
+
+        # 🔧 Fix: ensure both are datetime objects
+        if isinstance(created_at, date) and not isinstance(created_at, datetime):
+            created_at = datetime.combine(created_at, time.min)
+
+        if isinstance(transcript_date, date) and not isinstance(transcript_date, datetime):
+            transcript_date = datetime.combine(transcript_date, time.min)
+
+        writer.update_document(
+            id=d["id"],
+            transcript_name=d["transcript_name"],
+            witness_name=d["witness_name"],
+            created_at=created_at,
+            web_url=d["web_url"],
+            case_name=d["case_name"],
+            transcript_date=transcript_date,
+        )
+
+    writer.commit()
+    logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
+# --------------------- SEARCH ---------------------
+
+
 
 def search_documents2(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
     results = []
