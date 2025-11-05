@@ -1031,7 +1031,7 @@ class TestimonyViewSet(viewsets.ViewSet):
     def combined_search(self, request):
         """
         Paginated Whoosh-based search on question + answer fields.
-        Allows per-query mode selection (mode1, mode2, mode3).
+        Returns paginated results and count of unique transcript_name efficiently.
         """
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
@@ -1041,10 +1041,11 @@ class TestimonyViewSet(viewsets.ViewSet):
         mode3 = request.data.get("mode3", "exact").lower()
 
         page_size = int(request.data.get("page_size", 200))
-        max_pages = int(request.data.get("max_pages", 25))
+        page = int(request.data.get("page", 1))
+        max_edits = 1 if len(q1) <= 4 else 3
 
         try:
-            # Step 1: Fetch testimonies
+            # Step 1: Fetch testimonies and prepare docs list
             testimonies = Testimony.objects.select_related("file").all()
             docs_list = []
             for t in testimonies:
@@ -1056,7 +1057,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 web_url = t.web_url or ""
                 created_at = t.created_at
                 if created_at and created_at.tzinfo:
-                    created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
+                    created_at = created_at.replace(tzinfo=None)
 
                 if question.strip() or answer.strip():
                     docs_list.append({
@@ -1066,77 +1067,56 @@ class TestimonyViewSet(viewsets.ViewSet):
                         "question": question.strip(),
                         "answer": answer.strip(),
                         "cite": cite.strip(),
-                        "transcript_name_exact": transcript_name.strip(),  # add this
-                        "created_at": created_at,  # add this
+                        "transcript_name_exact": transcript_name.strip(),
+                        "created_at": created_at,
                         "web_url": web_url,
                     })
 
             if not docs_list:
                 return Response({"error": "No testimonies found to index."}, status=400)
 
-            # Step 2: Configure Whoosh index
+            # Step 2: Open Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
 
-            # Step 2.5: Index documents if index is empty
+            # Step 2.5: Index documents if empty
             with ix.searcher() as searcher:
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
 
-            # Step 3: Prepare query map (each entry has text, fields, and mode)
+            # Step 3: Prepare query map
             q_text_field_map = []
             if q1:
                 q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
             if q2:
                 q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
             if q3:
-                # Search in both fuzzy and exact filename
                 q_text_field_map.append({
                     "text": q3,
                     "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
                     "mode": mode3
                 })
-            logger.info(f"📌 q_text_field_map = {q_text_field_map}")
 
-            total_results = 0
-            current_page = 1
-            max_edits = 1 if len(q1) <= 4 else 3
-            unique_transcripts = set()  # track unique transcript_name
+            # Step 4: Build final query
+            with ix.searcher() as searcher:
+                field_queries = []
+                for entry in q_text_field_map:
+                    q = make_query(entry["text"], entry["fields"], entry["mode"], max_edits=max_edits)
+                    if q:
+                        field_queries.append(q)
+                final_query = And(field_queries) if field_queries else Every()
 
-            while True:
-                batch_results, batch_total = search_documents(
-                    ix,
-                    q_text_field_map=q_text_field_map,
-                    page=current_page,
-                    page_size=page_size,
-                    max_edits=max_edits,
-                )
+                # Fetch **current page** of results
+                whoosh_page = searcher.search_page(final_query, page=page, pagelen=page_size)
+                all_results = [dict(hit) for hit in whoosh_page]
+                total_results = whoosh_page.total
 
-                if not batch_results:
-                    break
+                # Efficient unique transcript_name count
+                grouped_results = searcher.search(final_query, groupedby="transcript_name")
+                unique_transcript_count = len(grouped_results.groups())
 
-                total_results = batch_total
-
-                # Add only transcript_name to the set (no storing full results)
-                for r in batch_results:
-                    tn = r.get("transcript_name")
-                    if tn:
-                        unique_transcripts.add(tn.strip().lower())
-
-                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
-
-                if len(batch_results) < page_size or current_page >= max_pages:
-                    break
-
-                current_page += 1
-
-            unique_transcript_count = len(unique_transcripts)
-            logger.info(f"📌 Unique transcript_name count: {unique_transcript_count}")
-
-
-            # Step 5: Return results
-# Step 5: Prepare results
+            # Step 5: Prepare JSON results
             results_json = [
                 {
                     "id": r.get("id"),
@@ -1151,21 +1131,21 @@ class TestimonyViewSet(viewsets.ViewSet):
                 for r in all_results
             ]
 
-            # ✅ Step 6: Sort by created_at (newest first)
+            # Step 6: Sort results (newest first)
             results_json.sort(
                 key=lambda x: x["created_at"] or datetime.min,
-                reverse=False  # descending (latest first)
+                reverse=True
             )
 
             return Response({
                 "query": f"q1={q1}, q2={q2}, q3={q3}",
                 "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
+                "page": page,
                 "page_size": page_size,
-                "pages_fetched": current_page,
                 "total_results": total_results,
                 "results_returned": len(results_json),
                 "results": results_json,
-                "unique_transcript_count": unique_transcript_count,
+                "unique_transcript_count": unique_transcript_count
             })
 
         except TimeoutError as e:
