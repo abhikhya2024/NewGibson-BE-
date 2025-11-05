@@ -1030,11 +1030,9 @@ class TestimonyViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         """
-        Paginated Whoosh-based search.
+        Paginated Whoosh-based search on question + answer fields.
+        Allows per-query mode selection (mode1, mode2, mode3).
         """
-        BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
-        INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
         q2 = request.data.get("q2", "").strip()
@@ -1042,59 +1040,132 @@ class TestimonyViewSet(viewsets.ViewSet):
         q3 = request.data.get("q3", "").strip()
         mode3 = request.data.get("mode3", "exact").lower()
 
-        page = int(request.data.get("page", 1))
-        page_size = int(request.data.get("page_size", 1000))  # default 1000 per page
+        page_size = int(request.data.get("page_size", 200))
+        max_pages = int(request.data.get("max_pages", 25))
 
-        # Step 1: Get existing Whoosh index
-        ix = get_or_create_index(INDEX_DIR)
+        try:
+            # Step 1: Fetch testimonies
+            testimonies = Testimony.objects.select_related("file").all()
+            docs_list = []
+            for t in testimonies:
+                transcript_name = t.file.name if t.file else ""
+                witness_name = t.witness_name or ""
+                question = t.question or ""
+                answer = t.answer or ""
+                cite = t.cite or ""
+                web_url = t.web_url or ""
+                created_at = t.created_at
+                if created_at and created_at.tzinfo:
+                    created_at = created_at.replace(tzinfo=None)  # ✅ remove timezone
 
-        # Step 2: Build query map
-        q_text_field_map = []
-        if q1:
-            q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
-        if q2:
-            q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
-        if q3:
-            q_text_field_map.append({
-                "text": q3,
-                "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
-                "mode": mode3
+                if question.strip() or answer.strip():
+                    docs_list.append({
+                        "id": str(t.id),
+                        "transcript_name": transcript_name.strip(),
+                        "witness_name": witness_name.strip(),
+                        "question": question.strip(),
+                        "answer": answer.strip(),
+                        "cite": cite.strip(),
+                        "transcript_name_exact": transcript_name.strip(),  # add this
+                        "created_at": created_at,  # add this
+                        "web_url": web_url,
+                    })
+
+            if not docs_list:
+                return Response({"error": "No testimonies found to index."}, status=400)
+
+            # Step 2: Configure Whoosh index
+            BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
+            INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
+            ix = open_dir(INDEX_DIR)
+
+            # Step 2.5: Index documents if index is empty
+            with ix.searcher() as searcher:
+                if searcher.doc_count() == 0:
+                    index_documents(ix, docs_list)
+
+            # Step 3: Prepare query map (each entry has text, fields, and mode)
+            q_text_field_map = []
+            if q1:
+                q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
+            if q2:
+                q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
+            if q3:
+                # Search in both fuzzy and exact filename
+                q_text_field_map.append({
+                    "text": q3,
+                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
+                    "mode": mode3
+                })
+            logger.info(f"📌 q_text_field_map = {q_text_field_map}")
+
+            # Step 4: Search in batches
+            all_results = []
+            total_results = 0
+            current_page = 1
+            max_edits = 1 if len(q1) <= 4 else 3
+
+            while True:
+                batch_results, batch_total = search_documents(
+                    ix,
+                    q_text_field_map=q_text_field_map,
+                    page=current_page,
+                    page_size=page_size,
+                    max_edits=max_edits,
+                )
+
+                if not batch_results:
+                    break
+
+                all_results.extend(batch_results)
+                total_results = batch_total
+
+                logger.info(f"📄 Page {current_page} → {len(batch_results)} results (Total so far: {total_results})")
+
+                if len(batch_results) < page_size or current_page >= max_pages:
+                    break
+
+                current_page += 1
+
+            # Step 5: Return results
+# Step 5: Prepare results
+            results_json = [
+                {
+                    "id": r.get("id"),
+                    "transcript_name": r.get("transcript_name", ""),
+                    "witness_name": r.get("witness_name", ""),
+                    "question": r.get("question", ""),
+                    "answer": r.get("answer", ""),
+                    "cite": r.get("cite", ""),
+                    "created_at": r.get("created_at"),
+                    "web_url": r.get("web_url"),
+                }
+                for r in all_results
+            ]
+
+            # ✅ Step 6: Sort by created_at (newest first)
+            results_json.sort(
+                key=lambda x: x["created_at"] or datetime.min,
+                reverse=False  # descending (latest first)
+            )
+
+            return Response({
+                "query": f"q1={q1}, q2={q2}, q3={q3}",
+                "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
+                "page_size": page_size,
+                "pages_fetched": current_page,
+                "total_results": total_results,
+                "results_returned": len(results_json),
+                "results": results_json,
             })
 
-        # Step 3: Search page using Whoosh
-        try:
-            results, total_results = search_documents(
-                ix,
-                q_text_field_map=q_text_field_map,
-                page=page,
-                page_size=page_size
-            )
+        except TimeoutError as e:
+            return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
-
-        # Step 4: Prepare response
-        results_json = [
-            {
-                "id": r.get("id"),
-                "transcript_name": r.get("transcript_name", ""),
-                "witness_name": r.get("witness_name", ""),
-                "question": r.get("question", ""),
-                "answer": r.get("answer", ""),
-                "cite": r.get("cite", ""),
-                "created_at": r.get("created_at"),
-                "web_url": r.get("web_url"),
-            }
-            for r in results
-        ]
-
-        return Response({
-            "page": page,
-            "page_size": page_size,
-            "total_results": total_results,
-            "results_returned": len(results_json),
-            "results": results_json,
-        })
-    
+            import traceback
+            logger.error("❌ Search error: %s\n%s", str(e), traceback.format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
     @action(detail=False, methods=["post"], url_path="rebuild-index")
     def rebuild_index(self, request):
         """
