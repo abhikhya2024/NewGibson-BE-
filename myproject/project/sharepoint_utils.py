@@ -31,6 +31,7 @@ import fcntl, time, os
 from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
+from requests.adapters import HTTPAdapter, Retry
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -161,18 +162,29 @@ def fetch_json_files_from_sharepoint():
     headers = {"Authorization": f"Bearer {token}"}
     results = []
 
+    # ✅ Create a session with retry + connection pooling
+    session = requests.Session()
+    retries = Retry(
+        total=5,              # up to 5 retries
+        backoff_factor=2,     # exponential backoff: 1s, 2s, 4s, ...
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET", "HEAD"]
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retries, pool_maxsize=10))
+
     try:
         logger.info("Fetching drive id…")
         drive_id = get_dive_id("/sites/DocsFarrarBallTireMFG")
 
-        files_res = requests.get(
+        files_res = session.get(
             f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{FOLDER}:/children",
-            headers=headers
+            headers=headers,
+            timeout=30,
         )
         files_res.raise_for_status()
         files = files_res.json().get("value", [])
     except Exception as e:
-        logger.error(f"⛔ error: {e}")
+        logger.error(f"⛔ error fetching file list: {e}")
         return []
 
     for file in files:
@@ -182,7 +194,6 @@ def fetch_json_files_from_sharepoint():
 
         txt_file_name = convert_json_filename_to_txt(filename)
 
-        # ✅ check in *all databases* for transcript
         transcript_exists = any(
             Transcript.objects.using(db).filter(name=txt_file_name).exists()
             for db in DB_NAMES
@@ -191,13 +202,13 @@ def fetch_json_files_from_sharepoint():
             logger.warning(f"❌ Skipping: No transcript found for {txt_file_name}")
             continue
 
-        # Fetch file content
         file_path = f"{FOLDER}/{filename}"
         encoded_file_path = urllib.parse.quote(file_path)
         file_url = f"https://graph.microsoft.com/v1.0/drives/{drive_id}/root:/{encoded_file_path}:/content"
 
         try:
-            file_res = requests.get(file_url, headers=headers)
+            # ✅ Use session.get with timeout + retry
+            file_res = session.get(file_url, headers=headers, timeout=60)
             file_res.raise_for_status()
             data = file_res.json()
 
@@ -207,13 +218,13 @@ def fetch_json_files_from_sharepoint():
                     "answer": record.get("answer"),
                     "cite": record.get("cite"),
                     "index": record.get("index"),
-                    "filename": txt_file_name
+                    "filename": txt_file_name,
                 })
-        except Exception as e:
-            logger.error(f"⛔ Skipping file {filename} due to error: {e}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"⛔ Skipping file {filename}: {e}")
             continue
 
-    print(f"\n✅ Total QA Pairs processed: {len(results)}")
+    logger.info(f"✅ Total QA pairs processed: {len(results)}")
     return results
 
 def format_name(name):
