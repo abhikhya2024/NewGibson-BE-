@@ -1123,6 +1123,11 @@ class TestimonyViewSet(viewsets.ViewSet):
                     r.get("transcript_name", "").strip().lower()
                     for r in full_results if r.get("transcript_name")
                 }
+                unique_witness = {
+                    r.get("witness_name", "").strip().lower()
+                    for r in full_results if r.get("witness_name")
+
+                }
 
             # Step 6: Build results JSON
             results_json = [
@@ -1149,6 +1154,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "total_results": batch_total,
                 "results_returned": len(results_json),
                 "unique_transcript_count": len(unique_transcripts),
+                "unique_witness": unique_witness,
                 "results": results_json,
             })
 
