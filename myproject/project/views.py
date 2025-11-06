@@ -1154,7 +1154,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "total_results": batch_total,
                 "results_returned": len(results_json),
                 "unique_transcript_count": len(unique_transcripts),
-                "unique_witness": unique_witness,
+                "unique_witness": len(unique_witness),
                 "results": results_json,
             })
 
