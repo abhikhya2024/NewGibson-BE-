@@ -686,19 +686,26 @@ def search_documents(ix, q_text_field_map, page=1, page_size=200, max_edits=1):
                     if mode == "fuzzy":
                         normalized = normalize_index_text(text)  # lowercase, remove punctuation
                         terms = [t for t in normalized.split() if t]
-                        if terms:
-                            term_queries = []
 
-                            for t in terms:
-                                # For each term, allow fuzzy OR prefix OR substring match
-                                term_queries.append(Or([
-                                    FuzzyTerm(f, t, maxdist=max_edits),   # fuzzy match
-                                    Prefix(f, t),                          # matches words starting with t
-                                    Wildcard(f, f"*{t}*")                 # matches term anywhere in the word
-                                ]))
+                        if not terms:
+                            return
 
-                            # If multiple terms, all of them should appear (AND between terms)
-                            queries.append(And(term_queries))
+                        if len(terms) == 1:
+                            # Single-word fuzzy search (allow fuzzy, prefix, and substring)
+                            t = terms[0]
+                            term_queries = Or([
+                                FuzzyTerm(f, t, maxdist=max_edits),   # fuzzy match
+                                Prefix(f, t),                         # starts with t
+                                Wildcard(f, f"*{t}*")                 # contains t
+                            ])
+                            queries.append(term_queries)
+
+                        else:
+                            # Multi-word → require exact phrase match (more strict)
+                            # You can combine it with fuzzy if you still want fallback behavior
+                            exact_phrase = " ".join(terms)
+                            queries.append(Phrase(f, exact_phrase.split()))
+
                     else:
                                     # Exact phrase search on tokenized field
                         cleaned_text = re.sub(r"[^\w\s]", " ", text)
