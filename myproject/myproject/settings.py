@@ -125,7 +125,7 @@ STATIC_URL = '/static/'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'farrar3',
+        'NAME': 'farrar',
         'USER': 'postgres',
         'PASSWORD': '123456',
         'HOST': 'localhost',
