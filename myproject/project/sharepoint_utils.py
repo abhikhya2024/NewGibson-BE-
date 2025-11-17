@@ -642,7 +642,7 @@ def index_documents(ix, docs_list):
             transcript_name_exact=d["transcript_name_exact"].lower(), # exact match
             transcript_name_search=normalize_index_text(d["transcript_name"]),  # searchable normalized
             witness_name=d["witness_name"],
-            witness_name_search=d["witness_name_search"],
+            witness_name_search=d.get("witness_name_search", ""),
             cite=d["cite"],
             created_at=d["created_at"],
             web_url=d["web_url"],

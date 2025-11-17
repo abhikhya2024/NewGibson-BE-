@@ -1259,7 +1259,9 @@ class TestimonyViewSet(viewsets.ViewSet):
                         "created_at": created_at,
                         "web_url": web_url,
                         "case_name": case_name,
-                        "transcript_date": transcript_date
+                        "transcript_date": transcript_date,
+                        "project_name": t.project_name if hasattr(t, "project_name") else "",
+
                     })
 
             if not docs_list:
