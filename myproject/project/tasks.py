@@ -158,7 +158,8 @@ def process_transcript_batch(batch):
                     cite=item.get("cite"),
                     index=item.get("index"),
                     file=transcript,
-                    witness_name=witness_name_str
+                    witness_name=witness_name_str,
+                    project_name=item.get("project_name") 
                 ))
             else:
                 skipped += 1

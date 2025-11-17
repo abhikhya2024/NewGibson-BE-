@@ -208,7 +208,8 @@ def fetch_json_files_from_sharepoint():
                     "answer": record.get("answer"),
                     "cite": record.get("cite"),
                     "index": record.get("index"),
-                    "filename": txt_file_name
+                    "filename": txt_file_name,
+                    "project_name": SITE_PATH1,
                 })
         except Exception as e:
             logger.error(f"⛔ Skipping file {filename} due to error: {e}")
