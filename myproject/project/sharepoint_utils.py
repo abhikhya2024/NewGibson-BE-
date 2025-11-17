@@ -603,7 +603,8 @@ def get_or_create_index(index_dir: str):
         witness_name_search=TEXT(stored=False),         # normalized for searching
         cite=TEXT(stored=True),
         created_at=DATETIME(stored=True),
-        web_url=TEXT(stored=True)
+        web_url=TEXT(stored=True),
+        project_name=TEXT(stored=True),
     )
 
     if os.path.exists(index_dir) and os.listdir(index_dir):
