@@ -24,6 +24,7 @@ class Transcript(TimestampedModel):
     file= models.FileField(upload_to="transcripts", null=True)
     case_name = models.CharField(max_length=5000)
     web_url = models.URLField(null=True, blank=True)  # new column
+    project_name = models.CharField(max_length=500)
     
 
     def __str__(self):
@@ -78,8 +79,8 @@ class Witness(TimestampedModel):
     fullname = models.CharField(max_length=50, null=True)
     alignment = models.ForeignKey(WitnessAlignment, on_delete=models.CASCADE, null=True)
     file = models.ForeignKey(Transcript, on_delete=models.CASCADE, null=True)
+    project_name = models.CharField(max_length=500)
 
- 
 
 class WitnessFiles(TimestampedModel):
     """
@@ -108,6 +109,7 @@ class Testimony(TimestampedModel):
     file = models.ForeignKey(Transcript, on_delete=models.CASCADE, related_name="testimony_data")
     witness_name = models.CharField(max_length=255, null=True, blank=True)  # new field
     web_url = models.URLField(null=True, blank=True)  # new column
+    project_name = models.CharField(max_length=500)
 
 # class Comments(TimestampedModel):
 #     """
