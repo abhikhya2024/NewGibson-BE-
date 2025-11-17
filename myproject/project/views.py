@@ -1039,8 +1039,8 @@ class TestimonyViewSet(viewsets.ViewSet):
         )
 
             # New filters (arrays)
-        transcript_filters = request.data.get("transcript_filters", []) or []
-        witness_filters = request.data.get("witness_filters", []) or []
+        transcript_filters = request.data.get("transcript_names", []) or []
+        witness_filters = request.data.get("witness_names", []) or []
 
         # ✅ Force large page size (5000) and accept page number
         page_size = 100
