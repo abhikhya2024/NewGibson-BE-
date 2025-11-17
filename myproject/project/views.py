@@ -1071,7 +1071,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                     ),
                     "web_url": t.web_url or "",
                     "project_name": getattr(t, "project_name", "") or "",   # ✅ ADD THIS
-                    "project_name_search": (getattr(t, "project_name", "") or "").strip().lower(),
+                    "project_name_search": normalize_index_text(getattr(t, "project_name", "") or "")
 
                 }
                 for t in testimonies
@@ -1127,7 +1127,7 @@ class TestimonyViewSet(viewsets.ViewSet):
 
             if project_filters:
                 project_terms = [
-                    Phrase("project_name_search", normalize_index_text(p).split())
+                    Term("project_name_search", normalize_index_text(p))
                     for p in project_filters
                 ]
                 extra_filters.append(Or(project_terms))
