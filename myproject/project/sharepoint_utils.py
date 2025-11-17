@@ -779,39 +779,61 @@ def search_documents(ix, q_text_field_map, extra_filters=None, page=1, page_size
             if not text:
                 return None
 
+            # LOWERCASE search text once
+            raw_text = text.lower()
+
+            # If searching in transcript_name and the user provided a long string,
+            # first try exact match.
+            if "transcript_name_exact" in fields:
+                # If user search is long (full filename or big part of it)
+                if len(raw_text) > 10:   # adjust threshold if needed
+                    return Term("transcript_name_exact", raw_text)
+
+            # Boolean mode (AND/OR/NOT)
             if mode == "boolean":
                 from whoosh.qparser import MultifieldParser
                 parser = MultifieldParser(fields, schema=ix.schema)
                 return parser.parse(text)
 
+            # Normal non-boolean search
             queries = []
 
             for f in fields:
-                if f.endswith("_exact"):
-                    queries.append(Term(f, text.lower()))
-                else:
-                    normalized = normalize_index_text(text)
-                    terms = normalized.split()
+                if f == "transcript_name_exact":
+                    # Exact match already handled above – skip here
+                    continue
 
-                    if mode == "fuzzy":
-                        if len(terms) == 1:
-                            t = terms[0]
-                            q = Or([
-                                FuzzyTerm(f, t, maxdist=max_edits),
-                                Prefix(f, t),
-                                Wildcard(f, f"*{t}*"),
-                            ])
-                            queries.append(q)
-                        else:
-                            queries.append(Phrase(f, terms))
+                # Normalize for fuzzy/prefix/wildcard
+                normalized = normalize_index_text(text)
+                terms = normalized.split()
+
+                if not terms:
+                    continue
+
+                # Fuzzy mode
+                if mode == "fuzzy":
+                    if len(terms) == 1:
+                        t = terms[0]
+                        q = Or([
+                            FuzzyTerm(f, t, maxdist=max_edits),
+                            Prefix(f, t),
+                            Wildcard(f, f"*{t}*"),
+                        ])
+                        queries.append(q)
                     else:
-                        if len(terms) > 1:
-                            queries.append(Phrase(f, terms))
-                        else:
-                            queries.append(Term(f, terms[0]))
+                        # Multi-word fuzzy → treat as keyword phrase
+                        queries.append(Phrase(f, terms))
+
+                # Exact mode
+                else:
+                    if len(terms) > 1:
+                        queries.append(Phrase(f, terms))
+                    else:
+                        queries.append(Term(f, terms[0]))
 
             if not queries:
                 return None
+
             return Or(queries) if len(queries) > 1 else queries[0]
 
         field_queries = []
