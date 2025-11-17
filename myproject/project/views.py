@@ -1110,7 +1110,7 @@ class TestimonyViewSet(viewsets.ViewSet):
 
             # Witness filters (array)
             if witness_filters:
-                witness_terms = [Term("witness_name_exact", w.lower()) for w in witness_filters]
+                witness_terms = [Term("witness_name_search", w.lower()) for w in witness_filters]
                 extra_filters.append(Or(witness_terms))
                 logger.info(f"📌 Search Query Map: {q_text_field_map}")
 
