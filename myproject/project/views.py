@@ -41,7 +41,7 @@ import zipfile
 from django.http import HttpResponse
 from whoosh import index
 from whoosh.index import open_dir
-
+from whoosh.query import Term, Or
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -1038,6 +1038,10 @@ class TestimonyViewSet(viewsets.ViewSet):
             request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4)
         )
 
+            # New filters (arrays)
+        transcript_filters = request.data.get("transcript_filters", []) or []
+        witness_filters = request.data.get("witness_filters", []) or []
+
         # ✅ Force large page size (5000) and accept page number
         page_size = 100
         page_number = int(request.data.get("page_number", 1))
@@ -1096,38 +1100,49 @@ class TestimonyViewSet(viewsets.ViewSet):
                     "mode": mode3,
                 })
 
-            logger.info(f"📌 Search Query Map: {q_text_field_map}")
+            extra_filters = []
+
+            # Transcript filters (array)
+            if transcript_filters:
+                transcript_terms = [Term("transcript_name_exact", t.lower()) for t in transcript_filters]
+                extra_filters.append(Or(transcript_terms))
+
+            # Witness filters (array)
+            if witness_filters:
+                witness_terms = [Term("witness_name", w.lower()) for w in witness_filters]
+                extra_filters.append(Or(witness_terms))
+                logger.info(f"📌 Search Query Map: {q_text_field_map}")
 
             # Step 5: Perform search
             max_edits = 1 if len(q1) <= 4 else 3
 
-            # ✅ Fetch only the required page
             batch_results, batch_total = search_documents(
                 ix,
                 q_text_field_map=q_text_field_map,
+                extra_filters=extra_filters,       # <--- NEW
                 page=page_number,
                 page_size=page_size,
                 max_edits=max_edits,
             )
 
-            # ✅ Compute unique transcript count efficiently (no need to fetch all results)
             with ix.searcher() as searcher:
                 full_results, _ = search_documents(
                     ix,
                     q_text_field_map=q_text_field_map,
+                    extra_filters=extra_filters,
                     page=1,
-                    page_size=1000000,  # one large scan
+                    page_size=1000000,
                     max_edits=max_edits,
                 )
                 unique_transcripts = {
-                    r.get("transcript_name", "").strip().lower()
+                    r.get("transcript_name", "").lower()
                     for r in full_results if r.get("transcript_name")
                 }
                 unique_witness = {
-                    r.get("witness_name", "").strip().lower()
+                    r.get("witness_name", "").lower()
                     for r in full_results if r.get("witness_name")
-
                 }
+
 
             # Step 6: Build results JSON
             results_json = [
