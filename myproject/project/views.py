@@ -1041,6 +1041,7 @@ class TestimonyViewSet(viewsets.ViewSet):
             # New filters (arrays)
         transcript_filters = request.data.get("transcript_names", []) or []
         witness_filters = request.data.get("witness_names", []) or []
+        project_filters = request.data.get("project_names", []) or []
 
         # ✅ Force large page size (5000) and accept page number
         page_size = 100
@@ -1070,6 +1071,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                     ),
                     "web_url": t.web_url or "",
                     "project_name": getattr(t, "project_name", "") or "",   # ✅ ADD THIS
+                    "project_name_search": (getattr(t, "project_name", "") or "").strip().lower(),
 
                 }
                 for t in testimonies
@@ -1099,7 +1101,7 @@ class TestimonyViewSet(viewsets.ViewSet):
             if q3:
                 q_text_field_map.append({
                     "text": q3,
-                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search"],
+                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search", "project_name_search"],
                     "mode": mode3,
                 })
 
@@ -1123,6 +1125,12 @@ class TestimonyViewSet(viewsets.ViewSet):
                 extra_filters.append(Or(witness_terms))
                 logger.info(f"📌 Search Query Map: {q_text_field_map}")
 
+            if project_filters:
+                project_terms = [
+                    Phrase("project_name_search", normalize_index_text(p).split())
+                    for p in project_filters
+                ]
+                extra_filters.append(Or(project_terms))
             # Step 5: Perform search
             max_edits = 1 if len(q1) <= 4 else 3
 

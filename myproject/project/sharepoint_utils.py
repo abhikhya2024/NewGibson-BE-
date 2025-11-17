@@ -605,6 +605,7 @@ def get_or_create_index(index_dir: str):
         created_at=DATETIME(stored=True),
         web_url=TEXT(stored=True),
         project_name=TEXT(stored=True),
+        project_name_search=TEXT(stored=False)
     )
 
     if os.path.exists(index_dir) and os.listdir(index_dir):
