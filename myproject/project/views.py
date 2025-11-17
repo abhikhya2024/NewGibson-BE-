@@ -1069,6 +1069,8 @@ class TestimonyViewSet(viewsets.ViewSet):
                         else t.created_at
                     ),
                     "web_url": t.web_url or "",
+                    "project_name": getattr(t, "project_name", "") or "",   # ✅ ADD THIS
+
                 }
                 for t in testimonies
                 if (t.question and t.question.strip()) or (t.answer and t.answer.strip())
@@ -1163,6 +1165,8 @@ class TestimonyViewSet(viewsets.ViewSet):
                     "cite": r.get("cite", ""),
                     "created_at": r.get("created_at"),
                     "web_url": r.get("web_url"),
+                    "project_name": r.get("project_name", ""),   # ✅ ADD THIS
+
                 }
                 for r in batch_results
             ]
