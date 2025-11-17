@@ -598,6 +598,7 @@ def get_or_create_index(index_dir: str):
         transcript_name_exact=ID(stored=True),    # exact filename match
         transcript_name_search=TEXT(stored=False), # normalized for searching
         witness_name=TEXT(stored=True),
+        witness_name_search=TEXT(stored=False),         # normalized for searching
         cite=TEXT(stored=True),
         created_at=DATETIME(stored=True),
         web_url=TEXT(stored=True)
@@ -637,7 +638,8 @@ def index_documents(ix, docs_list):
             transcript_name=d["transcript_name"],          # original for display
             transcript_name_exact=d["transcript_name_exact"].lower(), # exact match
             transcript_name_search=normalize_index_text(d["transcript_name"]),  # searchable normalized
-            witness_name=d["witness_name"].lower(),
+            witness_name=d["witness_name"],
+            witness_name_search=d["witness_name_search"],
             cite=d["cite"],
             created_at=d["created_at"],
             web_url=d["web_url"]
