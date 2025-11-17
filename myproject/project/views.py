@@ -1061,7 +1061,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                     "question": (t.question or "").strip(),
                     "answer": (t.answer or "").strip(),
                     "cite": (t.cite or "").strip(),
-                    "transcript_name_exact": (t.file.name if t.file else "").strip(),
+                    "transcript_name_exact": (t.file.name if t.file else "").strip()lower(),
                     "created_at": (
                         t.created_at.replace(tzinfo=None)
                         if t.created_at and t.created_at.tzinfo
