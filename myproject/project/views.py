@@ -1686,13 +1686,15 @@ class WitnessViewSet(viewsets.ViewSet):
                             file=transcript,
                             fullname=fullname,
                             alignment=alignment,
-                            type=witness_type
+                            type=witness_type,
+                            project_name=project_name
                         ).exists():
                             Witness.objects.create(
                                 file=transcript,
                                 fullname=fullname,
                                 alignment=alignment,
-                                type=witness_type
+                                type=witness_type,
+                                project_name=project_name
                             )
                 created_w += 1
                                 # Avoid duplicates
