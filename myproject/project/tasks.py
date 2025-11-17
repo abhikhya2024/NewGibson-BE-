@@ -39,6 +39,7 @@ def build_whoosh_index(self):
             cite = t.cite or ""
             web_url = t.web_url or ""
             created_at = t.created_at
+            project_name = t.project_name
             if created_at and created_at.tzinfo:
                 created_at = created_at.replace(tzinfo=None)
 
@@ -53,6 +54,7 @@ def build_whoosh_index(self):
                     "transcript_name_exact": transcript_name.strip(),
                     "created_at": created_at,
                     "web_url": web_url,
+                    "project_name": project_name
                 })
 
         if not docs_list:

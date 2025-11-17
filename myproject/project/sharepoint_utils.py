@@ -644,7 +644,8 @@ def index_documents(ix, docs_list):
             witness_name_search=d["witness_name_search"],
             cite=d["cite"],
             created_at=d["created_at"],
-            web_url=d["web_url"]
+            web_url=d["web_url"],
+            project_name=d["project_name"]
         )
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
@@ -669,6 +670,7 @@ def search_documents(ix, q_text_field_map, extra_filters=None, page=1, page_size
                 "transcript_name_exact": hit.get("transcript_name_exact", ""),
                 "created_at": hit.get("created_at"),
                 "web_url": hit.get("web_url"),
+                "project_name": hit.get("project_name")
             }
 
         def make_query(text, fields, mode, max_edits=1):
