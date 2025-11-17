@@ -1057,7 +1057,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 {
                     "id": str(t.id),
                     "transcript_name": (t.file.name if t.file else "").strip(),
-                    "witness_name": (t.witness_name or "").strip(),
+                    "witness_name": (t.witness_name or "").strip().lower(),
                     "question": (t.question or "").strip(),
                     "answer": (t.answer or "").strip(),
                     "cite": (t.cite or "").strip(),
