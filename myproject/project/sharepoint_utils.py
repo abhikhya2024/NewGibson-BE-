@@ -647,7 +647,8 @@ def index_documents(ix, docs_list):
             cite=d["cite"],
             created_at=d["created_at"],
             web_url=d["web_url"],
-            project_name=d["project_name"]
+            project_name=d["project_name"],
+            project_name_search=normalize_index_text(d.get("project_name_search", ""))
         )
     writer.commit()
     logger.info(f"✅ Indexed {len(docs_list)} documents into Whoosh index.")
