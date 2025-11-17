@@ -5,7 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.decorators import action
-from .sharepoint_utils import fetch_from_sharepoint, get_or_create_index2, search_documents2, index_documents2,get_token, get_access_token,get_or_create_index, index_documents, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
+from .sharepoint_utils import fetch_from_sharepoint, normalize_index_text,get_or_create_index2, search_documents2, index_documents2,get_token, get_access_token,get_or_create_index, index_documents, search_documents, fetch_attorney, fetch_jurisdictions, fetch_witness_names_and_transcripts, fetch_json_files_from_sharepoint, fetch_taxonomy_from_sharepoint
 from user.models import User
 from datetime import datetime
 # from .paginators import CustomPageNumberPagination  # Import your pagination
@@ -41,7 +41,7 @@ import zipfile
 from django.http import HttpResponse
 from whoosh import index
 from whoosh.index import open_dir
-from whoosh.query import Term, Or
+from whoosh.query import Term, Or, Phrase
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -1109,8 +1109,15 @@ class TestimonyViewSet(viewsets.ViewSet):
                 extra_filters.append(Or(transcript_terms))
 
             # Witness filters (array)
+            # if witness_filters:
+            #     witness_terms = [Term("witness_name_search", w.lower()) for w in witness_filters]
+            #     extra_filters.append(Or(witness_terms))
+            #     logger.info(f"📌 Search Query Map: {q_text_field_map}")
             if witness_filters:
-                witness_terms = [Term("witness_name_search", w.lower()) for w in witness_filters]
+                witness_terms = [
+                    Phrase("witness_name_search", normalize_index_text(w).split())
+                    for w in witness_filters
+                ]
                 extra_filters.append(Or(witness_terms))
                 logger.info(f"📌 Search Query Map: {q_text_field_map}")
 
