@@ -3,3 +3,4 @@ venv
 __pycache__
 migrations
 django_api.log
+project/whoosh_index/
