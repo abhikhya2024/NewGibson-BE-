@@ -1,6 +1,6 @@
 from celery import shared_task
 from .models import Transcript, Testimony, Witness
-from .sharepoint_utils import fetch_json_files_from_sharepoint, download_all_transcripts, get_or_create_index, index_documents
+from .sharepoint_utils import fetch_json_files_from_sharepoint,normalize_index_text, download_all_transcripts, get_or_create_index, index_documents
 from elasticsearch import Elasticsearch
 from datetime import datetime, timezone
 from rest_framework.response import Response
@@ -54,7 +54,8 @@ def build_whoosh_index(self):
                     "transcript_name_exact": transcript_name.strip(),
                     "created_at": created_at,
                     "web_url": web_url,
-                    "project_name": project_name
+                    "project_name": project_name,
+                    "project_name_search": normalize_index_text(project_name or "")
                 })
 
         if not docs_list:
