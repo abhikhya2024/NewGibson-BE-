@@ -1032,8 +1032,7 @@ class TestimonyViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         """
-        Optimized Whoosh-based combined search for testimonies.
-        Handles q1/q2/q3, filters, pagination, and unique counts.
+        Optimized Whoosh-based combined search with proper witness & transcript filters.
         """
         q1, q2, q3 = (request.data.get(f"q{i}", "").strip() for i in range(1, 4))
         mode1, mode2, mode3 = (request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4))
@@ -1046,68 +1045,52 @@ class TestimonyViewSet(viewsets.ViewSet):
         page_number = int(request.data.get("page_number", 1))
 
         try:
-            # Step 1: Open Whoosh index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
 
-            # Step 2: Build queries
             queries = []
 
-            def build_field_query(text, fields, mode, max_edits=1):
+            # Build main field queries
+            def build_field_query(text, fields, mode):
                 if not text:
                     return None
                 text = text.strip()
                 normalized = normalize_index_text(text)
-                field_queries = []
-
+                sub_queries = []
                 for f in fields:
-                    if f.endswith("_exact"):
-                        # Exact match
-                        field_queries.append(Term(f, text.lower()))
-                    else:
-                        # Fuzzy / phrase search
-                        terms = normalized.split()
-                        if not terms:
-                            continue
-                        if len(terms) > 1:
-                            field_queries.append(Phrase(f, terms))
+                    terms = normalized.split()
+                    if not terms:
+                        continue
+                    if len(terms) == 1:
+                        if mode == "fuzzy":
+                            sub_queries.append(Or([FuzzyTerm(f, terms[0], maxdist=2),
+                                                Prefix(f, terms[0]),
+                                                Wildcard(f, f"*{terms[0]}*")]))
                         else:
-                            if mode == "fuzzy":
-                                field_queries.append(
-                                    Or([
-                                        FuzzyTerm(f, terms[0], maxdist=max_edits),
-                                        Prefix(f, terms[0]),
-                                        Wildcard(f, f"*{terms[0]}*")
-                                    ])
-                                )
-                            else:
-                                field_queries.append(Term(f, terms[0]))
-                if not field_queries:
-                    return None
-                return Or(field_queries) if len(field_queries) > 1 else field_queries[0]
+                            sub_queries.append(Term(f, terms[0]))
+                    else:
+                        sub_queries.append(Phrase(f, terms))
+                return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
 
-            max_edits = 1 if len(q1) <= 4 else 3
-
+            # Build q1/q2/q3 queries
             if q1:
-                q = build_field_query(q1, ["question", "answer"], mode1, max_edits)
+                q = build_field_query(q1, ["question", "answer"], mode1)
                 if q:
                     queries.append(q)
             if q2:
-                q = build_field_query(q2, ["witness_name"], mode2, max_edits)
+                q = build_field_query(q2, ["witness_name_search"], mode2)
                 if q:
                     queries.append(q)
             if q3:
-                q = build_field_query(
-                    q3,
-                    ["transcript_name", "transcript_name_exact", "transcript_name_search", "project_name_search"],
-                    mode3,
-                    max_edits
-                )
+                q = build_field_query(q3, ["transcript_name_search", "transcript_name_exact",
+                                            "project_name_search"], mode3)
                 if q:
                     queries.append(q)
 
-            # Step 3: Build filters
+            main_query = And(queries) if queries else Every()
+
+            # Build filters properly
             filters = []
 
             if transcript_filters:
@@ -1115,29 +1098,21 @@ class TestimonyViewSet(viewsets.ViewSet):
                 filters.append(Or(t_terms))
 
             if witness_filters:
-                # Normalize each filter and match as term
-                witness_terms = [
-                    Term("witness_name_search", normalize_index_text(w))
-                    for w in witness_filters
-                ]
-                filters.append(Or(witness_terms))
+                # Match each word in witness names
+                w_terms = []
+                for w in witness_filters:
+                    tokens = normalize_index_text(w).split()
+                    token_terms = [Term("witness_name_search", t) for t in tokens]
+                    w_terms.append(And(token_terms))  # All words of single witness must match
+                filters.append(Or(w_terms))  # Any witness from the array
 
             if project_filters:
                 p_terms = [Term("project_name_search", normalize_index_text(p)) for p in project_filters]
                 filters.append(Or(p_terms))
 
-            # Combine main queries with filters
-            if queries:
-                main_query = And(queries)
-            else:
-                main_query = Every()
+            final_query = And([main_query] + filters) if filters else main_query
 
-            if filters:
-                final_query = And([main_query] + filters)
-            else:
-                final_query = main_query
-
-            # Step 4: Perform paginated search
+            # Perform search
             with ix.searcher() as searcher:
                 page_obj = searcher.search_page(final_query, page_number, pagelen=page_size)
                 batch_results = []
@@ -1154,12 +1129,12 @@ class TestimonyViewSet(viewsets.ViewSet):
                         "project_name": hit.get("project_name", ""),
                     })
 
-                # Step 5: Count unique transcripts & witnesses according to filters
+                # Unique counts applying project filter
                 all_hits = searcher.search(final_query, limit=None)
-                unique_transcripts = set()
-                unique_witness = set()
                 normalized_projects = [normalize_index_text(p) for p in project_filters]
 
+                unique_transcripts = set()
+                unique_witness = set()
                 for h in all_hits:
                     proj = normalize_index_text(h.get("project_name", ""))
                     if not project_filters or proj in normalized_projects:
@@ -1170,7 +1145,6 @@ class TestimonyViewSet(viewsets.ViewSet):
                         if wn:
                             unique_witness.add(wn.lower())
 
-            # Step 6: Sort results
             batch_results.sort(key=lambda x: x["created_at"] or datetime.min, reverse=True)
 
             return Response({
@@ -1185,11 +1159,10 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "results": batch_results,
             })
 
-        except TimeoutError as e:
-            return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
             logger.exception("❌ Search error")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=["post"], url_path="rebuild-index")
     def rebuild_index(self, request):
         """
