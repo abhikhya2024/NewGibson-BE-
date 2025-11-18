@@ -1028,76 +1028,69 @@ class TestimonyViewSet(viewsets.ViewSet):
         request_body=CombinedSearchInputSerializer,
         responses={200: TestimonySerializer(many=True)}
         )
+   
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         """
-        Optimized Whoosh-based search with pagination and filtered counts.
+        Optimized Whoosh-based search for question, answer, witness, transcript, and project_name.
+        Returns paginated results with correct unique transcript and witness counts.
         """
-        # Step 0: Get search text & modes
-        q1, q2, q3 = (request.data.get(f"q{i}", "").strip() for i in range(1, 4))
-        mode1, mode2, mode3 = (request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4))
-
-        # Filters
-        transcript_filters = request.data.get("transcript_names", []) or []
-        witness_filters = request.data.get("witness_names", []) or []
-        project_filters = request.data.get("project_names", []) or []
-
-        page_size = 100
-        page_number = int(request.data.get("page_number", 1))
-
         try:
-            # Step 1: Open Whoosh index
+            # --- Step 0: Read query params ---
+            q1, q2, q3 = (request.data.get(f"q{i}", "").strip() for i in range(1, 4))
+            mode1, mode2, mode3 = (
+                request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4)
+            )
+
+            transcript_filters = request.data.get("transcript_names", []) or []
+            witness_filters = request.data.get("witness_names", []) or []
+            project_filters = request.data.get("project_names", []) or []
+
+            page_size = 100
+            page_number = int(request.data.get("page_number", 1))
+
+            # --- Step 1: Open Whoosh index ---
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
 
-            # Step 2: Build a combined query for all fields
-            queries = []
+            # --- Step 2: Build final combined query ---
+            query_parts = []
 
-            def build_terms(text, fields, mode):
-                """
-                Convert text & fields into a Whoosh query (supports exact, fuzzy, phrase)
-                """
-                text = text.strip()
-                if not text:
+            def normalize_index_text(text: str) -> str:
+                return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
+
+            # Helper to create a Phrase query for fuzzy/partial multi-word
+            def make_phrase_or_term(field, text, mode):
+                terms = normalize_index_text(text).split()
+                if not terms:
                     return None
+                if len(terms) > 1 or mode == "fuzzy":
+                    return Phrase(field, terms)
+                return Term(field, terms[0])
 
-                normalized = normalize_index_text(text)
-                terms = normalized.split()
-                sub_queries = []
+            # q1: question + answer
+            if q1:
+                q_parts = [
+                    make_phrase_or_term(f, q1, mode1) 
+                    for f in ["question", "answer"]
+                ]
+                query_parts.append(Or([q for q in q_parts if q]))
 
-                for f in fields:
-                    if f == "transcript_name_exact" and len(text) > 10:
-                        sub_queries.append(Term(f, text.lower()))
-                        continue
+            # q2: witness_name
+            if q2:
+                q_parts = [make_phrase_or_term("witness_name", q2, mode2)]
+                query_parts.append(Or([q for q in q_parts if q]))
 
-                    if mode == "fuzzy":
-                        if len(terms) == 1:
-                            t = terms[0]
-                            sub_queries.append(Or([
-                                FuzzyTerm(f, t, maxdist=1),
-                                Prefix(f, t),
-                                Wildcard(f, f"*{t}*"),
-                            ]))
-                        else:
-                            sub_queries.append(Phrase(f, terms))
-                    else:
-                        if len(terms) > 1:
-                            sub_queries.append(Phrase(f, terms))
-                        else:
-                            sub_queries.append(Term(f, terms[0]))
-                return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0] if sub_queries else None
+            # q3: transcript + project
+            if q3:
+                q_fields = ["transcript_name", "transcript_name_exact", "transcript_name_search", "project_name_search"]
+                q_parts = [make_phrase_or_term(f, q3, mode3) for f in q_fields]
+                query_parts.append(Or([q for q in q_parts if q]))
 
-            # Build queries for q1, q2, q3
-            q_objs = []
-            if q1: q_objs.append(build_terms(q1, ["question", "answer"], mode1))
-            if q2: q_objs.append(build_terms(q2, ["witness_name"], mode2))
-            if q3: q_objs.append(build_terms(q3, ["transcript_name", "transcript_name_exact", "transcript_name_search", "project_name_search"], mode3))
+            final_query = And(query_parts) if query_parts else None
 
-            # Combine all queries into one big Or() for speed
-            final_query = And(q_objs) if q_objs else Every()
-
-            # Step 3: Apply array filters
+            # --- Step 3: Add filters ---
             filters = []
 
             if transcript_filters:
@@ -1110,46 +1103,66 @@ class TestimonyViewSet(viewsets.ViewSet):
                 filters.append(Or([Term("project_name_search", normalize_index_text(p)) for p in project_filters]))
 
             if filters:
-                final_query = And([final_query] + filters)
+                if final_query:
+                    final_query = And([final_query] + filters)
+                else:
+                    final_query = And(filters)
 
-            # Step 4: Search paginated results
+            if not final_query:
+                # Return empty if no query
+                return Response({
+                    "query": {},
+                    "modes": {},
+                    "page_number": page_number,
+                    "page_size": page_size,
+                    "total_results": 0,
+                    "results_returned": 0,
+                    "unique_transcript_count": 0,
+                    "unique_witness": 0,
+                    "results": [],
+                })
+
+            # --- Step 4: Search inside searcher context ---
             with ix.searcher() as searcher:
-                start = (page_number - 1) * page_size
-                end = start + page_size
                 hits = searcher.search(final_query, limit=None)  # get all matching docs
 
+                # Pagination
+                start = (page_number - 1) * page_size
+                end = start + page_size
                 batch_results = hits[start:end]
-                batch_total = len(hits)
 
-                # Step 5: Compute unique transcripts & witness filtered by project
+                # Unique counts filtered by project_names if provided
+                project_normalized = [normalize_index_text(p) for p in project_filters] if project_filters else None
                 unique_transcripts = {
                     r.get("transcript_name", "").lower()
                     for r in hits
-                    if r.get("transcript_name") and (not project_filters or normalize_index_text(r.get("project_name", "")) in [normalize_index_text(p) for p in project_filters])
+                    if r.get("transcript_name") and
+                    (not project_normalized or normalize_index_text(r.get("project_name", "")) in project_normalized)
                 }
-
                 unique_witness = {
                     r.get("witness_name", "").lower()
                     for r in hits
-                    if r.get("witness_name") and (not project_filters or normalize_index_text(r.get("project_name", "")) in [normalize_index_text(p) for p in project_filters])
+                    if r.get("witness_name") and
+                    (not project_normalized or normalize_index_text(r.get("project_name", "")) in project_normalized)
                 }
 
-            # Step 6: Build response
-            results_json = [
-                {
-                    "id": r.get("id"),
-                    "transcript_name": r.get("transcript_name", ""),
-                    "witness_name": r.get("witness_name", ""),
-                    "question": r.get("question", ""),
-                    "answer": r.get("answer", ""),
-                    "cite": r.get("cite", ""),
-                    "created_at": r.get("created_at"),
-                    "web_url": r.get("web_url"),
-                    "project_name": r.get("project_name", "")
-                }
-                for r in batch_results
-            ]
+                # Build results JSON safely inside searcher context
+                results_json = [
+                    {
+                        "id": r.get("id"),
+                        "transcript_name": r.get("transcript_name", ""),
+                        "witness_name": r.get("witness_name", ""),
+                        "question": r.get("question", ""),
+                        "answer": r.get("answer", ""),
+                        "cite": r.get("cite", ""),
+                        "created_at": r.get("created_at"),
+                        "web_url": r.get("web_url"),
+                        "project_name": r.get("project_name", ""),
+                    }
+                    for r in batch_results
+                ]
 
+            # Sort by created_at
             results_json.sort(key=lambda x: x["created_at"] or datetime.min, reverse=True)
 
             return Response({
@@ -1157,7 +1170,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
                 "page_number": page_number,
                 "page_size": page_size,
-                "total_results": batch_total,
+                "total_results": len(hits),
                 "results_returned": len(results_json),
                 "unique_transcript_count": len(unique_transcripts),
                 "unique_witness": len(unique_witness),
