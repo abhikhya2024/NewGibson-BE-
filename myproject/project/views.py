@@ -1030,28 +1030,23 @@ class TestimonyViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="combined-search")
     def combined_search(self, request):
         """
-        Paginated Whoosh-based search on question + answer fields.
-        Allows per-query mode selection (mode1, mode2, mode3).
+        Optimized Whoosh search combining all queries into a single OR for speed.
         """
         q1, q2, q3 = (request.data.get(f"q{i}", "").strip() for i in range(1, 4))
-        mode1, mode2, mode3 = (
-            request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4)
-        )
+        mode1, mode2, mode3 = (request.data.get(f"mode{i}", "exact").lower() for i in range(1, 4))
 
-            # New filters (arrays)
         transcript_filters = request.data.get("transcript_names", []) or []
         witness_filters = request.data.get("witness_names", []) or []
         project_filters = request.data.get("project_names", []) or []
 
-        # ✅ Force large page size (5000) and accept page number
         page_size = 100
         page_number = int(request.data.get("page_number", 1))
 
         try:
-            # Step 1: Prepare documents for indexing
-            testimonies = (
-                Testimony.objects.select_related("file")
-                .only("id", "file__name", "witness_name", "question", "answer", "cite", "created_at", "web_url")
+            # Step 1: Load testimonies
+            testimonies = Testimony.objects.select_related("file").only(
+                "id", "file__name", "witness_name", "question", "answer",
+                "cite", "created_at", "web_url", "project_name"
             )
 
             docs_list = [
@@ -1064,120 +1059,87 @@ class TestimonyViewSet(viewsets.ViewSet):
                     "cite": (t.cite or "").strip(),
                     "transcript_name_exact": (t.file.name if t.file else "").strip().lower(),
                     "witness_name_search": (t.witness_name or "").strip().lower(),
-                    "created_at": (
-                        t.created_at.replace(tzinfo=None)
-                        if t.created_at and t.created_at.tzinfo
-                        else t.created_at
-                    ),
+                    "created_at": t.created_at.replace(tzinfo=None) if t.created_at and t.created_at.tzinfo else t.created_at,
                     "web_url": t.web_url or "",
-                    "project_name": getattr(t, "project_name", "") or "",   # ✅ ADD THIS
-                    "project_name_search": normalize_index_text(getattr(t, "project_name", "") or "")
-
+                    "project_name": t.project_name or "",
+                    "project_name_search": normalize_index_text(t.project_name or "")
                 }
-                for t in testimonies
-                if (t.question and t.question.strip()) or (t.answer and t.answer.strip())
+                for t in testimonies if (t.question and t.question.strip()) or (t.answer and t.answer.strip())
             ]
 
             if not docs_list:
                 return Response([], status=200)
 
-            # Step 2: Open Whoosh index
+            # Step 2: Open index
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
 
-            # Step 3: Ensure index has data
+            # Step 3: Reindex if empty
             with ix.searcher() as searcher:
                 if searcher.doc_count() == 0:
                     index_documents(ix, docs_list)
                     logger.info("🆕 Whoosh index was empty — reindexed all testimonies.")
 
-            # Step 4: Build query map
-            q_text_field_map = []
+            # Step 4: Build a single OR query for all q1/q2/q3 text
+            query_parts = []
+
+            # Helper function to build field queries
+            def make_field_queries(text, fields, mode):
+                text = text.strip()
+                if not text:
+                    return None
+                normalized = normalize_index_text(text)
+                queries = []
+                for f in fields:
+                    terms = normalized.split()
+                    if len(terms) > 1:
+                        queries.append(Phrase(f, terms))
+                    else:
+                        queries.append(Term(f, terms[0]))
+                return Or(queries) if queries else None
+
             if q1:
-                q_text_field_map.append({"text": q1, "fields": ["question", "answer"], "mode": mode1})
+                q1_query = make_field_queries(q1, ["question", "answer"], mode1)
+                if q1_query: query_parts.append(q1_query)
             if q2:
-                q_text_field_map.append({"text": q2, "fields": ["witness_name"], "mode": mode2})
+                q2_query = make_field_queries(q2, ["witness_name_search"], mode2)
+                if q2_query: query_parts.append(q2_query)
             if q3:
-                q_text_field_map.append({
-                    "text": q3,
-                    "fields": ["transcript_name", "transcript_name_exact", "transcript_name_search", "project_name_search"],
-                    "mode": mode3,
-                })
+                q3_query = make_field_queries(q3, ["transcript_name_search", "transcript_name_exact", "project_name_search"], mode3)
+                if q3_query: query_parts.append(q3_query)
 
-            extra_filters = []
+            # Extra filters combined into one OR
+            filter_parts = []
 
-            # Transcript filters (array)
             if transcript_filters:
-                transcript_terms = [Term("transcript_name_exact", t.lower()) for t in transcript_filters]
-                extra_filters.append(Or(transcript_terms))
-
-            # Witness filters (array)
-            # if witness_filters:
-            #     witness_terms = [Term("witness_name_search", w.lower()) for w in witness_filters]
-            #     extra_filters.append(Or(witness_terms))
-            #     logger.info(f"📌 Search Query Map: {q_text_field_map}")
+                filter_parts += [Term("transcript_name_exact", t.lower()) for t in transcript_filters]
             if witness_filters:
-                witness_terms = [
-                    Phrase("witness_name_search", normalize_index_text(w).split())
-                    for w in witness_filters
-                ]
-                extra_filters.append(Or(witness_terms))
-                logger.info(f"📌 Search Query Map: {q_text_field_map}")
-
+                filter_parts += [Phrase("witness_name_search", normalize_index_text(w).split()) for w in witness_filters]
             if project_filters:
-                project_terms = [
-                    Term("project_name_search", normalize_index_text(p))
-                    for p in project_filters
-                ]
-                extra_filters.append(Or(project_terms))
-            # Step 5: Perform search
-            max_edits = 1 if len(q1) <= 4 else 3
+                filter_parts += [Term("project_name_search", normalize_index_text(p)) for p in project_filters]
 
-            batch_results, batch_total = search_documents(
-                ix,
-                q_text_field_map=q_text_field_map,
-                extra_filters=extra_filters,       # <--- NEW
-                page=page_number,
-                page_size=page_size,
-                max_edits=max_edits,
-            )
+            # Combine everything into one big OR
+            final_query = Or(query_parts + filter_parts) if (query_parts or filter_parts) else Every()
 
+            # Step 5: Execute search
             with ix.searcher() as searcher:
-                full_results, _ = search_documents(
-                    ix,
-                    q_text_field_map=q_text_field_map,
-                    extra_filters=extra_filters,
-                    page=1,
-                    page_size=1000000,
-                    max_edits=max_edits,
-                )
-                unique_transcripts = {
-                    r.get("transcript_name", "").lower()
-                    for r in full_results if r.get("transcript_name")
-                }
-                unique_witness = {
-                    r.get("witness_name", "").lower()
-                    for r in full_results if r.get("witness_name")
-                }
-
-
-            # Step 6: Build results JSON
-            results_json = [
-                {
-                    "id": r.get("id"),
-                    "transcript_name": r.get("transcript_name", ""),
-                    "witness_name": r.get("witness_name", ""),
-                    "question": r.get("question", ""),
-                    "answer": r.get("answer", ""),
-                    "cite": r.get("cite", ""),
-                    "created_at": r.get("created_at"),
-                    "web_url": r.get("web_url"),
-                    "project_name": r.get("project_name", ""),   # ✅ ADD THIS
-
-                }
-                for r in batch_results
-            ]
+                page_obj = searcher.search_page(final_query, page_number, pagelen=page_size)
+                results_json = [
+                    {
+                        "id": hit.get("id"),
+                        "transcript_name": hit.get("transcript_name", ""),
+                        "witness_name": hit.get("witness_name", ""),
+                        "question": hit.get("question", ""),
+                        "answer": hit.get("answer", ""),
+                        "cite": hit.get("cite", ""),
+                        "created_at": hit.get("created_at"),
+                        "web_url": hit.get("web_url"),
+                        "project_name": hit.get("project_name", ""),
+                    }
+                    for hit in page_obj
+                ]
+                total_results = page_obj.total
 
             results_json.sort(key=lambda x: x["created_at"] or datetime.min, reverse=True)
 
@@ -1186,10 +1148,8 @@ class TestimonyViewSet(viewsets.ViewSet):
                 "modes": {"mode1": mode1, "mode2": mode2, "mode3": mode3},
                 "page_number": page_number,
                 "page_size": page_size,
-                "total_results": batch_total,
+                "total_results": total_results,
                 "results_returned": len(results_json),
-                "unique_transcript_count": len(unique_transcripts),
-                "unique_witness": len(unique_witness),
                 "results": results_json,
             })
 
@@ -1197,7 +1157,7 @@ class TestimonyViewSet(viewsets.ViewSet):
             return Response({"error": f"Index lock timeout: {str(e)}"}, status=503)
         except Exception as e:
             logger.exception("❌ Search error")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=500)
     @action(detail=False, methods=["post"], url_path="rebuild-index")
     def rebuild_index(self, request):
         """
