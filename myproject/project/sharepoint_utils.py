@@ -589,18 +589,18 @@ def _release_file_lock(fh):
 # --------------------- INDEX CREATION ---------------------
 def get_or_create_index(index_dir: str):
     """
-    Open an existing Whoosh index, or create a new one if it doesn't exist.
-    Does NOT delete existing index to avoid LockError.
+    Always delete the old Whoosh index and create a fresh one.
+    Ensures schema changes never cause KeyError.
     """
     schema = Schema(
         id=ID(stored=True, unique=True),
         question=TEXT(stored=True),
         answer=TEXT(stored=True),
-        transcript_name=TEXT(stored=True),        # fuzzy/partial search
-        transcript_name_exact=ID(stored=True),    # exact filename match
-        transcript_name_search=TEXT(stored=False), # normalized for searching
+        transcript_name=TEXT(stored=True),
+        transcript_name_exact=ID(stored=True),
+        transcript_name_search=TEXT(stored=False),
         witness_name=TEXT(stored=True),
-        witness_name_search=TEXT(stored=False),         # normalized for searching
+        witness_name_search=TEXT(stored=False),
         cite=TEXT(stored=True),
         created_at=DATETIME(stored=True),
         web_url=TEXT(stored=True),
@@ -608,20 +608,19 @@ def get_or_create_index(index_dir: str):
         project_name_search=TEXT(stored=False)
     )
 
-    if os.path.exists(index_dir) and os.listdir(index_dir):
-        try:
-            ix = open_dir(index_dir)
-            logger.info(f"📂 Opened existing Whoosh index at: {index_dir}")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to open existing index, creating new one: {e}")
-            ix = create_in(index_dir, schema)
-            logger.info(f"✅ Created new Whoosh index at: {index_dir}")
-    else:
-        os.makedirs(index_dir, exist_ok=True)
-        ix = create_in(index_dir, schema)
-        logger.info(f"✅ Created new Whoosh index at: {index_dir}")
+    # ❌ Delete existing index (safe)
+    if os.path.exists(index_dir):
+        shutil.rmtree(index_dir, ignore_errors=True)
+
+    # ✅ Create the folder fresh
+    os.makedirs(index_dir, exist_ok=True)
+
+    # ✅ Always create new Whoosh index
+    ix = create_in(index_dir, schema)
+    logger.info(f"🆕 Created fresh Whoosh index at: {index_dir}")
 
     return ix
+
 
 def normalize_index_text(text: str) -> str:
     return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
