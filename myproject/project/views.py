@@ -41,7 +41,7 @@ import zipfile
 from django.http import HttpResponse
 from whoosh import index
 from whoosh.index import open_dir
-from whoosh.query import Term, Or, Phrase
+from whoosh.query import Term, Or, Phrase, Every
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
