@@ -42,6 +42,7 @@ from django.http import HttpResponse
 from whoosh import index
 from whoosh.index import open_dir
 from whoosh.query import Term, Or, And, Phrase, Every, FuzzyTerm, Prefix, Wildcard
+import string
 
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
@@ -1100,14 +1101,21 @@ class TestimonyViewSet(viewsets.ViewSet):
             if witness_filters:
                 w_terms = []
                 for w in witness_filters:
-                    normalized_w = normalize_index_text(w)
-                    # Use Phrase to match multi-word names properly
-                    tokens = normalized_w.split()
+                    # Normalize exactly the same way the index analyzer does
+                    normalized = normalize_index_text(w)
+
+                    # Remove punctuation like commas, periods
+                    normalized = normalized.translate(str.maketrans('', '', string.punctuation))
+
+                    tokens = normalized.split()
                     if not tokens:
                         continue
+
+                    # Use Phrase search (best for full names)
                     w_terms.append(Phrase("witness_name_search", tokens))
+
                 if w_terms:
-                    filters.append(Or(w_terms))  # Match any of the witnesses
+                    filters.append(Or(w_terms))
 
             if project_filters:
                 p_terms = [Term("project_name_search", normalize_index_text(p)) for p in project_filters]
