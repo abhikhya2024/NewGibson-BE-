@@ -1094,7 +1094,7 @@ class TestimonyViewSet(viewsets.ViewSet):
                 if q:
                     queries.append(q)
             if q2:
-                q = build_field_query(q2, ["witness_name_search"], mode2, max_edits)
+                q = build_field_query(q2, ["witness_name"], mode2, max_edits)
                 if q:
                     queries.append(q)
             if q3:
@@ -1115,8 +1115,12 @@ class TestimonyViewSet(viewsets.ViewSet):
                 filters.append(Or(t_terms))
 
             if witness_filters:
-                w_terms = [Phrase("witness_name_search", normalize_index_text(w).split()) for w in witness_filters]
-                filters.append(Or(w_terms))
+                # Normalize each filter and match as term
+                witness_terms = [
+                    Term("witness_name_search", normalize_index_text(w))
+                    for w in witness_filters
+                ]
+                filters.append(Or(witness_terms))
 
             if project_filters:
                 p_terms = [Term("project_name_search", normalize_index_text(p)) for p in project_filters]
@@ -1202,6 +1206,7 @@ class TestimonyViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="combined-transcript-search")
     def combined_transcript_search(self, request):
+
         q1 = request.data.get("q1", "").strip()
         mode1 = request.data.get("mode1", "exact").lower()
         q2 = request.data.get("q2", "").strip()
