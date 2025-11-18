@@ -1098,13 +1098,16 @@ class TestimonyViewSet(viewsets.ViewSet):
                 filters.append(Or(t_terms))
 
             if witness_filters:
-                # Match each word in witness names
                 w_terms = []
                 for w in witness_filters:
-                    tokens = normalize_index_text(w).split()
-                    token_terms = [Term("witness_name_search", t) for t in tokens]
-                    w_terms.append(And(token_terms))  # All words of single witness must match
-                filters.append(Or(w_terms))  # Any witness from the array
+                    normalized_w = normalize_index_text(w)
+                    # Use Phrase to match multi-word names properly
+                    tokens = normalized_w.split()
+                    if not tokens:
+                        continue
+                    w_terms.append(Phrase("witness_name_search", tokens))
+                if w_terms:
+                    filters.append(Or(w_terms))  # Match any of the witnesses
 
             if project_filters:
                 p_terms = [Term("project_name_search", normalize_index_text(p)) for p in project_filters]
