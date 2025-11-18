@@ -1101,18 +1101,18 @@ class TestimonyViewSet(viewsets.ViewSet):
             if witness_filters:
                 w_terms = []
                 for w in witness_filters:
-                    # Normalize exactly the same way the index analyzer does
                     normalized = normalize_index_text(w)
-
-                    # Remove punctuation like commas, periods
-                    normalized = normalized.translate(str.maketrans('', '', string.punctuation))
-
-                    tokens = normalized.split()
+                    normalized = normalized.translate(str.maketrans('', '', string.punctuation)).strip()
+                    tokens = [t for t in normalized.split() if t]
                     if not tokens:
                         continue
 
-                    # Use Phrase search (best for full names)
-                    w_terms.append(Phrase("witness_name_search", tokens))
+                    per_token_query = []
+                    for t in tokens:
+                        # Prefer Prefix for speed; fallback to Wildcard if you need 'contains'
+                        per_token_query.append(Or([Prefix("witness_name_search", t), Term("witness_name_search", t)]))
+                    # require all tokens (but tokens can match via prefix OR exact)
+                    w_terms.append(And(per_token_query))
 
                 if w_terms:
                     filters.append(Or(w_terms))
