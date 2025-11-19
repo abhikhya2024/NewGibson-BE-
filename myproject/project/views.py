@@ -43,7 +43,10 @@ from whoosh import index
 from whoosh.index import open_dir
 from whoosh.query import Term, Or, And, Phrase, Every, FuzzyTerm, Prefix, Wildcard
 import string
+from nltk.stem import WordNetLemmatizer
+from whoosh.query import Term, Phrase, Or
 
+lemmatizer = WordNetLemmatizer()
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -1059,19 +1062,26 @@ class TestimonyViewSet(viewsets.ViewSet):
                 text = text.strip()
                 normalized = normalize_index_text(text)
                 sub_queries = []
+
+                # Split into terms and lemmatize each term
+                terms = normalized.split()
+                if not terms:
+                    return None
+
+                lemmas = []
+                for t in terms:
+                    l = lemmatizer.lemmatize(t)        # noun lemmatization
+                    l = lemmatizer.lemmatize(l, pos='v')  # verb lemmatization
+                    lemmas.append(l)
+
                 for f in fields:
-                    terms = normalized.split()
-                    if not terms:
-                        continue
                     if len(terms) == 1:
-                        if mode == "fuzzy":
-                            sub_queries.append(Or([FuzzyTerm(f, terms[0], maxdist=2),
-                                                Prefix(f, terms[0]),
-                                                Wildcard(f, f"*{terms[0]}*")]))
-                        else:
-                            sub_queries.append(Term(f, terms[0]))
+                        # Single-word term → use lemmatized term
+                        sub_queries.append(Term(f, lemmas[0]))
                     else:
-                        sub_queries.append(Phrase(f, terms))
+                        # Multi-word phrase → use lemmatized phrase
+                        sub_queries.append(Phrase(f, lemmas))
+
                 return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
 
             # Build q1/q2/q3 queries
