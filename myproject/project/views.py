@@ -1059,28 +1059,38 @@ class TestimonyViewSet(viewsets.ViewSet):
             def build_field_query(text, fields, mode):
                 if not text:
                     return None
+
                 text = text.strip()
                 normalized = normalize_index_text(text)
-                sub_queries = []
 
-                # Split into terms and lemmatize each term
-                terms = normalized.split()
+                # -----------------------------------------
+                # LEMMATIZATION ADDED HERE
+                # -----------------------------------------
+                terms = [lemmatizer.lemmatize(t) for t in normalized.split()]
                 if not terms:
                     return None
 
-                lemmas = []
-                for t in terms:
-                    l = lemmatizer.lemmatize(t)        # noun lemmatization
-                    l = lemmatizer.lemmatize(l, pos='v')  # verb lemmatization
-                    lemmas.append(l)
+                sub_queries = []
 
                 for f in fields:
+                    # single-term queries
                     if len(terms) == 1:
-                        # Single-word term → use lemmatized term
-                        sub_queries.append(Term(f, lemmas[0]))
+                        token = terms[0]
+
+                        if mode == "fuzzy":
+                            # -----------------------------------------
+                            # REMOVE WILDCARD & SPELL-TOLERANCE
+                            # Only lemmatized exact match
+                            # -----------------------------------------
+                            sub_queries.append(Term(f, token))
+
+                        else:
+                            # exact mode
+                            sub_queries.append(Term(f, token))
+
                     else:
-                        # Multi-word phrase → use lemmatized phrase
-                        sub_queries.append(Phrase(f, lemmas))
+                        # multi-term phrase search
+                        sub_queries.append(Phrase(f, terms))
 
                 return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
 
