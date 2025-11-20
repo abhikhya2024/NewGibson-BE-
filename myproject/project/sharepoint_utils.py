@@ -32,8 +32,6 @@ from whoosh import index
 from whoosh.query import Every
 from datetime import datetime, time, date
 from whoosh.index import create_in, open_dir
-from nltk.stem import WordNetLemmatizer
-lemmatizer = WordNetLemmatizer()
 
 load_dotenv()
 # Configuration (move to settings or .env for production)
@@ -624,35 +622,8 @@ def get_or_create_index(index_dir: str):
     return ix
 
 
-# def normalize_index_text(text: str) -> str:
-#     return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
 def normalize_index_text(text: str) -> str:
-    text = re.sub(r'[^A-Za-z0-9\s]', ' ', text.lower())
-    words = text.split()
-    lemmas = [lemmatizer.lemmatize(w) for w in words]
-    return " ".join(lemmas)
-
-def normalize_query_text(text: str) -> str:
-    """Lowercase + remove symbols + lemmatize user query"""
-    text = re.sub(r'[^A-Za-z0-9\s]', ' ', text.lower())
-    words = text.split()
-    lemmas = [lemmatizer.lemmatize(w) for w in words]
-    return lemmas
-def build_field_query(fields, lemmas):
-    """Build exact-term or exact-phrase queries based on lemma list"""
-    sub_queries = []
-
-    for f in fields:
-        if len(lemmas) == 1:
-            # Single exact match
-            sub_queries.append(Term(f, lemmas[0]))
-        else:
-            # Multi-word phrase search
-            sub_queries.append(Phrase(f, lemmas))
-
-    return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
-    
-
+    return re.sub(r'[^A-Za-z0-9\s]', '', text.lower())
 def index_documents(ix, docs_list):
     """
     Index a list of documents into the Whoosh index.
