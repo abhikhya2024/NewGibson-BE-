@@ -1217,7 +1217,9 @@ class TestimonyViewSet(viewsets.ViewSet):
 
         BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
         INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
-        ix = open_dir(INDEX_DIR)        queries = []
+        ix = open_dir(INDEX_DIR)        
+        
+        queries = []
 
         # ---- Query 1 ----
         if q1:
