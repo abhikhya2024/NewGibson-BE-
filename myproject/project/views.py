@@ -1046,7 +1046,7 @@ class TestimonyViewSet(viewsets.ViewSet):
         page_size = 100
         page_number = int(request.data.get("page_number", 1))
 
-        try:
+                try:
             BASE_DIR = "/var/www/gibson-be/NewGibson-BE-/myproject/project"
             INDEX_DIR = os.path.join(BASE_DIR, "whoosh_index")
             ix = open_dir(INDEX_DIR)
