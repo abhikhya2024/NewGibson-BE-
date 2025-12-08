@@ -1072,22 +1072,22 @@ class TestimonyViewSet(viewsets.ViewSet):
                         token = nlp(terms[0])[0]  # tokenize the term
                         lemma = token.lemma_.lower()  # lemmatized form
 
-                        if mode == "fuzzy":
-                            # Fuzzy query includes:
-                            # 1. Fuzzy match of original term
-                            # 2. Prefix and wildcard of original term
-                            # 3. Exact lemma match
-                            sub_queries.append(
-                                Or([
-                                    FuzzyTerm(f, terms[0], maxdist=2),
-                                    Prefix(f, terms[0]),
-                                    Wildcard(f, f"*{terms[0]}*"),
-                                    Term(f, lemma)
-                                ])
-                            )
-                        else:
+                        # if mode == "fuzzy":
+                        #     # Fuzzy query includes:
+                        #     # 1. Fuzzy match of original term
+                        #     # 2. Prefix and wildcard of original term
+                        #     # 3. Exact lemma match
+                        #     sub_queries.append(
+                        #         Or([
+                        #             FuzzyTerm(f, terms[0], maxdist=2),
+                        #             Prefix(f, terms[0]),
+                        #             Wildcard(f, f"*{terms[0]}*"),
+                        #             Term(f, lemma)
+                        #         ])
+                        #     )
+                        # else:
                             # Exact mode includes lemma match as well
-                            sub_queries.append(Term(f, lemma))
+                        sub_queries.append(Term(f, lemma))
 
                     # Process multi-word terms
                     else:
