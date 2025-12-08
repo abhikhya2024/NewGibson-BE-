@@ -42,6 +42,8 @@ from django.http import HttpResponse
 from whoosh import index
 from whoosh.index import open_dir
 from whoosh.query import Term, Or, And, Phrase, Every, FuzzyTerm, Prefix, Wildcard
+import spacy
+nlp = spacy.load("en_core_web_md", disable=["parser", "ner", "textcat"])
 
 SCOPE = ["https://graph.microsoft.com/.default"]
 TENANT_ID = os.getenv("TENANT_ID")
@@ -1055,22 +1057,47 @@ class TestimonyViewSet(viewsets.ViewSet):
             def build_field_query(text, fields, mode):
                 if not text:
                     return None
+
                 text = text.strip()
                 normalized = normalize_index_text(text)
                 sub_queries = []
+
                 for f in fields:
                     terms = normalized.split()
                     if not terms:
                         continue
+
+                    # Process single-word terms
                     if len(terms) == 1:
+                        token = nlp(terms[0])[0]  # tokenize the term
+                        lemma = token.lemma_.lower()  # lemmatized form
+
                         if mode == "fuzzy":
-                            sub_queries.append(Or([FuzzyTerm(f, terms[0], maxdist=2),
-                                                Prefix(f, terms[0]),
-                                                Wildcard(f, f"*{terms[0]}*")]))
+                            # Fuzzy query includes:
+                            # 1. Fuzzy match of original term
+                            # 2. Prefix and wildcard of original term
+                            # 3. Exact lemma match
+                            sub_queries.append(
+                                Or([
+                                    FuzzyTerm(f, terms[0], maxdist=2),
+                                    Prefix(f, terms[0]),
+                                    Wildcard(f, f"*{terms[0]}*"),
+                                    Term(f, lemma)
+                                ])
+                            )
                         else:
-                            sub_queries.append(Term(f, terms[0]))
+                            # Exact mode includes lemma match as well
+                            sub_queries.append(Term(f, lemma))
+
+                    # Process multi-word terms
                     else:
-                        sub_queries.append(Phrase(f, terms))
+                        # Lemmatize each word in the phrase
+                        lemmatized_terms = [t.lemma_.lower() for t in nlp(" ".join(terms))]
+                        sub_queries.append(Phrase(f, lemmatized_terms))
+
+                if not sub_queries:
+                    return None
+
                 return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
 
             # Build q1/q2/q3 queries
