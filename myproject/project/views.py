@@ -1055,6 +1055,10 @@ class TestimonyViewSet(viewsets.ViewSet):
 
             # Build main field queries
             def build_field_query(text, fields, mode):
+                """
+                Build a Whoosh query for given text, fields, and mode.
+                If mode=="fuzzy", only lemma-based matches are included.
+                """
                 if not text:
                     return None
 
@@ -1067,31 +1071,14 @@ class TestimonyViewSet(viewsets.ViewSet):
                     if not terms:
                         continue
 
-                    # Process single-word terms
+                    # Single-word term
                     if len(terms) == 1:
-                        token = nlp(terms[0])[0]  # tokenize the term
-                        lemma = token.lemma_.lower()  # lemmatized form
-
-                        # if mode == "fuzzy":
-                        #     # Fuzzy query includes:
-                        #     # 1. Fuzzy match of original term
-                        #     # 2. Prefix and wildcard of original term
-                        #     # 3. Exact lemma match
-                        #     sub_queries.append(
-                        #         Or([
-                        #             FuzzyTerm(f, terms[0], maxdist=2),
-                        #             Prefix(f, terms[0]),
-                        #             Wildcard(f, f"*{terms[0]}*"),
-                        #             Term(f, lemma)
-                        #         ])
-                        #     )
-                        # else:
-                            # Exact mode includes lemma match as well
+                        token = nlp(terms[0])[0]
+                        lemma = token.lemma_.lower()
                         sub_queries.append(Term(f, lemma))
 
-                    # Process multi-word terms
+                    # Multi-word term
                     else:
-                        # Lemmatize each word in the phrase
                         lemmatized_terms = [t.lemma_.lower() for t in nlp(" ".join(terms))]
                         sub_queries.append(Phrase(f, lemmatized_terms))
 
@@ -1099,7 +1086,6 @@ class TestimonyViewSet(viewsets.ViewSet):
                     return None
 
                 return Or(sub_queries) if len(sub_queries) > 1 else sub_queries[0]
-
             # Build q1/q2/q3 queries
             if q1:
                 q = build_field_query(q1, ["question", "answer"], mode1)
